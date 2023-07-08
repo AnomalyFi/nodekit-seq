@@ -194,7 +194,7 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 			return err
 		}
 		if result.Success {
-			switch action := tx.Action.(type) {
+			switch tx.Action.(type) {
 			case *actions.CreateAsset:
 				c.metrics.createAsset.Inc()
 			case *actions.MintAsset:
