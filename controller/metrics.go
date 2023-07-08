@@ -18,10 +18,6 @@ type metrics struct {
 
 	transfer prometheus.Counter
 
-	createOrder prometheus.Counter
-	fillOrder   prometheus.Counter
-	closeOrder  prometheus.Counter
-
 	importAsset  prometheus.Counter
 	exportAsset  prometheus.Counter
 	sequencerMsg prometheus.Counter
@@ -54,21 +50,6 @@ func newMetrics(gatherer ametrics.MultiGatherer) (*metrics, error) {
 			Name:      "transfer",
 			Help:      "number of transfer actions",
 		}),
-		createOrder: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: "actions",
-			Name:      "create_order",
-			Help:      "number of create order actions",
-		}),
-		fillOrder: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: "actions",
-			Name:      "fill_order",
-			Help:      "number of fill order actions",
-		}),
-		closeOrder: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: "actions",
-			Name:      "close_order",
-			Help:      "number of close order actions",
-		}),
 		importAsset: prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: "actions",
 			Name:      "import_asset",
@@ -94,10 +75,6 @@ func newMetrics(gatherer ametrics.MultiGatherer) (*metrics, error) {
 		r.Register(m.modifyAsset),
 
 		r.Register(m.transfer),
-
-		r.Register(m.createOrder),
-		r.Register(m.fillOrder),
-		r.Register(m.closeOrder),
 
 		r.Register(m.importAsset),
 		r.Register(m.exportAsset),

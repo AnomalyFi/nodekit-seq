@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ava-labs/avalanchego/database"
 	"github.com/AnomalyFi/hypersdk/pebble"
 	"github.com/AnomalyFi/hypersdk/utils"
+	"github.com/ava-labs/avalanchego/database"
 	"github.com/spf13/cobra"
 )
 
@@ -152,10 +152,6 @@ func init() {
 		sequencerMsgCmd,
 		// burnAssetCmd,
 		// modifyAssetCmd,
-
-		createOrderCmd,
-		fillOrderCmd,
-		closeOrderCmd,
 
 		importAssetCmd,
 		exportAssetCmd,

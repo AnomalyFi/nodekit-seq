@@ -15,7 +15,6 @@ import (
 	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
-	"github.com/AnomalyFi/nodekit-seq/orderbook"
 	_ "github.com/AnomalyFi/nodekit-seq/registry" // ensure registry populated
 )
 
@@ -108,19 +107,6 @@ func (cli *JSONRPCClient) Balance(ctx context.Context, addr string, asset ids.ID
 		resp,
 	)
 	return resp.Amount, err
-}
-
-func (cli *JSONRPCClient) Orders(ctx context.Context, pair string) ([]*orderbook.Order, error) {
-	resp := new(OrdersReply)
-	err := cli.requester.SendRequest(
-		ctx,
-		"orders",
-		&OrdersArgs{
-			Pair: pair,
-		},
-		resp,
-	)
-	return resp.Orders, err
 }
 
 func (cli *JSONRPCClient) Loan(

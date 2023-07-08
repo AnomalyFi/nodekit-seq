@@ -9,7 +9,6 @@ import (
 	"github.com/ava-labs/avalanchego/ids"
 
 	"github.com/AnomalyFi/nodekit-seq/genesis"
-	"github.com/AnomalyFi/nodekit-seq/orderbook"
 	"github.com/AnomalyFi/nodekit-seq/utils"
 )
 
@@ -109,22 +108,6 @@ func (j *JSONRPCServer) Balance(req *http.Request, args *BalanceArgs, reply *Bal
 	}
 	reply.Amount = balance
 	return err
-}
-
-type OrdersArgs struct {
-	Pair string `json:"pair"`
-}
-
-type OrdersReply struct {
-	Orders []*orderbook.Order `json:"orders"`
-}
-
-func (j *JSONRPCServer) Orders(req *http.Request, args *OrdersArgs, reply *OrdersReply) error {
-	_, span := j.c.Tracer().Start(req.Context(), "Server.Orders")
-	defer span.End()
-
-	reply.Orders = j.c.Orders(args.Pair, ordersToSend)
-	return nil
 }
 
 type LoanArgs struct {
