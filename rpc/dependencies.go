@@ -6,11 +6,11 @@ package rpc
 import (
 	"context"
 
+	"github.com/AnomalyFi/hypersdk/crypto"
+	"github.com/AnomalyFi/nodekit-seq/genesis"
+	"github.com/AnomalyFi/nodekit-seq/orderbook"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/trace"
-	"github.com/AnomalyFi/hypersdk/crypto"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/genesis"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/orderbook"
 )
 
 type Controller interface {

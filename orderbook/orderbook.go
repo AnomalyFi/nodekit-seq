@@ -8,8 +8,8 @@ import (
 
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/AnomalyFi/hypersdk/crypto"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/actions"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/utils"
+	"github.com/AnomalyFi/nodekit-seq/actions"
+	"github.com/AnomalyFi/nodekit-seq/utils"
 	"github.com/AnomalyFi/hypersdk/heap"
 	"go.uber.org/zap"
 )

@@ -40,13 +40,13 @@ import (
 	"github.com/AnomalyFi/hypersdk/vm"
 	"github.com/AnomalyFi/hypersdk/workers"
 
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/actions"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/auth"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/consts"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/controller"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/genesis"
-	trpc "github.com/AnomalyFi/hypersdk/examples/tokenvm/rpc"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/utils"
+	"github.com/AnomalyFi/nodekit-seq/actions"
+	"github.com/AnomalyFi/nodekit-seq/auth"
+	"github.com/AnomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/controller"
+	"github.com/AnomalyFi/nodekit-seq/genesis"
+	trpc "github.com/AnomalyFi/nodekit-seq/rpc"
+	"github.com/AnomalyFi/nodekit-seq/utils"
 	"github.com/AnomalyFi/hypersdk/rpc"
 )
 

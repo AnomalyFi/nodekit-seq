@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/AnomalyFi/nodekit-seq/cmd/tokenvm/version"
+	"github.com/AnomalyFi/nodekit-seq/controller"
 	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/ava-labs/avalanchego/utils/ulimit"
 	"github.com/ava-labs/avalanchego/vms/rpcchainvm"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/cmd/tokenvm/version"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/controller"
 	"github.com/spf13/cobra"
 )
 

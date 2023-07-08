@@ -6,7 +6,7 @@ package utils
 import (
 	"github.com/AnomalyFi/hypersdk/crypto"
 
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/consts"
+	"github.com/AnomalyFi/nodekit-seq/consts"
 )
 
 func Address(pk crypto.PublicKey) string {

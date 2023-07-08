@@ -14,10 +14,10 @@ import (
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/crypto"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/consts"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/storage"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/utils"
 	"github.com/AnomalyFi/hypersdk/vm"
+	"github.com/AnomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/storage"
+	"github.com/AnomalyFi/nodekit-seq/utils"
 )
 
 var _ vm.Genesis = (*Genesis)(nil)

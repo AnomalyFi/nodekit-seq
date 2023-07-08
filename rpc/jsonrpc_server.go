@@ -8,9 +8,9 @@ import (
 
 	"github.com/ava-labs/avalanchego/ids"
 
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/genesis"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/orderbook"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/utils"
+	"github.com/AnomalyFi/nodekit-seq/genesis"
+	"github.com/AnomalyFi/nodekit-seq/orderbook"
+	"github.com/AnomalyFi/nodekit-seq/utils"
 )
 
 type JSONRPCServer struct {

@@ -10,7 +10,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/genesis"
+	"github.com/AnomalyFi/nodekit-seq/genesis"
 )
 
 var genesisCmd = &cobra.Command{

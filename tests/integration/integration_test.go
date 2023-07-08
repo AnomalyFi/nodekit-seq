@@ -41,13 +41,13 @@ import (
 	hutils "github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/hypersdk/vm"
 
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/actions"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/auth"
-	tconsts "github.com/AnomalyFi/hypersdk/examples/tokenvm/consts"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/controller"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/genesis"
-	trpc "github.com/AnomalyFi/hypersdk/examples/tokenvm/rpc"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/utils"
+	"github.com/AnomalyFi/nodekit-seq/actions"
+	"github.com/AnomalyFi/nodekit-seq/auth"
+	tconsts "github.com/AnomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/controller"
+	"github.com/AnomalyFi/nodekit-seq/genesis"
+	trpc "github.com/AnomalyFi/nodekit-seq/rpc"
+	"github.com/AnomalyFi/nodekit-seq/utils"
 )
 
 const transferTxFee = 400 /* base fee */ + 72 /* transfer fee */

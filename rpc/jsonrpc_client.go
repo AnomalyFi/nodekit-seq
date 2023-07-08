@@ -10,13 +10,13 @@ import (
 	"github.com/ava-labs/avalanchego/ids"
 
 	"github.com/AnomalyFi/hypersdk/chain"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/consts"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/genesis"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/orderbook"
-	_ "github.com/AnomalyFi/hypersdk/examples/tokenvm/registry" // ensure registry populated
 	"github.com/AnomalyFi/hypersdk/requester"
 	"github.com/AnomalyFi/hypersdk/rpc"
 	"github.com/AnomalyFi/hypersdk/utils"
+	"github.com/AnomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/genesis"
+	"github.com/AnomalyFi/nodekit-seq/orderbook"
+	_ "github.com/AnomalyFi/nodekit-seq/registry" // ensure registry populated
 )
 
 type JSONRPCClient struct {

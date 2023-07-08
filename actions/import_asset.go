@@ -13,9 +13,9 @@ import (
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/crypto"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/auth"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/storage"
 	"github.com/AnomalyFi/hypersdk/utils"
+	"github.com/AnomalyFi/nodekit-seq/auth"
+	"github.com/AnomalyFi/nodekit-seq/storage"
 )
 
 var _ chain.Action = (*ImportAsset)(nil)

@@ -7,7 +7,7 @@ import (
 	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/ava-labs/avalanchego/vms"
 
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/controller"
+	"github.com/AnomalyFi/nodekit-seq/controller"
 )
 
 var _ vms.Factory = &Factory{}

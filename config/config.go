@@ -8,17 +8,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/utils/logging"
-	"github.com/ava-labs/avalanchego/utils/profiler"
 	"github.com/AnomalyFi/hypersdk/config"
 	hconsts "github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/trace"
 	"github.com/AnomalyFi/hypersdk/vm"
+	"github.com/ava-labs/avalanchego/ids"
+	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/ava-labs/avalanchego/utils/profiler"
 
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/consts"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/utils"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/version"
+	"github.com/AnomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/utils"
+	"github.com/AnomalyFi/nodekit-seq/version"
 )
 
 var _ vm.Config = (*Config)(nil)

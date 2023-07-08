@@ -6,14 +6,14 @@ package cmd
 import (
 	"context"
 
-	"github.com/ava-labs/avalanchego/ids"
 	"github.com/AnomalyFi/hypersdk/crypto"
 	hutils "github.com/AnomalyFi/hypersdk/utils"
+	"github.com/ava-labs/avalanchego/ids"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
-	trpc "github.com/AnomalyFi/hypersdk/examples/tokenvm/rpc"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/utils"
+	trpc "github.com/AnomalyFi/nodekit-seq/rpc"
+	"github.com/AnomalyFi/nodekit-seq/utils"
 )
 
 var keyCmd = &cobra.Command{

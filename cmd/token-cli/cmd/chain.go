@@ -30,11 +30,11 @@ import (
 
 	//"github.com/celestiaorg/go-cnc"
 
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/actions"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/auth"
-	"github.com/AnomalyFi/hypersdk/examples/tokenvm/consts"
-	trpc "github.com/AnomalyFi/hypersdk/examples/tokenvm/rpc"
-	tutils "github.com/AnomalyFi/hypersdk/examples/tokenvm/utils"
+	"github.com/AnomalyFi/nodekit-seq/actions"
+	"github.com/AnomalyFi/nodekit-seq/auth"
+	"github.com/AnomalyFi/nodekit-seq/consts"
+	trpc "github.com/AnomalyFi/nodekit-seq/rpc"
+	tutils "github.com/AnomalyFi/nodekit-seq/utils"
 )
 
 var chainCmd = &cobra.Command{
