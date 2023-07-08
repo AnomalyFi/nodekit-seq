@@ -21,10 +21,10 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/AnomalyFi/nodekit-seq/actions"
-	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/config"
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
+
 	//"github.com/AnomalyFi/nodekit-seq/orderbook"
 	"github.com/AnomalyFi/nodekit-seq/rpc"
 	"github.com/AnomalyFi/nodekit-seq/storage"
@@ -163,7 +163,6 @@ func (c *Controller) Initialize(
 		gossip = gossiper.NewProposer(inner, gcfg)
 	}
 
-
 	return c.config, c.genesis, build, gossip, blockDB, stateDB, apis, consts.ActionRegistry, consts.AuthRegistry, nil
 }
 
@@ -206,7 +205,7 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 				c.metrics.modifyAsset.Inc()
 			case *actions.Transfer:
 				c.metrics.transfer.Inc()
-			case *actions.SequencerMsg
+			case *actions.SequencerMsg:
 				c.metrics.sequencerMsg.Inc()
 			case *actions.ImportAsset:
 				c.metrics.importAsset.Inc()
