@@ -5,8 +5,14 @@ significantly over the coming months as its modules are optimized and
 audited.
 
 ## Features
+### Shared Sequencer
+The `SeqVM` is built from the ground up with the shared sequencer built directly into the chain 
+enabling decentralization from the start. This enable users to easily send messages from rollups like NodeKit chain to the shared sequencer. The contents of `SequencerMSG` is just `ChainId|Data|FromAddress` where the data is the transaction data 
+from the rollup translated into a byte[]. 
+
+
 ### Arbitrary Token Minting
-The basis of the `SeqVM` is the ability to create, mint, and transfer user-generated
+The `SeqVM` also has the ability to create, mint, and transfer user-generated
 tokens with ease. When creating an asset, the owner is given "admin control" of
 the asset functions and can later mint more of an asset, update its metadata
 (during a reveal for example), or transfer/revoke ownership (if rotating their
@@ -21,44 +27,13 @@ as it is re-added upstream by the `hypersdk` (no action required in the
 `SeqVM`).
 
 ### Avalanche Warp Support
-We take advantage of the Avalanche Warp Messaging (AWM) support provided by the
-`hypersdk` to enable any `SeqVM` to send assets to any other `SeqVM` without
-relying on a trusted relayer or bridge (just the validators of the `SeqVM`
-sending the message).
-
-By default, a `SeqVM` will accept a message from another `SeqVM` if 80% of
-the stake weight of the source has signed it. Because each imported asset is
-given a unique `AssetID` (hash of `sourceChainID + sourceAssetID`), it is not
-possible for a malicious/rogue Subnet to corrupt token balances imported from
-other Subnets with this default import setting. `SeqVMs` also track the
-amount of assets exported to all other `SeqVMs` and ensure that more assets
-can't be brought back from a `SeqVM` than were exported to it (prevents
-infinite minting).
-
-To limit "contagion" in the case of a `SeqVM` failure, we ONLY allow the
-export of natively minted assets to another `SeqVM`. This means you can
-transfer an asset between two `SeqVMs` A and B but you can't export from
-`SeqVM` A to `SeqVM` B to `SeqVM` C. This ensures that the import policy
-for an external `SeqVM` is always transparent and is never inherited
-implicitly by the transfers between other `SeqVMs`. The ability to impose
-this restriction (without massively driving up the cost of each transfer) is
-possible because AWM does not impose an additional overhead per Subnet
-connection (no "per connection" state to maintain). This means it is just as
-cheap/scalable to communicate with every other `SeqVM` as it is to only
-communicate with one.
-
-Lastly, the `SeqVM` allows users to both tip relayers (whoever sends
-a transaction that imports their message) and to swap for another asset when
-their message is imported (so they can acquire fee-paying tokens right when
-they arrive).
-
-You can see how this works by checking out the [E2E test suite](./tests/e2e/e2e_test.go) that
-runs through these flows.
+We plan to take advantage of the Avalanche Warp Messaging (AWM) support provided by the
+`hypersdk` to enable any `SeqVM` to receive messages from our `NodeKit Hub` subnet without
+relying on a trusted relayer or bridge (just the validators of the `SeqVM` and `NodeKit Hub`
+sending the message). This feature is still in-progress and we will be sharing more details in 
+the upcoming months.
 
 ## Demos
-Someone: "Seems cool but I need to see it to really get it."
-Me: "Look no further."
-
 The first step to running these demos is to launch your own `SeqVM` Subnet. You
 can do so by running the following command from this location (may take a few
 minutes):
@@ -158,7 +133,7 @@ balance: 10000 27grFs9vE2YP9kwLM5hQJGLDvqEY9ii71zzdoRHNGC4Appavug
 
 #### Bonus: Watch Activity in Real-Time
 To provide a better sense of what is actually happening on-chain, the
-`index-cli` comes bundled with a simple explorer that logs all blocks/txs that
+`token-cli` comes bundled with a simple explorer that logs all blocks/txs that
 occur on-chain. You can run this utility by running the following command from
 this location:
 ```bash
@@ -175,45 +150,9 @@ available chains: 2 excluded: []
 select chainID: 0
 watching for new blocks on Em2pZtHr7rDCzii43an2bBi1M2mTFyLN33QP1Xfjy7BcWtaH9 👀
 height:13 txs:1 units:488 root:2po1n8rqdpNuwpMGndqC2hjt6Xa3cUDsjEpm7D6u9kJRFEPmdL avg TPS:0.026082
-✅ 2Qb172jGBtjTTLhrzYD8ZLatjg6FFmbiFSP6CBq2Xy4aBV2WxL actor: token1rvzhmceq997zntgvravfagsks6w0ryud3rylh4cdvayry0dl97nsjzf3yp units: 488 summary (*actions.CreateOrder): [1.000000000 TKN -> 10 27grFs9vE2YP9kwLM5hQJGLDvqEY9ii71zzdoRHNGC4Appavug (supply: 50 27grFs9vE2YP9kwLM5hQJGLDvqEY9ii71zzdoRHNGC4Appavug)]
-height:14 txs:1 units:1536 root:2vqraWhyd98zVk2ALMmbHPApXjjvHpxh4K4u1QhSb6i3w4VZxM avg TPS:0.030317
-✅ 2H7wiE5MyM4JfRgoXPVP1GkrrhoSXL25iDPJ1wEiWRXkEL1CWz actor: token1rvzhmceq997zntgvravfagsks6w0ryud3rylh4cdvayry0dl97nsjzf3yp units: 1536 summary (*actions.FillOrder): [2.000000000 TKN -> 20 27grFs9vE2YP9kwLM5hQJGLDvqEY9ii71zzdoRHNGC4Appavug (remaining: 30 27grFs9vE2YP9kwLM5hQJGLDvqEY9ii71zzdoRHNGC4Appavug)]
-height:15 txs:1 units:464 root:u2FyTtup4gwPfEFybMNTgL2svvSnajfGH4QKqiJ9vpZBSvx7q avg TPS:0.036967
-✅ Lsad3MZ8i5V5hrGcRxXsghV5G1o1a9XStHY3bYmg7ha7W511e actor: token1rvzhmceq997zntgvravfagsks6w0ryud3rylh4cdvayry0dl97nsjzf3yp units: 464 summary (*actions.CloseOrder): [orderID: 2Qb172jGBtjTTLhrzYD8ZLatjg6FFmbiFSP6CBq2Xy4aBV2WxL]
-```
+✅ KwHcsy3TXcnDyoMNmpMYC4EUvXPDPCoTK8YaEigG7nWwwdi1n actor: token1rvzhmceq997zntgvravfagsks6w0ryud3rylh4cdvayry0dl97nsjzf3yp units: 496 summary (*actions.SequencerMsg): [data: ]
 
-### Transfer Assets to Another Subnet
-Unlike the mint and trade demo, the AWM demo only requires running a single
-command. You can kick off a transfer between the 2 Subnets you created by
-running the following command from this location:
-```bash
-./build/token-cli action export
 ```
-
-When you are done, the output should look something like this:
-```
-database: .token-cli
-address: token1rvzhmceq997zntgvravfagsks6w0ryud3rylh4cdvayry0dl97nsjzf3yp
-chainID: Em2pZtHr7rDCzii43an2bBi1M2mTFyLN33QP1Xfjy7BcWtaH9
-✔ assetID (use TKN for native token): TKN
-balance: 997.999988891 TKN
-recipient: token1rvzhmceq997zntgvravfagsks6w0ryud3rylh4cdvayry0dl97nsjzf3yp
-amount: 10
-reward: 0
-available chains: 1 excluded: [Em2pZtHr7rDCzii43an2bBi1M2mTFyLN33QP1Xfjy7BcWtaH9]
-0) chainID: cKVefMmNPSKmLoshR15Fzxmx52Y5yUSPqWiJsNFUg1WgNQVMX
-destination: 0
-swap on import (y/n): n
-continue (y/n): y
-✅ txID: 24Y2zR2qEQZSmyaG1BCqpZZaWMDVDtimGDYFsEkpCcWYH4dUfJ
-perform import on destination (y/n): y
-22u9zvTa8cRX7nork3koubETsKDn43ydaVEZZWMGcTDerucq4b to: token1rvzhmceq997zntgvravfagsks6w0ryud3rylh4cdvayry0dl97nsjzf3yp source assetID: TKN output assetID: 2rST7KDPjRvDxypr6Q4SwfAwdApLwKXuukrSc42jA3dQDgo7jx value: 10000000000 reward: 10000000000 return: false
-✔ switch default chain to destination (y/n): y
-```
-
-_The `export` command will automatically run the `import` command on the
-destination. If you wish to import the AWM message using a separate account,
-you can run the `import` command after changing your key._
 
 ### Running a Load Test
 _Before running this demo, make sure to stop the network you started using
@@ -271,23 +210,5 @@ your own custom network or on Fuji, check out this [doc](DEVNETS.md).
 
 ## Future Work
 _If you want to take the lead on any of these items, please
-[start a discussion](https://github.com/ava-labs/hypersdk/discussions) or reach
-out on the Avalanche Discord._
-
-* Add more config options for determining which order books to store in-memory
-* Add option to CLI to fill up to some amount of an asset as long as it is
-  under some exchange rate (trading agent command to provide better UX)
-* Add expiring order support (can't fill an order after some point in time but
-  still need to explicitly close it to get your funds back -> async cleanup is
-  not a good idea)
-* Add lockup fee for creating a Warp Message and ability to reclaim the lockup
-  with a refund action (this will allow for "user-driven" acks on
-  messages, which will remain signable and in state until a refund action is
-  issued)
-
-<br>
-<br>
-<br>
-<p align="center">
-  <a href="https://github.com/ava-labs/hypersdk"><img width="40%" alt="SeqVM" src="assets/hypersdk.png"></a>
-</p>
+[start a discussion](https://github.com/AnomalyFi/nodekit-seq/discussions) or reach
+out on the NodeKit Discord._
