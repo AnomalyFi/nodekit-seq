@@ -295,290 +295,290 @@ var mintAssetCmd = &cobra.Command{
 	},
 }
 
-var closeOrderCmd = &cobra.Command{
-	Use: "close-order",
-	RunE: func(*cobra.Command, []string) error {
-		ctx := context.Background()
-		_, _, factory, cli, tcli, err := defaultActor()
-		if err != nil {
-			return err
-		}
+// var closeOrderCmd = &cobra.Command{
+// 	Use: "close-order",
+// 	RunE: func(*cobra.Command, []string) error {
+// 		ctx := context.Background()
+// 		_, _, factory, cli, tcli, err := defaultActor()
+// 		if err != nil {
+// 			return err
+// 		}
 
-		// Select inbound token
-		orderID, err := promptID("orderID")
-		if err != nil {
-			return err
-		}
+// 		// Select inbound token
+// 		orderID, err := promptID("orderID")
+// 		if err != nil {
+// 			return err
+// 		}
 
-		// Select outbound token
-		outAssetID, err := promptAsset("out assetID", true)
-		if err != nil {
-			return err
-		}
+// 		// Select outbound token
+// 		outAssetID, err := promptAsset("out assetID", true)
+// 		if err != nil {
+// 			return err
+// 		}
 
-		// Confirm action
-		cont, err := promptContinue()
-		if !cont || err != nil {
-			return err
-		}
+// 		// Confirm action
+// 		cont, err := promptContinue()
+// 		if !cont || err != nil {
+// 			return err
+// 		}
 
-		// Generate transaction
-		parser, err := tcli.Parser(ctx)
-		if err != nil {
-			return err
-		}
-		submit, tx, _, err := cli.GenerateTransaction(ctx, parser, nil, &actions.CloseOrder{
-			Order: orderID,
-			Out:   outAssetID,
-		}, factory)
-		if err != nil {
-			return err
-		}
-		if err := submit(ctx); err != nil {
-			return err
-		}
-		success, err := tcli.WaitForTransaction(ctx, tx.ID())
-		if err != nil {
-			return err
-		}
-		printStatus(tx.ID(), success)
-		return nil
-	},
-}
+// 		// Generate transaction
+// 		parser, err := tcli.Parser(ctx)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		submit, tx, _, err := cli.GenerateTransaction(ctx, parser, nil, &actions.CloseOrder{
+// 			Order: orderID,
+// 			Out:   outAssetID,
+// 		}, factory)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		if err := submit(ctx); err != nil {
+// 			return err
+// 		}
+// 		success, err := tcli.WaitForTransaction(ctx, tx.ID())
+// 		if err != nil {
+// 			return err
+// 		}
+// 		printStatus(tx.ID(), success)
+// 		return nil
+// 	},
+// }
 
-var createOrderCmd = &cobra.Command{
-	Use: "create-order",
-	RunE: func(*cobra.Command, []string) error {
-		ctx := context.Background()
-		_, priv, factory, cli, tcli, err := defaultActor()
-		if err != nil {
-			return err
-		}
+// var createOrderCmd = &cobra.Command{
+// 	Use: "create-order",
+// 	RunE: func(*cobra.Command, []string) error {
+// 		ctx := context.Background()
+// 		_, priv, factory, cli, tcli, err := defaultActor()
+// 		if err != nil {
+// 			return err
+// 		}
 
-		// Select inbound token
-		inAssetID, err := promptAsset("in assetID", true)
-		if err != nil {
-			return err
-		}
-		if inAssetID != ids.Empty {
-			exists, metadata, supply, _, warp, err := tcli.Asset(ctx, inAssetID)
-			if err != nil {
-				return err
-			}
-			if !exists {
-				hutils.Outf("{{red}}%s does not exist{{/}}\n", inAssetID)
-				hutils.Outf("{{red}}exiting...{{/}}\n")
-				return nil
-			}
-			hutils.Outf(
-				"{{yellow}}metadata:{{/}} %s {{yellow}}supply:{{/}} %d {{yellow}}warp:{{/}} %t\n",
-				string(metadata),
-				supply,
-				warp,
-			)
-		}
+// 		// Select inbound token
+// 		inAssetID, err := promptAsset("in assetID", true)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		if inAssetID != ids.Empty {
+// 			exists, metadata, supply, _, warp, err := tcli.Asset(ctx, inAssetID)
+// 			if err != nil {
+// 				return err
+// 			}
+// 			if !exists {
+// 				hutils.Outf("{{red}}%s does not exist{{/}}\n", inAssetID)
+// 				hutils.Outf("{{red}}exiting...{{/}}\n")
+// 				return nil
+// 			}
+// 			hutils.Outf(
+// 				"{{yellow}}metadata:{{/}} %s {{yellow}}supply:{{/}} %d {{yellow}}warp:{{/}} %t\n",
+// 				string(metadata),
+// 				supply,
+// 				warp,
+// 			)
+// 		}
 
-		// Select in tick
-		inTick, err := promptAmount("in tick", inAssetID, consts.MaxUint64, nil)
-		if err != nil {
-			return err
-		}
+// 		// Select in tick
+// 		inTick, err := promptAmount("in tick", inAssetID, consts.MaxUint64, nil)
+// 		if err != nil {
+// 			return err
+// 		}
 
-		// Select outbound token
-		outAssetID, err := promptAsset("out assetID", true)
-		if err != nil {
-			return err
-		}
-		balance, _, err := getAssetInfo(ctx, tcli, priv.PublicKey(), outAssetID, true)
-		if balance == 0 || err != nil {
-			return err
-		}
+// 		// Select outbound token
+// 		outAssetID, err := promptAsset("out assetID", true)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		balance, _, err := getAssetInfo(ctx, tcli, priv.PublicKey(), outAssetID, true)
+// 		if balance == 0 || err != nil {
+// 			return err
+// 		}
 
-		// Select out tick
-		outTick, err := promptAmount("out tick", outAssetID, consts.MaxUint64, nil)
-		if err != nil {
-			return err
-		}
+// 		// Select out tick
+// 		outTick, err := promptAmount("out tick", outAssetID, consts.MaxUint64, nil)
+// 		if err != nil {
+// 			return err
+// 		}
 
-		// Select supply
-		supply, err := promptAmount(
-			"supply (must be multiple of out tick)",
-			outAssetID,
-			balance,
-			func(input uint64) error {
-				if input%outTick != 0 {
-					return ErrNotMultiple
-				}
-				return nil
-			},
-		)
-		if err != nil {
-			return err
-		}
+// 		// Select supply
+// 		supply, err := promptAmount(
+// 			"supply (must be multiple of out tick)",
+// 			outAssetID,
+// 			balance,
+// 			func(input uint64) error {
+// 				if input%outTick != 0 {
+// 					return ErrNotMultiple
+// 				}
+// 				return nil
+// 			},
+// 		)
+// 		if err != nil {
+// 			return err
+// 		}
 
-		// Confirm action
-		cont, err := promptContinue()
-		if !cont || err != nil {
-			return err
-		}
+// 		// Confirm action
+// 		cont, err := promptContinue()
+// 		if !cont || err != nil {
+// 			return err
+// 		}
 
-		// Generate transaction
-		parser, err := tcli.Parser(ctx)
-		if err != nil {
-			return err
-		}
-		submit, tx, _, err := cli.GenerateTransaction(ctx, parser, nil, &actions.CreateOrder{
-			In:      inAssetID,
-			InTick:  inTick,
-			Out:     outAssetID,
-			OutTick: outTick,
-			Supply:  supply,
-		}, factory)
-		if err != nil {
-			return err
-		}
-		if err := submit(ctx); err != nil {
-			return err
-		}
-		success, err := tcli.WaitForTransaction(ctx, tx.ID())
-		if err != nil {
-			return err
-		}
-		printStatus(tx.ID(), success)
-		return nil
-	},
-}
+// 		// Generate transaction
+// 		parser, err := tcli.Parser(ctx)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		submit, tx, _, err := cli.GenerateTransaction(ctx, parser, nil, &actions.CreateOrder{
+// 			In:      inAssetID,
+// 			InTick:  inTick,
+// 			Out:     outAssetID,
+// 			OutTick: outTick,
+// 			Supply:  supply,
+// 		}, factory)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		if err := submit(ctx); err != nil {
+// 			return err
+// 		}
+// 		success, err := tcli.WaitForTransaction(ctx, tx.ID())
+// 		if err != nil {
+// 			return err
+// 		}
+// 		printStatus(tx.ID(), success)
+// 		return nil
+// 	},
+// }
 
-var fillOrderCmd = &cobra.Command{
-	Use: "fill-order",
-	RunE: func(*cobra.Command, []string) error {
-		ctx := context.Background()
-		_, priv, factory, cli, tcli, err := defaultActor()
-		if err != nil {
-			return err
-		}
+// var fillOrderCmd = &cobra.Command{
+// 	Use: "fill-order",
+// 	RunE: func(*cobra.Command, []string) error {
+// 		ctx := context.Background()
+// 		_, priv, factory, cli, tcli, err := defaultActor()
+// 		if err != nil {
+// 			return err
+// 		}
 
-		// Select inbound token
-		inAssetID, err := promptAsset("in assetID", true)
-		if err != nil {
-			return err
-		}
-		balance, _, err := getAssetInfo(ctx, tcli, priv.PublicKey(), inAssetID, true)
-		if balance == 0 || err != nil {
-			return err
-		}
+// 		// Select inbound token
+// 		inAssetID, err := promptAsset("in assetID", true)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		balance, _, err := getAssetInfo(ctx, tcli, priv.PublicKey(), inAssetID, true)
+// 		if balance == 0 || err != nil {
+// 			return err
+// 		}
 
-		// Select outbound token
-		outAssetID, err := promptAsset("out assetID", true)
-		if err != nil {
-			return err
-		}
-		if _, _, err := getAssetInfo(ctx, tcli, priv.PublicKey(), outAssetID, false); err != nil {
-			return err
-		}
+// 		// Select outbound token
+// 		outAssetID, err := promptAsset("out assetID", true)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		if _, _, err := getAssetInfo(ctx, tcli, priv.PublicKey(), outAssetID, false); err != nil {
+// 			return err
+// 		}
 
-		// View orders
-		orders, err := tcli.Orders(ctx, actions.PairID(inAssetID, outAssetID))
-		if err != nil {
-			return err
-		}
-		if len(orders) == 0 {
-			hutils.Outf("{{red}}no available orders{{/}}\n")
-			hutils.Outf("{{red}}exiting...{{/}}\n")
-			return nil
-		}
-		hutils.Outf("{{cyan}}available orders:{{/}} %d\n", len(orders))
-		max := 20
-		if len(orders) < max {
-			max = len(orders)
-		}
-		for i := 0; i < max; i++ {
-			order := orders[i]
-			hutils.Outf(
-				"%d) {{cyan}}Rate(in/out):{{/}} %.4f {{cyan}}InTick:{{/}} %s %s {{cyan}}OutTick:{{/}} %s %s {{cyan}}Remaining:{{/}} %s %s\n", //nolint:lll
-				i,
-				float64(order.InTick)/float64(order.OutTick),
-				valueString(inAssetID, order.InTick),
-				assetString(inAssetID),
-				valueString(outAssetID, order.OutTick),
-				assetString(outAssetID),
-				valueString(outAssetID, order.Remaining),
-				assetString(outAssetID),
-			)
-		}
+// 		// View orders
+// 		orders, err := tcli.Orders(ctx, actions.PairID(inAssetID, outAssetID))
+// 		if err != nil {
+// 			return err
+// 		}
+// 		if len(orders) == 0 {
+// 			hutils.Outf("{{red}}no available orders{{/}}\n")
+// 			hutils.Outf("{{red}}exiting...{{/}}\n")
+// 			return nil
+// 		}
+// 		hutils.Outf("{{cyan}}available orders:{{/}} %d\n", len(orders))
+// 		max := 20
+// 		if len(orders) < max {
+// 			max = len(orders)
+// 		}
+// 		for i := 0; i < max; i++ {
+// 			order := orders[i]
+// 			hutils.Outf(
+// 				"%d) {{cyan}}Rate(in/out):{{/}} %.4f {{cyan}}InTick:{{/}} %s %s {{cyan}}OutTick:{{/}} %s %s {{cyan}}Remaining:{{/}} %s %s\n", //nolint:lll
+// 				i,
+// 				float64(order.InTick)/float64(order.OutTick),
+// 				valueString(inAssetID, order.InTick),
+// 				assetString(inAssetID),
+// 				valueString(outAssetID, order.OutTick),
+// 				assetString(outAssetID),
+// 				valueString(outAssetID, order.Remaining),
+// 				assetString(outAssetID),
+// 			)
+// 		}
 
-		// Select order
-		orderIndex, err := promptChoice("select order", max)
-		if err != nil {
-			return err
-		}
-		order := orders[orderIndex]
+// 		// Select order
+// 		orderIndex, err := promptChoice("select order", max)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		order := orders[orderIndex]
 
-		// Select input to trade
-		value, err := promptAmount(
-			"value (must be multiple of in tick)",
-			inAssetID,
-			balance,
-			func(input uint64) error {
-				if input%order.InTick != 0 {
-					return ErrNotMultiple
-				}
-				multiples := input / order.InTick
-				requiredRemainder := order.OutTick * multiples
-				if requiredRemainder > order.Remaining {
-					return ErrInsufficientSupply
-				}
-				return nil
-			},
-		)
-		if err != nil {
-			return err
-		}
-		multiples := value / order.InTick
-		outAmount := multiples * order.OutTick
-		hutils.Outf(
-			"{{orange}}in:{{/}} %s %s {{orange}}out:{{/}} %s %s\n",
-			valueString(inAssetID, value),
-			assetString(inAssetID),
-			valueString(outAssetID, outAmount),
-			assetString(outAssetID),
-		)
+// 		// Select input to trade
+// 		value, err := promptAmount(
+// 			"value (must be multiple of in tick)",
+// 			inAssetID,
+// 			balance,
+// 			func(input uint64) error {
+// 				if input%order.InTick != 0 {
+// 					return ErrNotMultiple
+// 				}
+// 				multiples := input / order.InTick
+// 				requiredRemainder := order.OutTick * multiples
+// 				if requiredRemainder > order.Remaining {
+// 					return ErrInsufficientSupply
+// 				}
+// 				return nil
+// 			},
+// 		)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		multiples := value / order.InTick
+// 		outAmount := multiples * order.OutTick
+// 		hutils.Outf(
+// 			"{{orange}}in:{{/}} %s %s {{orange}}out:{{/}} %s %s\n",
+// 			valueString(inAssetID, value),
+// 			assetString(inAssetID),
+// 			valueString(outAssetID, outAmount),
+// 			assetString(outAssetID),
+// 		)
 
-		// Confirm action
-		cont, err := promptContinue()
-		if !cont || err != nil {
-			return err
-		}
+// 		// Confirm action
+// 		cont, err := promptContinue()
+// 		if !cont || err != nil {
+// 			return err
+// 		}
 
-		owner, err := utils.ParseAddress(order.Owner)
-		if err != nil {
-			return err
-		}
-		parser, err := tcli.Parser(ctx)
-		if err != nil {
-			return err
-		}
-		submit, tx, _, err := cli.GenerateTransaction(ctx, parser, nil, &actions.FillOrder{
-			Order: order.ID,
-			Owner: owner,
-			In:    inAssetID,
-			Out:   outAssetID,
-			Value: value,
-		}, factory)
-		if err != nil {
-			return err
-		}
-		if err := submit(ctx); err != nil {
-			return err
-		}
-		success, err := tcli.WaitForTransaction(ctx, tx.ID())
-		if err != nil {
-			return err
-		}
-		printStatus(tx.ID(), success)
-		return nil
-	},
-}
+// 		owner, err := utils.ParseAddress(order.Owner)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		parser, err := tcli.Parser(ctx)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		submit, tx, _, err := cli.GenerateTransaction(ctx, parser, nil, &actions.FillOrder{
+// 			Order: order.ID,
+// 			Owner: owner,
+// 			In:    inAssetID,
+// 			Out:   outAssetID,
+// 			Value: value,
+// 		}, factory)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		if err := submit(ctx); err != nil {
+// 			return err
+// 		}
+// 		success, err := tcli.WaitForTransaction(ctx, tx.ID())
+// 		if err != nil {
+// 			return err
+// 		}
+// 		printStatus(tx.ID(), success)
+// 		return nil
+// 	},
+// }
 
 func performImport(
 	ctx context.Context,

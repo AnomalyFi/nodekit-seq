@@ -342,44 +342,44 @@ var watchChainCmd = &cobra.Command{
 						}
 						summaryStr = fmt.Sprintf("%s %s -> %s", amountStr, assetStr, tutils.Address(action.To))
 
-					case *actions.CreateOrder:
-						inTickStr := strconv.FormatUint(action.InTick, 10)
-						inStr := action.In.String()
-						if action.In == ids.Empty {
-							inTickStr = utils.FormatBalance(action.InTick)
-							inStr = consts.Symbol
-						}
-						outTickStr := strconv.FormatUint(action.OutTick, 10)
-						supplyStr := strconv.FormatUint(action.Supply, 10)
-						outStr := action.Out.String()
-						if action.Out == ids.Empty {
-							outTickStr = utils.FormatBalance(action.OutTick)
-							supplyStr = utils.FormatBalance(action.Supply)
-							outStr = consts.Symbol
-						}
-						summaryStr = fmt.Sprintf("%s %s -> %s %s (supply: %s %s)", inTickStr, inStr, outTickStr, outStr, supplyStr, outStr)
-					case *actions.FillOrder:
-						or, _ := actions.UnmarshalOrderResult(result.Output)
-						inAmtStr := strconv.FormatUint(or.In, 10)
-						inStr := action.In.String()
-						if action.In == ids.Empty {
-							inAmtStr = utils.FormatBalance(or.In)
-							inStr = consts.Symbol
-						}
-						outAmtStr := strconv.FormatUint(or.Out, 10)
-						remainingStr := strconv.FormatUint(or.Remaining, 10)
-						outStr := action.Out.String()
-						if action.Out == ids.Empty {
-							outAmtStr = utils.FormatBalance(or.Out)
-							remainingStr = utils.FormatBalance(or.Remaining)
-							outStr = consts.Symbol
-						}
-						summaryStr = fmt.Sprintf(
-							"%s %s -> %s %s (remaining: %s %s)",
-							inAmtStr, inStr, outAmtStr, outStr, remainingStr, outStr,
-						)
-					case *actions.CloseOrder:
-						summaryStr = fmt.Sprintf("orderID: %s", action.Order)
+					// case *actions.CreateOrder:
+					// 	inTickStr := strconv.FormatUint(action.InTick, 10)
+					// 	inStr := action.In.String()
+					// 	if action.In == ids.Empty {
+					// 		inTickStr = utils.FormatBalance(action.InTick)
+					// 		inStr = consts.Symbol
+					// 	}
+					// 	outTickStr := strconv.FormatUint(action.OutTick, 10)
+					// 	supplyStr := strconv.FormatUint(action.Supply, 10)
+					// 	outStr := action.Out.String()
+					// 	if action.Out == ids.Empty {
+					// 		outTickStr = utils.FormatBalance(action.OutTick)
+					// 		supplyStr = utils.FormatBalance(action.Supply)
+					// 		outStr = consts.Symbol
+					// 	}
+					// 	summaryStr = fmt.Sprintf("%s %s -> %s %s (supply: %s %s)", inTickStr, inStr, outTickStr, outStr, supplyStr, outStr)
+					// case *actions.FillOrder:
+					// 	or, _ := actions.UnmarshalOrderResult(result.Output)
+					// 	inAmtStr := strconv.FormatUint(or.In, 10)
+					// 	inStr := action.In.String()
+					// 	if action.In == ids.Empty {
+					// 		inAmtStr = utils.FormatBalance(or.In)
+					// 		inStr = consts.Symbol
+					// 	}
+					// 	outAmtStr := strconv.FormatUint(or.Out, 10)
+					// 	remainingStr := strconv.FormatUint(or.Remaining, 10)
+					// 	outStr := action.Out.String()
+					// 	if action.Out == ids.Empty {
+					// 		outAmtStr = utils.FormatBalance(or.Out)
+					// 		remainingStr = utils.FormatBalance(or.Remaining)
+					// 		outStr = consts.Symbol
+					// 	}
+					// 	summaryStr = fmt.Sprintf(
+					// 		"%s %s -> %s %s (remaining: %s %s)",
+					// 		inAmtStr, inStr, outAmtStr, outStr, remainingStr, outStr,
+					// 	)
+					// case *actions.CloseOrder:
+					// 	summaryStr = fmt.Sprintf("orderID: %s", action.Order)
 
 					case *actions.ImportAsset:
 						wm := tx.WarpMessage

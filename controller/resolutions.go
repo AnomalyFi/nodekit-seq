@@ -8,7 +8,6 @@ import (
 
 	"github.com/AnomalyFi/hypersdk/crypto"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
-	"github.com/AnomalyFi/nodekit-seq/orderbook"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/trace"
@@ -47,10 +46,6 @@ func (c *Controller) GetBalanceFromState(
 	asset ids.ID,
 ) (uint64, error) {
 	return storage.GetBalanceFromState(ctx, c.inner.ReadState, pk, asset)
-}
-
-func (c *Controller) Orders(pair string, limit int) []*orderbook.Order {
-	return c.orderBook.Orders(pair, limit)
 }
 
 func (c *Controller) GetLoanFromState(
