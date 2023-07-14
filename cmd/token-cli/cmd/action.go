@@ -295,291 +295,6 @@ var mintAssetCmd = &cobra.Command{
 	},
 }
 
-// var closeOrderCmd = &cobra.Command{
-// 	Use: "close-order",
-// 	RunE: func(*cobra.Command, []string) error {
-// 		ctx := context.Background()
-// 		_, _, factory, cli, tcli, err := defaultActor()
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		// Select inbound token
-// 		orderID, err := promptID("orderID")
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		// Select outbound token
-// 		outAssetID, err := promptAsset("out assetID", true)
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		// Confirm action
-// 		cont, err := promptContinue()
-// 		if !cont || err != nil {
-// 			return err
-// 		}
-
-// 		// Generate transaction
-// 		parser, err := tcli.Parser(ctx)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		submit, tx, _, err := cli.GenerateTransaction(ctx, parser, nil, &actions.CloseOrder{
-// 			Order: orderID,
-// 			Out:   outAssetID,
-// 		}, factory)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		if err := submit(ctx); err != nil {
-// 			return err
-// 		}
-// 		success, err := tcli.WaitForTransaction(ctx, tx.ID())
-// 		if err != nil {
-// 			return err
-// 		}
-// 		printStatus(tx.ID(), success)
-// 		return nil
-// 	},
-// }
-
-// var createOrderCmd = &cobra.Command{
-// 	Use: "create-order",
-// 	RunE: func(*cobra.Command, []string) error {
-// 		ctx := context.Background()
-// 		_, priv, factory, cli, tcli, err := defaultActor()
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		// Select inbound token
-// 		inAssetID, err := promptAsset("in assetID", true)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		if inAssetID != ids.Empty {
-// 			exists, metadata, supply, _, warp, err := tcli.Asset(ctx, inAssetID)
-// 			if err != nil {
-// 				return err
-// 			}
-// 			if !exists {
-// 				hutils.Outf("{{red}}%s does not exist{{/}}\n", inAssetID)
-// 				hutils.Outf("{{red}}exiting...{{/}}\n")
-// 				return nil
-// 			}
-// 			hutils.Outf(
-// 				"{{yellow}}metadata:{{/}} %s {{yellow}}supply:{{/}} %d {{yellow}}warp:{{/}} %t\n",
-// 				string(metadata),
-// 				supply,
-// 				warp,
-// 			)
-// 		}
-
-// 		// Select in tick
-// 		inTick, err := promptAmount("in tick", inAssetID, consts.MaxUint64, nil)
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		// Select outbound token
-// 		outAssetID, err := promptAsset("out assetID", true)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		balance, _, err := getAssetInfo(ctx, tcli, priv.PublicKey(), outAssetID, true)
-// 		if balance == 0 || err != nil {
-// 			return err
-// 		}
-
-// 		// Select out tick
-// 		outTick, err := promptAmount("out tick", outAssetID, consts.MaxUint64, nil)
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		// Select supply
-// 		supply, err := promptAmount(
-// 			"supply (must be multiple of out tick)",
-// 			outAssetID,
-// 			balance,
-// 			func(input uint64) error {
-// 				if input%outTick != 0 {
-// 					return ErrNotMultiple
-// 				}
-// 				return nil
-// 			},
-// 		)
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		// Confirm action
-// 		cont, err := promptContinue()
-// 		if !cont || err != nil {
-// 			return err
-// 		}
-
-// 		// Generate transaction
-// 		parser, err := tcli.Parser(ctx)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		submit, tx, _, err := cli.GenerateTransaction(ctx, parser, nil, &actions.CreateOrder{
-// 			In:      inAssetID,
-// 			InTick:  inTick,
-// 			Out:     outAssetID,
-// 			OutTick: outTick,
-// 			Supply:  supply,
-// 		}, factory)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		if err := submit(ctx); err != nil {
-// 			return err
-// 		}
-// 		success, err := tcli.WaitForTransaction(ctx, tx.ID())
-// 		if err != nil {
-// 			return err
-// 		}
-// 		printStatus(tx.ID(), success)
-// 		return nil
-// 	},
-// }
-
-// var fillOrderCmd = &cobra.Command{
-// 	Use: "fill-order",
-// 	RunE: func(*cobra.Command, []string) error {
-// 		ctx := context.Background()
-// 		_, priv, factory, cli, tcli, err := defaultActor()
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		// Select inbound token
-// 		inAssetID, err := promptAsset("in assetID", true)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		balance, _, err := getAssetInfo(ctx, tcli, priv.PublicKey(), inAssetID, true)
-// 		if balance == 0 || err != nil {
-// 			return err
-// 		}
-
-// 		// Select outbound token
-// 		outAssetID, err := promptAsset("out assetID", true)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		if _, _, err := getAssetInfo(ctx, tcli, priv.PublicKey(), outAssetID, false); err != nil {
-// 			return err
-// 		}
-
-// 		// View orders
-// 		orders, err := tcli.Orders(ctx, actions.PairID(inAssetID, outAssetID))
-// 		if err != nil {
-// 			return err
-// 		}
-// 		if len(orders) == 0 {
-// 			hutils.Outf("{{red}}no available orders{{/}}\n")
-// 			hutils.Outf("{{red}}exiting...{{/}}\n")
-// 			return nil
-// 		}
-// 		hutils.Outf("{{cyan}}available orders:{{/}} %d\n", len(orders))
-// 		max := 20
-// 		if len(orders) < max {
-// 			max = len(orders)
-// 		}
-// 		for i := 0; i < max; i++ {
-// 			order := orders[i]
-// 			hutils.Outf(
-// 				"%d) {{cyan}}Rate(in/out):{{/}} %.4f {{cyan}}InTick:{{/}} %s %s {{cyan}}OutTick:{{/}} %s %s {{cyan}}Remaining:{{/}} %s %s\n", //nolint:lll
-// 				i,
-// 				float64(order.InTick)/float64(order.OutTick),
-// 				valueString(inAssetID, order.InTick),
-// 				assetString(inAssetID),
-// 				valueString(outAssetID, order.OutTick),
-// 				assetString(outAssetID),
-// 				valueString(outAssetID, order.Remaining),
-// 				assetString(outAssetID),
-// 			)
-// 		}
-
-// 		// Select order
-// 		orderIndex, err := promptChoice("select order", max)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		order := orders[orderIndex]
-
-// 		// Select input to trade
-// 		value, err := promptAmount(
-// 			"value (must be multiple of in tick)",
-// 			inAssetID,
-// 			balance,
-// 			func(input uint64) error {
-// 				if input%order.InTick != 0 {
-// 					return ErrNotMultiple
-// 				}
-// 				multiples := input / order.InTick
-// 				requiredRemainder := order.OutTick * multiples
-// 				if requiredRemainder > order.Remaining {
-// 					return ErrInsufficientSupply
-// 				}
-// 				return nil
-// 			},
-// 		)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		multiples := value / order.InTick
-// 		outAmount := multiples * order.OutTick
-// 		hutils.Outf(
-// 			"{{orange}}in:{{/}} %s %s {{orange}}out:{{/}} %s %s\n",
-// 			valueString(inAssetID, value),
-// 			assetString(inAssetID),
-// 			valueString(outAssetID, outAmount),
-// 			assetString(outAssetID),
-// 		)
-
-// 		// Confirm action
-// 		cont, err := promptContinue()
-// 		if !cont || err != nil {
-// 			return err
-// 		}
-
-// 		owner, err := utils.ParseAddress(order.Owner)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		parser, err := tcli.Parser(ctx)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		submit, tx, _, err := cli.GenerateTransaction(ctx, parser, nil, &actions.FillOrder{
-// 			Order: order.ID,
-// 			Owner: owner,
-// 			In:    inAssetID,
-// 			Out:   outAssetID,
-// 			Value: value,
-// 		}, factory)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		if err := submit(ctx); err != nil {
-// 			return err
-// 		}
-// 		success, err := tcli.WaitForTransaction(ctx, tx.ID())
-// 		if err != nil {
-// 			return err
-// 		}
-// 		printStatus(tx.ID(), success)
-// 		return nil
-// 	},
-// }
-
 func performImport(
 	ctx context.Context,
 	scli *rpc.JSONRPCClient,
@@ -693,6 +408,99 @@ func performImport(
 	submit, tx, _, err := dcli.GenerateTransaction(ctx, parser, msg, &actions.ImportAsset{
 		Fill: fill,
 	}, factory)
+	if err != nil {
+		return err
+	}
+	if err := submit(ctx); err != nil {
+		return err
+	}
+	success, err := dtcli.WaitForTransaction(ctx, tx.ID())
+	if err != nil {
+		return err
+	}
+	printStatus(tx.ID(), success)
+	return nil
+}
+
+func performImportMsg(
+	ctx context.Context,
+	scli *rpc.JSONRPCClient,
+	dcli *rpc.JSONRPCClient,
+	dtcli *trpc.JSONRPCClient,
+	exportTxID ids.ID,
+	priv crypto.PrivateKey,
+	factory chain.AuthFactory,
+) error {
+	// Select TxID (if not provided)
+	var err error
+	if exportTxID == ids.Empty {
+		exportTxID, err = promptID("export txID")
+		if err != nil {
+			return err
+		}
+	}
+
+	// Generate warp signature (as long as >= 80% stake)
+	var (
+		msg                     *warp.Message
+		subnetWeight, sigWeight uint64
+	)
+	for ctx.Err() == nil {
+		msg, subnetWeight, sigWeight, err = scli.GenerateAggregateWarpSignature(ctx, exportTxID)
+		if sigWeight >= (subnetWeight*4)/5 && err == nil {
+			break
+		}
+		if err == nil {
+			hutils.Outf(
+				"{{yellow}}waiting for signature weight:{{/}} %d {{yellow}}observed:{{/}} %d\n",
+				subnetWeight,
+				sigWeight,
+			)
+		} else {
+			hutils.Outf("{{red}}encountered error:{{/}} %v\n", err)
+		}
+		cont, err := promptBool("try again")
+		if err != nil {
+			return err
+		}
+		if !cont {
+			hutils.Outf("{{red}}exiting...{{/}}\n")
+			return nil
+		}
+	}
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	wt, err := actions.UnmarshalWarpSequencerMsg(msg.UnsignedMessage.Payload)
+	if err != nil {
+		return err
+	}
+	hutils.Outf(
+		"%s {{yellow}}to:{{/}} %s {{yellow}}source \n",
+		hutils.ToID(
+			msg.UnsignedMessage.Payload,
+		),
+	)
+	hutils.Outf(
+		"{{yellow}}signature weight:{{/}} %d {{yellow}}total weight:{{/}} %d\n",
+		sigWeight,
+		subnetWeight,
+	)
+	if wt.SwapExpiry > time.Now().Unix() {
+		return ErrExpiredTx
+	}
+
+	// Attempt to send dummy transaction if needed
+	if err := submitDummy(ctx, dcli, dtcli, priv.PublicKey(), factory); err != nil {
+		return err
+	}
+
+	// Generate transaction
+	parser, err := dtcli.Parser(ctx)
+	if err != nil {
+		return err
+	}
+	submit, tx, _, err := dcli.GenerateTransaction(ctx, parser, msg, &actions.ImportMsg{}, factory)
 	if err != nil {
 		return err
 	}

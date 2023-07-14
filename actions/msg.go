@@ -8,6 +8,7 @@ import (
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
+	"github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/crypto"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
@@ -52,9 +53,10 @@ func (t *SequencerMsg) Execute(
 }
 
 func (*SequencerMsg) MaxUnits(chain.Rules) uint64 {
+	//TODO this should be larger because it should consider the max byte array length
 	// We use size as the price of this transaction but we could just as easily
 	// use any other calculation.
-	return crypto.PublicKeyLen + crypto.SignatureLen
+	return crypto.PublicKeyLen + consts.IDLen + consts.Uint64Len
 }
 
 func (t *SequencerMsg) Marshal(p *codec.Packer) {

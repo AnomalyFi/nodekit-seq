@@ -15,6 +15,7 @@ var (
 	ErrNotMultiple         = errors.New("must be a multiple")
 	ErrInsufficientSupply  = errors.New("insufficient supply")
 	ErrMustFill            = errors.New("must fill")
+	ErrExpiredTx           = errors.New("expireed tx")
 	ErrDuplicate           = errors.New("duplicate")
 	ErrNoKeys              = errors.New("no available keys")
 	ErrNoChains            = errors.New("no available chains")

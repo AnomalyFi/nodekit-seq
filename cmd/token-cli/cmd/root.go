@@ -146,13 +146,9 @@ func init() {
 	// actions
 	actionCmd.AddCommand(
 		transferCmd,
-
 		createAssetCmd,
 		mintAssetCmd,
 		sequencerMsgCmd,
-		// burnAssetCmd,
-		// modifyAssetCmd,
-
 		importAssetCmd,
 		exportAssetCmd,
 	)
