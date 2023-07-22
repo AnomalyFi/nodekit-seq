@@ -17,7 +17,7 @@ import (
 var _ chain.Action = (*SequencerMsg)(nil)
 
 type SequencerMsg struct {
-	//TODO might need to add this back in at some point but rn it should be fine
+	// TODO might need to add this back in at some point but rn it should be fine
 	ChainId     []byte           `protobuf:"bytes,1,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
 	Data        []byte           `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
 	FromAddress crypto.PublicKey `json:"from_address"`
@@ -66,7 +66,7 @@ func (t *SequencerMsg) Marshal(p *codec.Packer) {
 func UnmarshalSequencerMsg(p *codec.Packer, _ *warp.Message) (chain.Action, error) {
 	var sequencermsg SequencerMsg
 	p.UnpackPublicKey(false, &sequencermsg.FromAddress)
-	//TODO need to correct this and check byte count
+	// TODO need to correct this and check byte count
 	p.UnpackBytes(-1, true, &sequencermsg.Data)
 	p.UnpackBytes(-1, true, &sequencermsg.ChainId)
 	return &sequencermsg, p.Err()

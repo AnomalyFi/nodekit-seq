@@ -192,7 +192,7 @@ var _ = ginkgo.BeforeSuite(func() {
 
 	// Start cluster
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	//TODO start with custom node configs
+	// TODO start with custom node configs
 	resp, err := anrCli.Start(
 		ctx,
 		execPath,

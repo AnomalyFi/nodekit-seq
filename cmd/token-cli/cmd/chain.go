@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	//"encoding/hex"
+	// "encoding/hex"
 
 	hconsts "github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/rpc"
@@ -28,7 +28,7 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 
-	//"github.com/celestiaorg/go-cnc"
+	// "github.com/celestiaorg/go-cnc"
 
 	"github.com/AnomalyFi/nodekit-seq/actions"
 	"github.com/AnomalyFi/nodekit-seq/auth"
