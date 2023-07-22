@@ -17,7 +17,7 @@ jobs:
       matrix:
         level: [v1, v2, v3] # v4 is not supported
     runs-on:
-      labels: ubuntu-20.04-32
+      labels: ubuntu-20.04
     timeout-minutes: 10
     steps:
       - name: Checkout

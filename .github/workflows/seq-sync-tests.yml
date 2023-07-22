@@ -14,7 +14,7 @@ jobs:
   seq-sync-tests:
    # if: ${{ github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'run CI') }}
     runs-on:
-      labels: ubuntu-20.04-32
+      labels: ubuntu-20.04
     timeout-minutes: 25
     steps:
       - name: Checkout
