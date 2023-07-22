@@ -7,12 +7,12 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    types: [labeled,synchronize,reopened]
+  #pull_request:
+    #types: [labeled,synchronize,reopened]
 
 jobs:
   seq-load-tests:
-    if: ${{ github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'run load') }}
+    #if: ${{ github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'run load') }}
     strategy:
       matrix:
         level: [v1, v2, v3] # v4 is not supported

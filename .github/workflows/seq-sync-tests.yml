@@ -7,12 +7,12 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    types: [labeled,synchronize,reopened]
+  #pull_request:
+   # types: [labeled,synchronize,reopened]
 
 jobs:
   seq-sync-tests:
-    if: ${{ github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'run CI') }}
+   # if: ${{ github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'run CI') }}
     runs-on:
       labels: ubuntu-20.04-32
     timeout-minutes: 25
