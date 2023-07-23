@@ -17,7 +17,6 @@ import (
 var _ chain.Action = (*SequencerMsg)(nil)
 
 type SequencerMsg struct {
-	// TODO might need to add this back in at some point but rn it should be fine
 	ChainId     []byte           `protobuf:"bytes,1,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
 	Data        []byte           `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
 	FromAddress crypto.PublicKey `json:"from_address"`
