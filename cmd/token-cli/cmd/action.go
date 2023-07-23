@@ -195,7 +195,7 @@ var sequencerMsgCmd = &cobra.Command{
 		}
 		submit, tx, _, err := cli.GenerateTransaction(ctx, parser, nil, &actions.SequencerMsg{
 			Data:        []byte{0x00, 0x01, 0x02},
-			ChainId:     []byte{0x00},
+			ChainId:     []byte("nkit"),
 			FromAddress: recipient,
 		}, factory)
 		if err != nil {
