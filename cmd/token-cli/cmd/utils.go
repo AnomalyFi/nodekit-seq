@@ -9,16 +9,16 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/utils/set"
 	hconsts "github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/crypto"
+	"github.com/AnomalyFi/hypersdk/rpc"
+	hutils "github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	trpc "github.com/AnomalyFi/nodekit-seq/rpc"
 	"github.com/AnomalyFi/nodekit-seq/utils"
-	"github.com/AnomalyFi/hypersdk/rpc"
-	hutils "github.com/AnomalyFi/hypersdk/utils"
+	"github.com/ava-labs/avalanchego/ids"
+	"github.com/ava-labs/avalanchego/utils/set"
 	"github.com/manifoldco/promptui"
 )
 
@@ -149,6 +149,7 @@ func promptInt(
 				return ErrInputEmpty
 			}
 			amount, err := strconv.Atoi(input)
+			strconv.
 			if err != nil {
 				return err
 			}
@@ -206,6 +207,24 @@ func promptTime(label string) (int64, error) {
 		return -1, err
 	}
 	return strconv.ParseInt(rawTime, 10, 64)
+}
+
+func promptUint(label string) (uint64, error) {
+	promptText := promptui.Prompt{
+		Label: label,
+		Validate: func(input string) error {
+			if len(input) == 0 {
+				return ErrInputEmpty
+			}
+			_, err := strconv.ParseUInt(input, 10, 64)
+			return err
+		},
+	}
+	rawTime, err := promptText.Run()
+	if err != nil {
+		return -1, err
+	}
+	return strconv.ParseUInt(rawTime, 10, 64)
 }
 
 func promptContinue() (bool, error) {

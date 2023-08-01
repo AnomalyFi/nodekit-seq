@@ -40,6 +40,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/vm"
 	"github.com/AnomalyFi/hypersdk/workers"
 
+	"github.com/AnomalyFi/hypersdk/rpc"
 	"github.com/AnomalyFi/nodekit-seq/actions"
 	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/consts"
@@ -47,7 +48,6 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	trpc "github.com/AnomalyFi/nodekit-seq/rpc"
 	"github.com/AnomalyFi/nodekit-seq/utils"
-	"github.com/AnomalyFi/hypersdk/rpc"
 )
 
 const (
@@ -492,10 +492,11 @@ func issueSequencerSimpleTx(
 		},
 		nil,
 		&actions.SequencerMsg{
-			Data:  []byte{2, 248, 117, 130, 5, 57, 8, 132, 89, 104, 47, 0, 133, 4, 90, 118, 125, 113, 130, 82, 8, 148, 228, 159, 63, 227, 110, 159, 13, 235, 100, 138, 112, 128, 80, 21, 170, 137, 148, 2, 255, 248, 136, 13, 224, 182, 179, 167, 100, 0, 0, 128, 192, 1, 160, 187, 97, 123, 192, 59, 150, 57, 70, 19, 129, 28, 78, 191, 80, 67, 53, 195, 22, 137, 141, 48, 197, 124, 151, 245, 227, 197, 130, 253, 2, 109, 6, 160, 21, 40, 87, 45, 214, 180, 231, 224, 205, 62, 27, 172, 72, 18, 62, 31, 237, 121, 68, 25, 4, 231, 13, 193, 104, 89, 15, 107, 13, 35, 172, 216},
-			ChainId:  []byte{0x00, 0x01, 0x02},
+			Data:        []byte{2, 248, 117, 130, 5, 57, 8, 132, 89, 104, 47, 0, 133, 4, 90, 118, 125, 113, 130, 82, 8, 148, 228, 159, 63, 227, 110, 159, 13, 235, 100, 138, 112, 128, 80, 21, 170, 137, 148, 2, 255, 248, 136, 13, 224, 182, 179, 167, 100, 0, 0, 128, 192, 1, 160, 187, 97, 123, 192, 59, 150, 57, 70, 19, 129, 28, 78, 191, 80, 67, 53, 195, 22, 137, 141, 48, 197, 124, 151, 245, 227, 197, 130, 253, 2, 109, 6, 160, 21, 40, 87, 45, 214, 180, 231, 224, 205, 62, 27, 172, 72, 18, 62, 31, 237, 121, 68, 25, 4, 231, 13, 193, 104, 89, 15, 107, 13, 35, 172, 216},
+			ChainId:     []byte{0x00, 0x01, 0x02},
 			FromAddress: to,
 		},
+		false,
 	)
 	tx, err := tx.Sign(factory, consts.ActionRegistry, consts.AuthRegistry)
 	gomega.Ω(err).To(gomega.BeNil())
@@ -504,7 +505,6 @@ func issueSequencerSimpleTx(
 	_, err = i.cli.SubmitTx(context.TODO(), tx.Bytes())
 	return tx.ID(), err
 }
-
 
 func issueSimpleTx(
 	i *instance,
@@ -523,6 +523,7 @@ func issueSimpleTx(
 			To:    to,
 			Value: amount,
 		},
+		false,
 	)
 	tx, err := tx.Sign(factory, consts.ActionRegistry, consts.AuthRegistry)
 	gomega.Ω(err).To(gomega.BeNil())

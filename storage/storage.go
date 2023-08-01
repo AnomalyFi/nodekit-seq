@@ -48,6 +48,7 @@ const (
 	heightPrefix       = 0x4
 	incomingWarpPrefix = 0x5
 	outgoingWarpPrefix = 0x6
+	blockPrefix        = 0x7
 )
 
 var (
@@ -407,6 +408,15 @@ func PrefixLoanKey(asset ids.ID, destination ids.ID) (k []byte) {
 	k[0] = loanPrefix
 	copy(k[1:], asset[:])
 	copy(k[1+consts.IDLen:], destination[:])
+	return
+}
+
+// [loanPrefix] + [asset] + [destination]
+func PrefixBlockKey(block ids.ID, parent ids.ID) (k []byte) {
+	k = make([]byte, 1+consts.IDLen*2)
+	k[0] = blockPrefix
+	copy(k[1:], block[:])
+	copy(k[1+consts.IDLen:], parent[:])
 	return
 }
 

@@ -85,7 +85,7 @@ var transferCmd = &cobra.Command{
 			To:    recipient,
 			Asset: assetID,
 			Value: amount,
-		}, factory)
+		}, factory, false)
 		if err != nil {
 			return err
 		}
@@ -138,7 +138,7 @@ var createAssetCmd = &cobra.Command{
 		}
 		submit, tx, _, err := cli.GenerateTransaction(ctx, parser, nil, &actions.CreateAsset{
 			Metadata: []byte(metadata),
-		}, factory)
+		}, factory, false)
 		if err != nil {
 			return err
 		}
@@ -197,7 +197,7 @@ var sequencerMsgCmd = &cobra.Command{
 			Data:        []byte{0x00, 0x01, 0x02},
 			ChainId:     []byte{0x00},
 			FromAddress: recipient,
-		}, factory)
+		}, factory, false)
 		if err != nil {
 			return err
 		}
@@ -279,7 +279,7 @@ var mintAssetCmd = &cobra.Command{
 			Asset: assetID,
 			To:    recipient,
 			Value: amount,
-		}, factory)
+		}, factory, false)
 		if err != nil {
 			return err
 		}
@@ -407,7 +407,7 @@ func performImport(
 	}
 	submit, tx, _, err := dcli.GenerateTransaction(ctx, parser, msg, &actions.ImportAsset{
 		Fill: fill,
-	}, factory)
+	}, factory, false)
 	if err != nil {
 		return err
 	}
@@ -471,10 +471,16 @@ func performImportMsg(
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
-	wt, err := actions.UnmarshalWarpSequencerMsg(msg.UnsignedMessage.Payload)
+	wt, err := chain.UnmarshalWarpBlock(msg.UnsignedMessage.Payload)
 	if err != nil {
 		return err
 	}
+	hutils.Outf(
+		"{{yellow}}Timestamp:{{/}} %d {{yellow}}Height:{{/}} %d\n",
+		wt.Tmstmp,
+		wt.Hght,
+	)
+
 	hutils.Outf(
 		"%s {{yellow}}to:{{/}} %s {{yellow}}source \n",
 		hutils.ToID(
@@ -486,9 +492,6 @@ func performImportMsg(
 		sigWeight,
 		subnetWeight,
 	)
-	if wt.SwapExpiry > time.Now().Unix() {
-		return ErrExpiredTx
-	}
 
 	// Attempt to send dummy transaction if needed
 	if err := submitDummy(ctx, dcli, dtcli, priv.PublicKey(), factory); err != nil {
@@ -500,7 +503,8 @@ func performImportMsg(
 	if err != nil {
 		return err
 	}
-	submit, tx, _, err := dcli.GenerateTransaction(ctx, parser, msg, &actions.ImportMsg{}, factory)
+	//TODO this is what tests our block validation
+	submit, tx, _, err := dcli.GenerateTransaction(ctx, parser, msg, &actions.ImportBlockMsg{}, factory, true)
 	if err != nil {
 		return err
 	}
@@ -546,7 +550,7 @@ func submitDummy(
 			submit, tx, _, err := cli.GenerateTransaction(ctx, parser, nil, &actions.Transfer{
 				To:    dest,
 				Value: txsSent + 1, // prevent duplicate txs
-			}, factory)
+			}, factory, false)
 			if err != nil {
 				return err
 			}
@@ -703,7 +707,7 @@ var exportAssetCmd = &cobra.Command{
 			SwapOut:     swapOut,
 			SwapExpiry:  swapExpiry,
 			Destination: destination,
-		}, factory)
+		}, factory, false)
 		if err != nil {
 			return err
 		}
@@ -727,6 +731,120 @@ var exportAssetCmd = &cobra.Command{
 				return err
 			}
 			if err := performImport(ctx, cli, rpc.NewJSONRPCClient(uris[0]), trpc.NewJSONRPCClient(uris[0], destination), tx.ID(), priv, factory); err != nil {
+				return err
+			}
+		}
+
+		// Ask if user would like to switch to destination chain
+		sw, err := promptBool("switch default chain to destination")
+		if err != nil {
+			return err
+		}
+		if !sw {
+			return nil
+		}
+		return StoreDefault(defaultChainKey, destination[:])
+	},
+}
+
+var exportBlockCmd = &cobra.Command{
+	Use: "export-block",
+	RunE: func(*cobra.Command, []string) error {
+		ctx := context.Background()
+		currentChainID, priv, factory, cli, tcli, err := defaultActor()
+		if err != nil {
+			return err
+		}
+
+		sourceChainID, _, err := promptChain("sourceChainID", set.Set[ids.ID]{currentChainID: {}})
+
+		if err != nil {
+			return err
+		}
+
+		blockRoot, err := promptID("stateRoot")
+
+		if err != nil {
+			return err
+		}
+
+		parentRoot, err := promptID("parentRoot")
+
+		if err != nil {
+			return err
+		}
+
+		height, err := promptUint("Height")
+
+		if err != nil {
+			return err
+		}
+
+		tmstmp, err := promptTime("Timestamp")
+
+		if err != nil {
+			return err
+		}
+
+		//TODO need to prompt for Tmstmp and Hght
+
+		// Determine destination
+		destination := sourceChainID
+		// if !ret {
+		// 	destination, _, err = promptChain("destination", set.Set[ids.ID]{currentChainID: {}})
+		// 	if err != nil {
+		// 		return err
+		// 	}
+		// }
+
+		// Determine if swap in
+
+		// Confirm action
+		cont, err := promptContinue()
+		if !cont || err != nil {
+			return err
+		}
+
+		// Attempt to send dummy transaction if needed
+		if err := submitDummy(ctx, cli, tcli, priv.PublicKey(), factory); err != nil {
+			return err
+		}
+
+		// Generate transaction
+		parser, err := tcli.Parser(ctx)
+		if err != nil {
+			return err
+		}
+		submit, tx, _, err := cli.GenerateTransaction(ctx, parser, nil, &actions.ExportBlockMsg{
+			Prnt:        parentRoot,
+			Tmstmp:      tmstmp,
+			Hght:        height,
+			StateRoot:   blockRoot,
+			Destination: destination,
+		}, factory, false)
+		if err != nil {
+			return err
+		}
+		if err := submit(ctx); err != nil {
+			return err
+		}
+		success, err := tcli.WaitForTransaction(ctx, tx.ID())
+		if err != nil {
+			return err
+		}
+		printStatus(tx.ID(), success)
+
+		// Perform import
+		imp, err := promptBool("perform import on destination")
+		if err != nil {
+			return err
+		}
+		if imp {
+			uris, err := GetChain(destination)
+			if err != nil {
+				return err
+			}
+			if err := performImportMsg(ctx, cli, rpc.NewJSONRPCClient(uris[0]), trpc.NewJSONRPCClient(uris[0], destination), tx.ID(), priv, factory); err != nil {
 				return err
 			}
 		}

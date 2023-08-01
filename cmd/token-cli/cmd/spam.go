@@ -159,7 +159,7 @@ var runSpamCmd = &cobra.Command{
 				To:    pk.PublicKey(),
 				Asset: ids.Empty,
 				Value: distAmount,
-			}, factory)
+			}, factory, false)
 			if err != nil {
 				return err
 			}
