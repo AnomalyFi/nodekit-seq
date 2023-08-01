@@ -149,7 +149,6 @@ func promptInt(
 				return ErrInputEmpty
 			}
 			amount, err := strconv.Atoi(input)
-			strconv.
 			if err != nil {
 				return err
 			}
