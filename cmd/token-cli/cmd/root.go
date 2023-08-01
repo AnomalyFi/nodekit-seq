@@ -151,6 +151,7 @@ func init() {
 		sequencerMsgCmd,
 		importAssetCmd,
 		exportAssetCmd,
+		exportBlockCmd,
 	)
 
 	// spam

@@ -215,15 +215,15 @@ func promptUint(label string) (uint64, error) {
 			if len(input) == 0 {
 				return ErrInputEmpty
 			}
-			_, err := strconv.ParseUInt(input, 10, 64)
+			_, err := strconv.ParseUint(input, 10, 64)
 			return err
 		},
 	}
 	rawTime, err := promptText.Run()
 	if err != nil {
-		return -1, err
+		return 1, err
 	}
-	return strconv.ParseUInt(rawTime, 10, 64)
+	return strconv.ParseUint(rawTime, 10, 64)
 }
 
 func promptContinue() (bool, error) {
@@ -323,6 +323,47 @@ func promptChain(label string, excluded set.Set[ids.ID]) (ids.ID, []string, erro
 		"{{cyan}}available chains:{{/}} %d {{cyan}}excluded:{{/}} %+v\n",
 		len(filteredChains),
 		excludedChains,
+	)
+	keys := make([]ids.ID, 0, len(filteredChains))
+	for _, chainID := range filteredChains {
+		hutils.Outf(
+			"%d) {{cyan}}chainID:{{/}} %s\n",
+			len(keys),
+			chainID,
+		)
+		keys = append(keys, chainID)
+	}
+
+	chainIndex, err := promptChoice(label, len(keys))
+	if err != nil {
+		return ids.Empty, nil, err
+	}
+	chainID := keys[chainIndex]
+	return chainID, chains[chainID], nil
+}
+
+func promptChainNoExclude(label string) (ids.ID, []string, error) {
+	chains, err := GetChains()
+	if err != nil {
+		return ids.Empty, nil, err
+	}
+	filteredChains := make([]ids.ID, 0, len(chains))
+	//excludedChains := []ids.ID{}
+	for chainID := range chains {
+		// if excluded != nil && excluded.Contains(chainID) {
+		// 	excludedChains = append(excludedChains, chainID)
+		// 	continue
+		// }
+		filteredChains = append(filteredChains, chainID)
+	}
+	if len(filteredChains) == 0 {
+		return ids.Empty, nil, ErrNoChains
+	}
+
+	// Select chain
+	hutils.Outf(
+		"{{cyan}}available chains:{{/}} %d \n",
+		len(filteredChains),
 	)
 	keys := make([]ids.ID, 0, len(filteredChains))
 	for _, chainID := range filteredChains {

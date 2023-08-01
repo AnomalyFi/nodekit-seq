@@ -17,6 +17,10 @@ import (
 var _ chain.Action = (*ImportBlockMsg)(nil)
 
 type ImportBlockMsg struct {
+	// Fill indicates if the actor wishes to fill the order request in the warp
+	// message. This must be true if the warp message is in a block with
+	// a timestamp < [SwapExpiry].
+	Fill bool `json:"fill"`
 	// warpTransfer is parsed from the inner *warp.Message
 	warpMsg *chain.WarpBlock
 
@@ -61,6 +65,7 @@ func UnmarshalImportBlockMsg(p *codec.Packer, wm *warp.Message) (chain.Action, e
 		imp ImportBlockMsg
 		err error
 	)
+	imp.Fill = p.UnpackBool()
 	if err := p.Err(); err != nil {
 		return nil, err
 	}
@@ -76,7 +81,7 @@ func UnmarshalImportBlockMsg(p *codec.Packer, wm *warp.Message) (chain.Action, e
 // All we encode that is action specific for now is the type byte from the
 // registry.
 func (i *ImportBlockMsg) Marshal(p *codec.Packer) {
-	print("Marshal")
+	p.PackBool(i.Fill)
 }
 
 func (*ImportBlockMsg) ValidRange(chain.Rules) (int64, int64) {

@@ -517,6 +517,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 					Value: sendAmount,
 				},
 				factory,
+				false,
 			)
 			gomega.Ω(err).Should(gomega.BeNil())
 			hutils.Outf("{{yellow}}generated transaction{{/}}\n")
@@ -598,6 +599,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 					Destination: destination,
 				},
 				factory,
+				false,
 			)
 			gomega.Ω(err).Should(gomega.BeNil())
 			txID = tx.ID()
@@ -646,6 +648,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 							Value: 1000 + uint64(i), // ensure we don't produce same tx
 						},
 						factory,
+						false,
 					)
 					gomega.Ω(err).Should(gomega.BeNil())
 					hutils.Outf("{{yellow}}generated transaction:{{/}} %s\n", txID)
@@ -740,6 +743,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 				msg,
 				&actions.ImportAsset{},
 				factory,
+				false,
 			)
 			gomega.Ω(err).Should(gomega.BeNil())
 			txID = tx.ID()
@@ -812,6 +816,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 					Destination: ids.GenerateTestID(),
 				},
 				otherFactory,
+				false,
 			)
 			gomega.Ω(err).Should(gomega.BeNil())
 			hutils.Outf("{{yellow}}generated transaction:{{/}} %s\n", txID)
@@ -854,6 +859,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 					Reward:      100,
 				},
 				otherFactory,
+				false,
 			)
 			gomega.Ω(err).Should(gomega.BeNil())
 			txID = tx.ID()
@@ -957,6 +963,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 				msg,
 				&actions.ImportAsset{},
 				factory,
+				false,
 			)
 			gomega.Ω(err).Should(gomega.BeNil())
 			txID = tx.ID()
@@ -1023,6 +1030,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 					Destination: source,
 				},
 				otherFactory,
+				false,
 			)
 			gomega.Ω(err).Should(gomega.BeNil())
 			txID = tx.ID()
@@ -1119,6 +1127,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 				msg,
 				&actions.ImportAsset{},
 				factory,
+				false,
 			)
 			gomega.Ω(err).Should(gomega.BeNil())
 			txID = tx.ID()
@@ -1188,6 +1197,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 					Destination: destination,
 				},
 				factory,
+				false,
 			)
 			gomega.Ω(err).Should(gomega.BeNil())
 			txID = tx.ID()
@@ -1271,6 +1281,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 					Fill: true,
 				},
 				factory,
+				false,
 			)
 			gomega.Ω(err).Should(gomega.BeNil())
 			txID = tx.ID()
@@ -1502,6 +1513,7 @@ func awaitHealthy(cli runner_sdk.Client, instances []instance) {
 					Value: 1,
 				},
 				factory,
+				false,
 			)
 			gomega.Ω(err).Should(gomega.BeNil())
 			// Broadcast and wait for transaction
@@ -1540,6 +1552,7 @@ func generateBlocks(
 				Value: 1,
 			},
 			factory,
+			false,
 		)
 		if failOnError {
 			gomega.Ω(err).Should(gomega.BeNil())
@@ -1606,6 +1619,7 @@ func acceptTransaction(cli *rpc.JSONRPCClient, tcli *trpc.JSONRPCClient) {
 				Value: sendAmount,
 			},
 			factory,
+			false,
 		)
 		gomega.Ω(err).Should(gomega.BeNil())
 		hutils.Outf("{{yellow}}generated transaction{{/}}\n")

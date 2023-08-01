@@ -7,6 +7,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	// "math/rand"
@@ -481,12 +482,12 @@ func performImportMsg(
 		wt.Hght,
 	)
 
-	hutils.Outf(
-		"%s {{yellow}}to:{{/}} %s {{yellow}}source \n",
-		hutils.ToID(
-			msg.UnsignedMessage.Payload,
-		),
-	)
+	// hutils.Outf(
+	// 	"%s {{yellow}}to:{{/}} %s {{yellow}}source \n",
+	// 	hutils.ToID(
+	// 		msg.UnsignedMessage.Payload,
+	// 	),
+	// )
 	hutils.Outf(
 		"{{yellow}}signature weight:{{/}} %d {{yellow}}total weight:{{/}} %d\n",
 		sigWeight,
@@ -495,22 +496,36 @@ func performImportMsg(
 
 	// Attempt to send dummy transaction if needed
 	if err := submitDummy(ctx, dcli, dtcli, priv.PublicKey(), factory); err != nil {
+		fmt.Println("Error in submit of dummy TX: %w", err)
 		return err
 	}
+	fmt.Println("MAKE IT PAST DUMMY")
 
 	// Generate transaction
 	parser, err := dtcli.Parser(ctx)
 	if err != nil {
+		fmt.Println("Error in parser of dummy TX: %w", err)
 		return err
 	}
+
+	fmt.Println("MAKE IT PAST Parser")
+
 	//TODO this is what tests our block validation
 	submit, tx, _, err := dcli.GenerateTransaction(ctx, parser, msg, &actions.ImportBlockMsg{}, factory, true)
 	if err != nil {
+		fmt.Println("Error in generation of verification TX: %w", err)
 		return err
 	}
+
+	fmt.Println("MAKE IT PAST generate")
+
 	if err := submit(ctx); err != nil {
+		fmt.Println("Error in submission of verification TX: %w", err)
 		return err
 	}
+
+	fmt.Println("MAKE IT PAST submit")
+
 	success, err := dtcli.WaitForTransaction(ctx, tx.ID())
 	if err != nil {
 		return err
@@ -751,12 +766,13 @@ var exportBlockCmd = &cobra.Command{
 	Use: "export-block",
 	RunE: func(*cobra.Command, []string) error {
 		ctx := context.Background()
-		currentChainID, priv, factory, cli, tcli, err := defaultActor()
+		_, priv, factory, cli, tcli, err := defaultActor()
 		if err != nil {
 			return err
 		}
 
-		sourceChainID, _, err := promptChain("sourceChainID", set.Set[ids.ID]{currentChainID: {}})
+		//, set.Set[ids.ID]{currentChainID: {}}
+		sourceChainID, _, err := promptChainNoExclude("sourceChainID")
 
 		if err != nil {
 			return err
@@ -786,8 +802,6 @@ var exportBlockCmd = &cobra.Command{
 			return err
 		}
 
-		//TODO need to prompt for Tmstmp and Hght
-
 		// Determine destination
 		destination := sourceChainID
 		// if !ret {
@@ -810,6 +824,8 @@ var exportBlockCmd = &cobra.Command{
 			return err
 		}
 
+		fmt.Println("GOT TO HERE")
+
 		// Generate transaction
 		parser, err := tcli.Parser(ctx)
 		if err != nil {
@@ -823,9 +839,11 @@ var exportBlockCmd = &cobra.Command{
 			Destination: destination,
 		}, factory, false)
 		if err != nil {
+			fmt.Errorf("Error in generation of TX: %w", err)
 			return err
 		}
 		if err := submit(ctx); err != nil {
+			fmt.Errorf("Error in submit of TX: %w", err)
 			return err
 		}
 		success, err := tcli.WaitForTransaction(ctx, tx.ID())
@@ -835,7 +853,7 @@ var exportBlockCmd = &cobra.Command{
 		printStatus(tx.ID(), success)
 
 		// Perform import
-		imp, err := promptBool("perform import on destination")
+		imp, err := promptBool("perform import on destination for block")
 		if err != nil {
 			return err
 		}

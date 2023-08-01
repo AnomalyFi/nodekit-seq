@@ -334,7 +334,7 @@ var runSpamCmd = &cobra.Command{
 								To:    recipient,
 								Asset: ids.Empty,
 								Value: uint64(v), // ensure txs are unique
-							}, factory, unitPrice)
+							}, factory, unitPrice, false)
 							if err != nil {
 								hutils.Outf("{{orange}}failed to generate:{{/}} %v\n", err)
 								continue
@@ -412,7 +412,7 @@ var runSpamCmd = &cobra.Command{
 				To:    key.PublicKey(),
 				Asset: ids.Empty,
 				Value: returnAmt,
-			}, auth.NewED25519Factory(accounts[i]))
+			}, auth.NewED25519Factory(accounts[i]), false)
 			if err != nil {
 				return err
 			}

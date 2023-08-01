@@ -122,10 +122,10 @@ func (e *ExportBlockMsg) Marshal(p *codec.Packer) {
 
 func UnmarshalExportBlockMsg(p *codec.Packer, _ *warp.Message) (chain.Action, error) {
 	var export ExportBlockMsg
-	p.UnpackID(false, &export.Prnt)
-	export.Tmstmp = p.UnpackInt64(false)
-	export.Hght = p.UnpackUint64(false)
-	p.UnpackID(false, &export.StateRoot)
+	p.UnpackID(true, &export.Prnt)
+	export.Tmstmp = p.UnpackInt64(true)
+	export.Hght = p.UnpackUint64(true)
+	p.UnpackID(true, &export.StateRoot)
 	p.UnpackID(true, &export.Destination)
 	if err := p.Err(); err != nil {
 		return nil, err
