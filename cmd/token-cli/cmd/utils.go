@@ -391,6 +391,17 @@ func valueString(assetID ids.ID, value uint64) string {
 	return strconv.FormatUint(value, 10)
 }
 
+func valueStringUint(value uint64) string {
+	// Custom assets are denoted in raw units
+	return strconv.FormatUint(value, 10)
+}
+
+func valueStringInt(value int64) string {
+	// Custom assets are denoted in raw units
+	return strconv.FormatInt(value, 10)
+}
+
+
 func assetString(assetID ids.ID) string {
 	if assetID == ids.Empty {
 		return consts.Symbol

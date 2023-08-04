@@ -17,6 +17,7 @@ import (
 
 	//"encoding/hex"
 
+	"github.com/AnomalyFi/hypersdk/chain"
 	hconsts "github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/rpc"
 	"github.com/AnomalyFi/hypersdk/utils"
@@ -342,46 +343,6 @@ var watchChainCmd = &cobra.Command{
 							assetStr = consts.Symbol
 						}
 						summaryStr = fmt.Sprintf("%s %s -> %s", amountStr, assetStr, tutils.Address(action.To))
-
-					// case *actions.CreateOrder:
-					// 	inTickStr := strconv.FormatUint(action.InTick, 10)
-					// 	inStr := action.In.String()
-					// 	if action.In == ids.Empty {
-					// 		inTickStr = utils.FormatBalance(action.InTick)
-					// 		inStr = consts.Symbol
-					// 	}
-					// 	outTickStr := strconv.FormatUint(action.OutTick, 10)
-					// 	supplyStr := strconv.FormatUint(action.Supply, 10)
-					// 	outStr := action.Out.String()
-					// 	if action.Out == ids.Empty {
-					// 		outTickStr = utils.FormatBalance(action.OutTick)
-					// 		supplyStr = utils.FormatBalance(action.Supply)
-					// 		outStr = consts.Symbol
-					// 	}
-					// 	summaryStr = fmt.Sprintf("%s %s -> %s %s (supply: %s %s)", inTickStr, inStr, outTickStr, outStr, supplyStr, outStr)
-					// case *actions.FillOrder:
-					// 	or, _ := actions.UnmarshalOrderResult(result.Output)
-					// 	inAmtStr := strconv.FormatUint(or.In, 10)
-					// 	inStr := action.In.String()
-					// 	if action.In == ids.Empty {
-					// 		inAmtStr = utils.FormatBalance(or.In)
-					// 		inStr = consts.Symbol
-					// 	}
-					// 	outAmtStr := strconv.FormatUint(or.Out, 10)
-					// 	remainingStr := strconv.FormatUint(or.Remaining, 10)
-					// 	outStr := action.Out.String()
-					// 	if action.Out == ids.Empty {
-					// 		outAmtStr = utils.FormatBalance(or.Out)
-					// 		remainingStr = utils.FormatBalance(or.Remaining)
-					// 		outStr = consts.Symbol
-					// 	}
-					// 	summaryStr = fmt.Sprintf(
-					// 		"%s %s -> %s %s (remaining: %s %s)",
-					// 		inAmtStr, inStr, outAmtStr, outStr, remainingStr, outStr,
-					// 	)
-					// case *actions.CloseOrder:
-					// 	summaryStr = fmt.Sprintf("orderID: %s", action.Order)
-
 					case *actions.ImportAsset:
 						wm := tx.WarpMessage
 						signers, _ := wm.Signature.NumSigners()
@@ -418,6 +379,16 @@ var watchChainCmd = &cobra.Command{
 						if wt.SwapIn > 0 {
 							summaryStr += fmt.Sprintf(" | swap in: %s %s swap out: %s %s expiry: %d", valueString(outputAssetID, wt.SwapIn), assetString(outputAssetID), valueString(wt.AssetOut, wt.SwapOut), assetString(wt.AssetOut), wt.SwapExpiry)
 						}
+					case *actions.ImportBlockMsg:
+						wm := tx.WarpMessage
+						signers, _ := wm.Signature.NumSigners()
+						wt, _ := chain.UnmarshalWarpBlock(wm.Payload)
+						summaryStr = fmt.Sprintf("source: %s signers: %d | ", wm.SourceChainID, signers)
+						summaryStr += fmt.Sprintf("(parent: %s) -> (child: %s) timestamp: %s height: %s", wt.Prnt, wt.StateRoot, valueStringInt(wt.Tmstmp), valueStringUint(wt.Hght))
+					case *actions.ExportBlockMsg:
+						wt, _ := chain.UnmarshalWarpBlock(result.WarpMessage.Payload)
+						summaryStr = fmt.Sprintf("destination: %s | ", action.Destination)
+						summaryStr += fmt.Sprintf("(parent: %s) -> (child: %s) timestamp: %s height: %s", wt.Prnt, wt.StateRoot, valueStringInt(wt.Tmstmp), valueStringUint(wt.Hght))
 					case *actions.SequencerMsg:
 						summaryStr = fmt.Sprintf("data: %s", string(action.Data))
 					}
