@@ -265,7 +265,7 @@ var watchChainCmd = &cobra.Command{
 			tpsWindow         = window.Window{}
 		)
 		for ctx.Err() == nil {
-			blk, results, err := scli.ListenBlock(ctx, parser)
+			blk, results, blkId, err := scli.ListenBlock(ctx, parser) //nolint:all
 			if err != nil {
 				return err
 			}
@@ -284,11 +284,12 @@ var watchChainCmd = &cobra.Command{
 				runningDuration := time.Since(start)
 				tpsDivisor := math.Min(window.WindowSize, runningDuration.Seconds())
 				utils.Outf(
-					"{{green}}height:{{/}}%d {{green}}txs:{{/}}%d {{green}}units:{{/}}%d {{green}}root:{{/}}%s {{green}}TPS:{{/}}%.2f {{green}}split:{{/}}%dms\n", //nolint:lll
+					"{{green}}height:{{/}}%d {{green}}txs:{{/}}%d {{green}}units:{{/}}%d {{green}}root:{{/}}%s {{green}}ID:{{/}}%s {{green}}TPS:{{/}}%.2f {{green}}split:{{/}}%dms\n", //nolint:lll
 					blk.Hght,
 					len(blk.Txs),
 					blk.UnitsConsumed,
 					blk.StateRoot,
+					blkId,
 					float64(window.Sum(tpsWindow))/tpsDivisor,
 					time.Since(lastBlockDetailed).Milliseconds(),
 				)

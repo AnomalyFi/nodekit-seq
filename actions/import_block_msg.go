@@ -60,6 +60,12 @@ func (i *ImportBlockMsg) MaxUnits(chain.Rules) uint64 {
 	return uint64(len(i.warpMessage.Payload))
 }
 
+// All we encode that is action specific for now is the type byte from the
+// registry.
+func (i *ImportBlockMsg) Marshal(p *codec.Packer) {
+	p.PackBool(i.Fill)
+}
+
 func UnmarshalImportBlockMsg(p *codec.Packer, wm *warp.Message) (chain.Action, error) {
 	var (
 		imp ImportBlockMsg
@@ -76,12 +82,6 @@ func UnmarshalImportBlockMsg(p *codec.Packer, wm *warp.Message) (chain.Action, e
 	}
 
 	return &imp, nil
-}
-
-// All we encode that is action specific for now is the type byte from the
-// registry.
-func (i *ImportBlockMsg) Marshal(p *codec.Packer) {
-	p.PackBool(i.Fill)
 }
 
 func (*ImportBlockMsg) ValidRange(chain.Rules) (int64, int64) {

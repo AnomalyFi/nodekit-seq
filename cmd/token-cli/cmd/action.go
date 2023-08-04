@@ -511,7 +511,9 @@ func performImportMsg(
 	fmt.Println("MAKE IT PAST Parser")
 
 	//TODO this is what tests our block validation
-	submit, tx, _, err := dcli.GenerateTransaction(ctx, parser, msg, &actions.ImportBlockMsg{}, factory, true)
+	submit, tx, _, err := dcli.GenerateTransaction(ctx, parser, msg, &actions.ImportBlockMsg{
+		Fill: true,
+	}, factory, true)
 	if err != nil {
 		fmt.Println("Error in generation of verification TX: %w", err)
 		return err
