@@ -12,7 +12,8 @@ import (
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/consts"
-	"github.com/AnomalyFi/hypersdk/crypto"
+	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
+	"github.com/AnomalyFi/hypersdk/state"
 	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/storage"
@@ -28,40 +29,31 @@ type ExportBlockMsg struct {
 	Destination ids.ID `json:"destination"`
 }
 
-func (e *ExportBlockMsg) StateKeys(rauth chain.Auth, _ ids.ID) [][]byte {
-	//TODO needs to be fixed
-	// var (
-	// 	keys  [][]byte
-	// 	actor = auth.GetActor(rauth)
-	// )
-	// if e.Return {
-	// 	keys = [][]byte{
-	// 		storage.PrefixAssetKey(e.Asset),
-	// 		storage.PrefixBalanceKey(actor, e.Asset),
-	// 	}
-	// } else {
-	// 	keys = [][]byte{
-	// 		storage.PrefixAssetKey(e.Asset),
-	// 		storage.PrefixLoanKey(e.Asset, e.Destination),
-	// 		storage.PrefixBalanceKey(actor, e.Asset),
-	// 	}
-	// }
+func (*ExportBlockMsg) GetTypeID() uint8 {
+	return exportBlockID
+}
 
-	return [][]byte{
-		storage.PrefixBlockKey(e.StateRoot, e.Destination),
-		storage.PrefixBlockKey(e.Prnt, e.Destination),
+func (e *ExportBlockMsg) StateKeys(rauth chain.Auth, _ ids.ID) []string {
+	//TODO may need to be fixed
+	return []string{
+		string(storage.PrefixBlockKey(e.StateRoot, e.Destination)),
+		string(storage.PrefixBlockKey(e.Prnt, e.Destination)),
 	}
+}
+
+// TODO probably need to fix
+func (e *ExportBlockMsg) StateKeysMaxChunks() []uint16 {
+	return []uint16{storage.AssetChunks, storage.LoanChunks, storage.BalanceChunks}
 }
 
 func (e *ExportBlockMsg) executeLoan(
 	ctx context.Context,
-	r chain.Rules,
-	db chain.Database,
-	actor crypto.PublicKey,
+	mu state.Mutable,
+	actor ed25519.PublicKey,
 	txID ids.ID,
-) (*chain.Result, error) {
-	unitsUsed := e.MaxUnits(r)
+) (bool, uint64, []byte, *warp.UnsignedMessage, error) {
 
+	//TODO may need to add a destination chainID to this
 	wt := &chain.WarpBlock{
 		Prnt:      e.Prnt,
 		Tmstmp:    e.Tmstmp,
@@ -71,45 +63,54 @@ func (e *ExportBlockMsg) executeLoan(
 	}
 	payload, err := wt.Marshal()
 	if err != nil {
-		return &chain.Result{Success: false, Units: unitsUsed, Output: utils.ErrBytes(err)}, nil
+		return false, ExportBlockComputeUnits, utils.ErrBytes(err), nil, nil
 	}
 	wm := &warp.UnsignedMessage{
-		DestinationChainID: e.Destination,
-		// SourceChainID is populated by hypersdk
+		// NetworkID + SourceChainID is populated by hypersdk
 		Payload: payload,
 	}
-	return &chain.Result{Success: true, Units: unitsUsed, WarpMessage: wm}, nil
+	return true, ExportBlockComputeUnits, nil, wm, nil
 }
 
 func (e *ExportBlockMsg) Execute(
 	ctx context.Context,
-	r chain.Rules,
-	db chain.Database,
+	_ chain.Rules,
+	mu state.Mutable,
 	_ int64,
 	rauth chain.Auth,
 	txID ids.ID,
 	_ bool,
-) (*chain.Result, error) {
+) (bool, uint64, []byte, *warp.UnsignedMessage, error) {
 
 	actor := auth.GetActor(rauth)
-	unitsUsed := e.MaxUnits(r) // max units == units
+	//unitsUsed := e.MaxUnits(r) // max units == units
 	if e.Destination == ids.Empty {
 		// This would result in multiplying balance export by whoever imports the
 		// transaction.
-		return &chain.Result{Success: false, Units: unitsUsed, Output: OutputAnycast}, nil
+		return false, ExportBlockComputeUnits, OutputAnycast, nil, nil
 	}
 	// TODO: check if destination is ourselves
 	// if e.Return {
 	// 	return e.executeReturn(ctx, r, db, actor, txID)
 	// }
-	return e.executeLoan(ctx, r, db, actor, txID)
+	return e.executeLoan(ctx, mu, actor, txID)
 }
 
 func (*ExportBlockMsg) MaxUnits(chain.Rules) uint64 {
 	//TODO fix this
-	return consts.IDLen +
-		consts.Uint64Len + consts.Uint64Len +
-		consts.IDLen + consts.IDLen
+	return ExportBlockComputeUnits
+}
+
+func (*ExportBlockMsg) Size() int {
+	return consts.IDLen + consts.Int64Len + consts.Uint64Len + consts.Int64Len + consts.IDLen
+}
+
+func (*ExportBlockMsg) OutputsWarpMessage() bool {
+	return true
+}
+
+func (*ExportBlockMsg) MaxComputeUnits(chain.Rules) uint64 {
+	return ExportBlockComputeUnits
 }
 
 func (e *ExportBlockMsg) Marshal(p *codec.Packer) {

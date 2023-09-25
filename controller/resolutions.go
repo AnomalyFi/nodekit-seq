@@ -6,7 +6,8 @@ package controller
 import (
 	"context"
 
-	"github.com/AnomalyFi/hypersdk/crypto"
+	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
@@ -29,20 +30,20 @@ func (c *Controller) Tracer() trace.Tracer {
 func (c *Controller) GetTransaction(
 	ctx context.Context,
 	txID ids.ID,
-) (bool, int64, bool, uint64, error) {
+) (bool, int64, bool, chain.Dimensions, uint64, error) {
 	return storage.GetTransaction(ctx, c.metaDB, txID)
 }
 
 func (c *Controller) GetAssetFromState(
 	ctx context.Context,
 	asset ids.ID,
-) (bool, []byte, uint64, crypto.PublicKey, bool, error) {
+) (bool, []byte, uint8, []byte, uint64, ed25519.PublicKey, bool, error) {
 	return storage.GetAssetFromState(ctx, c.inner.ReadState, asset)
 }
 
 func (c *Controller) GetBalanceFromState(
 	ctx context.Context,
-	pk crypto.PublicKey,
+	pk ed25519.PublicKey,
 	asset ids.ID,
 ) (uint64, error) {
 	return storage.GetBalanceFromState(ctx, c.inner.ReadState, pk, asset)

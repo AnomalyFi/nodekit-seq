@@ -9,7 +9,8 @@ import (
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/consts"
-	"github.com/AnomalyFi/hypersdk/crypto"
+	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
+	"github.com/AnomalyFi/hypersdk/state"
 	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/storage"
@@ -21,55 +22,76 @@ var _ chain.Action = (*Transfer)(nil)
 
 type Transfer struct {
 	// To is the recipient of the [Value].
-	To crypto.PublicKey `json:"to"`
+	To ed25519.PublicKey `json:"to"`
 
 	// Asset to transfer to [To].
-	Asset ids.ID
+	Asset ids.ID `json:"asset"`
 
 	// Amount are transferred to [To].
 	Value uint64 `json:"value"`
+
+	// Optional message to accompany transaction.
+	Memo []byte `json:"memo"`
 }
 
-func (t *Transfer) StateKeys(rauth chain.Auth, _ ids.ID) [][]byte {
-	return [][]byte{
-		storage.PrefixBalanceKey(auth.GetActor(rauth), t.Asset),
-		storage.PrefixBalanceKey(t.To, t.Asset),
+func (*Transfer) GetTypeID() uint8 {
+	return transferID
+}
+
+func (t *Transfer) StateKeys(rauth chain.Auth, _ ids.ID) []string {
+	return []string{
+		string(storage.BalanceKey(auth.GetActor(rauth), t.Asset)),
+		string(storage.BalanceKey(t.To, t.Asset)),
 	}
+}
+
+func (*Transfer) StateKeysMaxChunks() []uint16 {
+	return []uint16{storage.BalanceChunks, storage.BalanceChunks}
+}
+
+func (*Transfer) OutputsWarpMessage() bool {
+	return false
 }
 
 func (t *Transfer) Execute(
 	ctx context.Context,
-	r chain.Rules,
-	db chain.Database,
+	_ chain.Rules,
+	mu state.Mutable,
 	_ int64,
 	rauth chain.Auth,
 	_ ids.ID,
 	_ bool,
-) (*chain.Result, error) {
+) (bool, uint64, []byte, *warp.UnsignedMessage, error) {
 	actor := auth.GetActor(rauth)
-	unitsUsed := t.MaxUnits(r) // max units == units
 	if t.Value == 0 {
-		return &chain.Result{Success: false, Units: unitsUsed, Output: OutputValueZero}, nil
+		return false, TransferComputeUnits, OutputValueZero, nil, nil
 	}
-	if err := storage.SubBalance(ctx, db, actor, t.Asset, t.Value); err != nil {
-		return &chain.Result{Success: false, Units: unitsUsed, Output: utils.ErrBytes(err)}, nil
+	if len(t.Memo) > MaxMemoSize {
+		return false, CreateAssetComputeUnits, OutputMemoTooLarge, nil, nil
 	}
-	if err := storage.AddBalance(ctx, db, t.To, t.Asset, t.Value); err != nil {
-		return &chain.Result{Success: false, Units: unitsUsed, Output: utils.ErrBytes(err)}, nil
+	if err := storage.SubBalance(ctx, mu, actor, t.Asset, t.Value); err != nil {
+		return false, TransferComputeUnits, utils.ErrBytes(err), nil, nil
 	}
-	return &chain.Result{Success: true, Units: unitsUsed}, nil
+	// TODO: allow sender to configure whether they will pay to create
+	if err := storage.AddBalance(ctx, mu, t.To, t.Asset, t.Value, true); err != nil {
+		return false, TransferComputeUnits, utils.ErrBytes(err), nil, nil
+	}
+	return true, TransferComputeUnits, nil, nil, nil
 }
 
-func (*Transfer) MaxUnits(chain.Rules) uint64 {
-	// We use size as the price of this transaction but we could just as easily
-	// use any other calculation.
-	return crypto.PublicKeyLen + consts.IDLen + consts.Uint64Len
+func (*Transfer) MaxComputeUnits(chain.Rules) uint64 {
+	return TransferComputeUnits
+}
+
+func (t *Transfer) Size() int {
+	return ed25519.PublicKeyLen + consts.IDLen + consts.Uint64Len + codec.BytesLen(t.Memo)
 }
 
 func (t *Transfer) Marshal(p *codec.Packer) {
 	p.PackPublicKey(t.To)
 	p.PackID(t.Asset)
 	p.PackUint64(t.Value)
+	p.PackBytes(t.Memo)
 }
 
 func UnmarshalTransfer(p *codec.Packer, _ *warp.Message) (chain.Action, error) {
@@ -77,6 +99,7 @@ func UnmarshalTransfer(p *codec.Packer, _ *warp.Message) (chain.Action, error) {
 	p.UnpackPublicKey(false, &transfer.To) // can transfer to blackhole
 	p.UnpackID(false, &transfer.Asset)     // empty ID is the native asset
 	transfer.Value = p.UnpackUint64(true)
+	p.UnpackBytes(MaxMemoSize, false, &transfer.Memo)
 	return &transfer, p.Err()
 }
 

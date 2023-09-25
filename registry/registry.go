@@ -22,21 +22,21 @@ func init() {
 	errs := &wrappers.Errs{}
 	errs.Add(
 		// When registering new actions, ALWAYS make sure to append at the end.
-		consts.ActionRegistry.Register(&actions.Transfer{}, actions.UnmarshalTransfer, false),
+		consts.ActionRegistry.Register((&actions.Transfer{}).GetTypeID(), actions.UnmarshalTransfer, false),
 
-		consts.ActionRegistry.Register(&actions.CreateAsset{}, actions.UnmarshalCreateAsset, false),
-		consts.ActionRegistry.Register(&actions.MintAsset{}, actions.UnmarshalMintAsset, false),
-		consts.ActionRegistry.Register(&actions.BurnAsset{}, actions.UnmarshalBurnAsset, false),
-		consts.ActionRegistry.Register(&actions.ModifyAsset{}, actions.UnmarshalModifyAsset, false),
+		consts.ActionRegistry.Register((&actions.CreateAsset{}).GetTypeID(), actions.UnmarshalCreateAsset, false),
+		consts.ActionRegistry.Register((&actions.MintAsset{}).GetTypeID(), actions.UnmarshalMintAsset, false),
+		consts.ActionRegistry.Register((&actions.BurnAsset{}).GetTypeID(), actions.UnmarshalBurnAsset, false),
+		//consts.ActionRegistry.Register(&actions.ModifyAsset{}, actions.UnmarshalModifyAsset, false),
 
-		consts.ActionRegistry.Register(&actions.ImportAsset{}, actions.UnmarshalImportAsset, true),
-		consts.ActionRegistry.Register(&actions.ExportAsset{}, actions.UnmarshalExportAsset, false),
-		consts.ActionRegistry.Register(&actions.ImportBlockMsg{}, actions.UnmarshalImportBlockMsg, true),
-		consts.ActionRegistry.Register(&actions.ExportBlockMsg{}, actions.UnmarshalExportBlockMsg, false),
-		consts.ActionRegistry.Register(&actions.SequencerMsg{}, actions.UnmarshalSequencerMsg, false),
+		consts.ActionRegistry.Register((&actions.ImportAsset{}).GetTypeID(), actions.UnmarshalImportAsset, true),
+		consts.ActionRegistry.Register((&actions.ExportAsset{}).GetTypeID(), actions.UnmarshalExportAsset, false),
+		consts.ActionRegistry.Register((&actions.ImportBlockMsg{}).GetTypeID(), actions.UnmarshalImportBlockMsg, true),
+		consts.ActionRegistry.Register((&actions.ExportBlockMsg{}).GetTypeID(), actions.UnmarshalExportBlockMsg, false),
+		consts.ActionRegistry.Register((&actions.SequencerMsg{}).GetTypeID(), actions.UnmarshalSequencerMsg, false),
 
 		// When registering new auth, ALWAYS make sure to append at the end.
-		consts.AuthRegistry.Register(&auth.ED25519{}, auth.UnmarshalED25519, false),
+		consts.AuthRegistry.Register((&auth.ED25519{}).GetTypeID(), auth.UnmarshalED25519, false),
 	)
 	if errs.Errored() {
 		panic(errs.Err)

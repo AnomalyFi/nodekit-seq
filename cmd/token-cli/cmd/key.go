@@ -5,15 +5,19 @@ package cmd
 
 import (
 	"context"
+	"time"
 
-	"github.com/AnomalyFi/hypersdk/crypto"
-	hutils "github.com/AnomalyFi/hypersdk/utils"
+	"github.com/AnomalyFi/hypersdk/consts"
+	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
+	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/ava-labs/avalanchego/ids"
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
+	"github.com/AnomalyFi/nodekit-seq/challenge"
+	frpc "github.com/AnomalyFi/nodekit-seq/cmd/token-faucet/rpc"
+	tconsts "github.com/AnomalyFi/nodekit-seq/consts"
 	trpc "github.com/AnomalyFi/nodekit-seq/rpc"
-	"github.com/AnomalyFi/nodekit-seq/utils"
+	tutils "github.com/AnomalyFi/nodekit-seq/utils"
 )
 
 var keyCmd = &cobra.Command{
@@ -26,23 +30,7 @@ var keyCmd = &cobra.Command{
 var genKeyCmd = &cobra.Command{
 	Use: "generate",
 	RunE: func(*cobra.Command, []string) error {
-		// TODO: encrypt key
-		priv, err := crypto.GeneratePrivateKey()
-		if err != nil {
-			return err
-		}
-		if err := StoreKey(priv); err != nil {
-			return err
-		}
-		publicKey := priv.PublicKey()
-		if err := StoreDefault(defaultKeyKey, publicKey[:]); err != nil {
-			return err
-		}
-		color.Green(
-			"created address %s",
-			utils.Address(publicKey),
-		)
-		return nil
+		return handler.Root().GenerateKey()
 	},
 }
 
@@ -55,100 +43,84 @@ var importKeyCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
-		priv, err := crypto.LoadKey(args[0])
-		if err != nil {
-			return err
-		}
-		if err := StoreKey(priv); err != nil {
-			return err
-		}
-		publicKey := priv.PublicKey()
-		if err := StoreDefault(defaultKeyKey, publicKey[:]); err != nil {
-			return err
-		}
-		color.Green(
-			"imported address %s",
-			utils.Address(publicKey),
-		)
-		return nil
+		return handler.Root().ImportKey(args[0])
 	},
+}
+
+func lookupSetKeyBalance(choice int, address string, uri string, networkID uint32, chainID ids.ID) error {
+	// TODO: just load once
+	cli := trpc.NewJSONRPCClient(uri, networkID, chainID)
+	balance, err := cli.Balance(context.TODO(), address, ids.Empty)
+	if err != nil {
+		return err
+	}
+	utils.Outf(
+		"%d) {{cyan}}address:{{/}} %s {{cyan}}balance:{{/}} %s %s\n",
+		choice,
+		address,
+		utils.FormatBalance(balance, tconsts.Decimals),
+		tconsts.Symbol,
+	)
+	return nil
 }
 
 var setKeyCmd = &cobra.Command{
 	Use: "set",
 	RunE: func(*cobra.Command, []string) error {
-		keys, err := GetKeys()
-		if err != nil {
-			return err
-		}
-		if len(keys) == 0 {
-			hutils.Outf("{{red}}no stored keys{{/}}\n")
-			return nil
-		}
-		chainID, uris, err := GetDefaultChain()
-		if err != nil {
-			return err
-		}
-		if len(uris) == 0 {
-			hutils.Outf("{{red}}no available chains{{/}}\n")
-			return nil
-		}
-		cli := trpc.NewJSONRPCClient(uris[0], chainID)
-		hutils.Outf("{{cyan}}stored keys:{{/}} %d\n", len(keys))
-		for i := 0; i < len(keys); i++ {
-			address := utils.Address(keys[i].PublicKey())
-			balance, err := cli.Balance(context.TODO(), address, ids.Empty)
-			if err != nil {
-				return err
-			}
-			hutils.Outf(
-				"%d) {{cyan}}address:{{/}} %s {{cyan}}balance:{{/}} %s TKN\n",
-				i,
-				address,
-				valueString(ids.Empty, balance),
-			)
-		}
-
-		// Select key
-		keyIndex, err := promptChoice("set default key", len(keys))
-		if err != nil {
-			return err
-		}
-		key := keys[keyIndex]
-		publicKey := key.PublicKey()
-		return StoreDefault(defaultKeyKey, publicKey[:])
+		return handler.Root().SetKey(lookupSetKeyBalance)
 	},
+}
+
+func lookupKeyBalance(pk ed25519.PublicKey, uri string, networkID uint32, chainID ids.ID, assetID ids.ID) error {
+	_, _, _, _, err := handler.GetAssetInfo(
+		context.TODO(), trpc.NewJSONRPCClient(uri, networkID, chainID),
+		pk, assetID, true)
+	return err
 }
 
 var balanceKeyCmd = &cobra.Command{
 	Use: "balance",
 	RunE: func(*cobra.Command, []string) error {
+		return handler.Root().Balance(checkAllChains, true, lookupKeyBalance)
+	},
+}
+
+var faucetKeyCmd = &cobra.Command{
+	Use: "faucet",
+	RunE: func(*cobra.Command, []string) error {
 		ctx := context.Background()
 
-		priv, err := GetDefaultKey()
-		if err != nil {
-			return err
-		}
-		chainID, uris, err := GetDefaultChain()
-		if err != nil {
-			return err
-		}
-
-		assetID, err := promptAsset("assetID", true)
+		// Get private key
+		_, priv, _, _, _, _, err := handler.DefaultActor()
 		if err != nil {
 			return err
 		}
 
-		max := len(uris)
-		if !checkAllChains {
-			max = 1
+		// Get faucet
+		faucetURI, err := handler.Root().PromptString("faucet URI", 0, consts.MaxInt)
+		if err != nil {
+			return err
 		}
-		for _, uri := range uris[:max] {
-			hutils.Outf("{{yellow}}uri:{{/}} %s\n", uri)
-			if _, _, err = getAssetInfo(ctx, trpc.NewJSONRPCClient(uri, chainID), priv.PublicKey(), assetID, true); err != nil {
-				return err
-			}
+		fcli := frpc.NewJSONRPCClient(faucetURI)
+		faucet, err := fcli.FaucetAddress(ctx)
+		if err != nil {
+			return err
 		}
+
+		// Search for funds
+		salt, difficulty, err := fcli.Challenge(ctx)
+		if err != nil {
+			return err
+		}
+		utils.Outf("{{yellow}}searching for faucet solutions (difficulty=%d, faucet=%s):{{/}} %x\n", difficulty, faucet, salt)
+		start := time.Now()
+		solution, attempts := challenge.Search(salt, difficulty, numCores)
+		utils.Outf("{{cyan}}found solution (attempts=%d, t=%s):{{/}} %x\n", attempts, time.Since(start), solution)
+		txID, amount, err := fcli.SolveChallenge(ctx, tutils.Address(priv.PublicKey()), salt, solution)
+		if err != nil {
+			return err
+		}
+		utils.Outf("{{green}}faucet funds incoming (%s %s):{{/}} %s\n", utils.FormatBalance(amount, tconsts.Decimals), tconsts.Symbol, txID)
 		return nil
 	},
 }

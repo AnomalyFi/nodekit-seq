@@ -5,37 +5,13 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
-	"encoding/binary"
-	"fmt"
-	"os"
-	"reflect"
-	"strconv"
-	"strings"
-	"time"
-
-	//"encoding/hex"
 
 	"github.com/AnomalyFi/hypersdk/chain"
-	hconsts "github.com/AnomalyFi/hypersdk/consts"
-	"github.com/AnomalyFi/hypersdk/rpc"
-	"github.com/AnomalyFi/hypersdk/utils"
-	"github.com/AnomalyFi/hypersdk/window"
-	runner "github.com/ava-labs/avalanche-network-runner/client"
 	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/utils/logging"
-	"github.com/ava-labs/avalanchego/utils/math"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 
-	//"github.com/celestiaorg/go-cnc"
-
-	"github.com/AnomalyFi/nodekit-seq/actions"
-	"github.com/AnomalyFi/nodekit-seq/auth"
-	"github.com/AnomalyFi/nodekit-seq/consts"
 	trpc "github.com/AnomalyFi/nodekit-seq/rpc"
-	tutils "github.com/AnomalyFi/nodekit-seq/utils"
 )
 
 var chainCmd = &cobra.Command{
@@ -48,102 +24,15 @@ var chainCmd = &cobra.Command{
 var importChainCmd = &cobra.Command{
 	Use: "import",
 	RunE: func(_ *cobra.Command, args []string) error {
-		chainID, err := promptID("chainID")
-		if err != nil {
-			return err
-		}
-		uri, err := promptString("uri")
-		if err != nil {
-			return err
-		}
-		if err := StoreChain(chainID, uri); err != nil {
-			return err
-		}
-		if err := StoreDefault(defaultChainKey, chainID[:]); err != nil {
-			return err
-		}
-		return nil
+		return handler.Root().ImportChain()
 	},
 }
 
 var importANRChainCmd = &cobra.Command{
 	Use: "import-anr",
 	RunE: func(_ *cobra.Command, args []string) error {
-		ctx := context.Background()
-
-		// Delete previous items
-		oldChains, err := DeleteChains()
-		if err != nil {
-			return err
-		}
-		if len(oldChains) > 0 {
-			utils.Outf("{{yellow}}deleted old chains:{{/}} %+v\n", oldChains)
-		}
-
-		// Load new items from ANR
-		anrCli, err := runner.New(runner.Config{
-			Endpoint:    "0.0.0.0:12352",
-			DialTimeout: 10 * time.Second,
-		}, logging.NoLog{})
-		if err != nil {
-			return err
-		}
-		status, err := anrCli.Status(ctx)
-		if err != nil {
-			return err
-		}
-		subnets := map[ids.ID][]ids.ID{}
-		for chain, chainInfo := range status.ClusterInfo.CustomChains {
-			chainID, err := ids.FromString(chain)
-			if err != nil {
-				return err
-			}
-			subnetID, err := ids.FromString(chainInfo.SubnetId)
-			if err != nil {
-				return err
-			}
-			chainIDs, ok := subnets[subnetID]
-			if !ok {
-				chainIDs = []ids.ID{}
-			}
-			chainIDs = append(chainIDs, chainID)
-			subnets[subnetID] = chainIDs
-		}
-		var filledChainID ids.ID
-		for _, nodeInfo := range status.ClusterInfo.NodeInfos {
-			if len(nodeInfo.WhitelistedSubnets) == 0 {
-				continue
-			}
-			trackedSubnets := strings.Split(nodeInfo.WhitelistedSubnets, ",")
-			for _, subnet := range trackedSubnets {
-				subnetID, err := ids.FromString(subnet)
-				if err != nil {
-					return err
-				}
-				for _, chainID := range subnets[subnetID] {
-					uri := fmt.Sprintf("%s/ext/bc/%s", nodeInfo.Uri, chainID)
-					if err := StoreChain(chainID, uri); err != nil {
-						return err
-					}
-					utils.Outf(
-						"{{yellow}}stored chainID:{{/}} %s {{yellow}}uri:{{/}} %s\n",
-						chainID,
-						uri,
-					)
-					filledChainID = chainID
-				}
-			}
-		}
-		return StoreDefault(defaultChainKey, filledChainID[:])
+		return handler.Root().ImportANR()
 	},
-}
-
-type AvalancheOpsConfig struct {
-	Resources struct {
-		CreatedNodes []struct {
-			HTTPEndpoint string `yaml:"httpEndpoint"`
-		} `yaml:"created_nodes"`
-	} `yaml:"resources"`
 }
 
 var importAvalancheOpsChainCmd = &cobra.Command{
@@ -156,272 +45,37 @@ var importAvalancheOpsChainCmd = &cobra.Command{
 		return err
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
-		// Delete previous items
-		if deleteOtherChains {
-			oldChains, err := DeleteChains()
-			if err != nil {
-				return err
-			}
-			if len(oldChains) > 0 {
-				utils.Outf("{{yellow}}deleted old chains:{{/}} %+v\n", oldChains)
-			}
-		}
-
-		// Load chainID
-		chainID, err := ids.FromString(args[0])
-		if err != nil {
-			return err
-		}
-
-		// Load yaml file
-		var opsConfig AvalancheOpsConfig
-		yamlFile, err := os.ReadFile(args[1])
-		if err != nil {
-			return err
-		}
-		err = yaml.Unmarshal(yamlFile, &opsConfig)
-		if err != nil {
-			return err
-		}
-
-		// Add chains
-		for _, node := range opsConfig.Resources.CreatedNodes {
-			uri := fmt.Sprintf("%s/ext/bc/%s", node.HTTPEndpoint, chainID)
-			if err := StoreChain(chainID, uri); err != nil {
-				return err
-			}
-			utils.Outf(
-				"{{yellow}}stored chainID:{{/}} %s {{yellow}}uri:{{/}} %s\n",
-				chainID,
-				uri,
-			)
-		}
-		return StoreDefault(defaultChainKey, chainID[:])
+		return handler.Root().ImportOps(args[0], args[1])
 	},
 }
 
 var setChainCmd = &cobra.Command{
 	Use: "set",
 	RunE: func(*cobra.Command, []string) error {
-		chainID, _, err := promptChain("set default chain", nil)
-		if err != nil {
-			return err
-		}
-		return StoreDefault(defaultChainKey, chainID[:])
+		return handler.Root().SetDefaultChain()
 	},
 }
 
 var chainInfoCmd = &cobra.Command{
 	Use: "info",
 	RunE: func(_ *cobra.Command, args []string) error {
-		_, uris, err := promptChain("select chainID", nil)
-		if err != nil {
-			return err
-		}
-		cli := rpc.NewJSONRPCClient(uris[0])
-		networkID, subnetID, chainID, err := cli.Network(context.Background())
-		if err != nil {
-			return err
-		}
-		utils.Outf(
-			"{{cyan}}networkID:{{/}} %d {{cyan}}subnetID:{{/}} %s {{cyan}}chainID:{{/}} %s",
-			networkID,
-			subnetID,
-			chainID,
-		)
-		return nil
+		return handler.Root().PrintChainInfo()
 	},
 }
 
 var watchChainCmd = &cobra.Command{
 	Use: "watch",
 	RunE: func(_ *cobra.Command, args []string) error {
-		ctx := context.Background()
-		chainID, uris, err := promptChain("select chainID", nil)
-		if err != nil {
-			return err
-		}
-		if err := CloseDatabase(); err != nil {
-			return err
-		}
-		cli := trpc.NewJSONRPCClient(uris[0], chainID)
-		utils.Outf("{{yellow}}uri:{{/}} %s\n", uris[0])
-		scli, err := rpc.NewWebSocketClient(uris[0])
-		if err != nil {
-			return err
-		}
-		defer scli.Close()
-		if err := scli.RegisterBlocks(); err != nil {
-			return err
-		}
-		parser, err := cli.Parser(ctx)
-		if err != nil {
-			return err
-		}
-		utils.Outf("{{green}}watching for new blocks on %s 👀{{/}}\n", chainID)
-		var (
-			start             time.Time
-			lastBlock         int64
-			lastBlockDetailed time.Time
-			tpsWindow         = window.Window{}
-		)
-		for ctx.Err() == nil {
-			blk, results, blkId, err := scli.ListenBlock(ctx, parser) //nolint:all
-			if err != nil {
-				return err
+		var cli *trpc.JSONRPCClient
+		return handler.Root().WatchChain(hideTxs, func(uri string, networkID uint32, chainID ids.ID) (chain.Parser, error) {
+			cli = trpc.NewJSONRPCClient(uri, networkID, chainID)
+			return cli.Parser(context.TODO())
+		}, func(tx *chain.Transaction, result *chain.Result) {
+			if cli == nil {
+				// Should never happen
+				return
 			}
-			now := time.Now()
-			if start.IsZero() {
-				start = now
-			}
-			if lastBlock != 0 {
-				since := now.Unix() - lastBlock
-				newWindow, err := window.Roll(tpsWindow, int(since))
-				if err != nil {
-					return err
-				}
-				tpsWindow = newWindow
-				window.Update(&tpsWindow, window.WindowSliceSize-hconsts.Uint64Len, uint64(len(blk.Txs)))
-				runningDuration := time.Since(start)
-				tpsDivisor := math.Min(window.WindowSize, runningDuration.Seconds())
-				utils.Outf(
-					"{{green}}height:{{/}}%d {{green}}txs:{{/}}%d {{green}}units:{{/}}%d {{green}}root:{{/}}%s {{green}}ID:{{/}}%s {{green}}TPS:{{/}}%.2f {{green}}split:{{/}}%dms\n", //nolint:lll
-					blk.Hght,
-					len(blk.Txs),
-					blk.UnitsConsumed,
-					blk.StateRoot,
-					blkId,
-					float64(window.Sum(tpsWindow))/tpsDivisor,
-					time.Since(lastBlockDetailed).Milliseconds(),
-				)
-			} else {
-				utils.Outf(
-					"{{green}}height:{{/}}%d {{green}}txs:{{/}}%d {{green}}units:{{/}}%d {{green}}root:{{/}}%s\n", //nolint:lll
-					blk.Hght,
-					len(blk.Txs),
-					blk.UnitsConsumed,
-					blk.StateRoot,
-				)
-				window.Update(&tpsWindow, window.WindowSliceSize-hconsts.Uint64Len, uint64(len(blk.Txs)))
-			}
-			lastBlock = now.Unix()
-			lastBlockDetailed = now
-			if hideTxs {
-				continue
-			}
-			for i, tx := range blk.Txs {
-				result := results[i]
-				summaryStr := string(result.Output)
-				actor := auth.GetActor(tx.Auth)
-				status := "⚠️"
-				if result.Success {
-					status = "✅"
-					switch action := tx.Action.(type) {
-					case *actions.CreateAsset:
-						summaryStr = fmt.Sprintf("assetID: %s metadata:%s", tx.ID(), string(action.Metadata))
-					case *actions.MintAsset:
-						amountStr := strconv.FormatUint(action.Value, 10)
-						assetStr := action.Asset.String()
-						if action.Asset == ids.Empty {
-							amountStr = utils.FormatBalance(action.Value)
-							assetStr = consts.Symbol
-						}
-						summaryStr = fmt.Sprintf("%s %s -> %s", amountStr, assetStr, tutils.Address(action.To))
-					case *actions.BurnAsset:
-						summaryStr = fmt.Sprintf("%d %s -> 🔥", action.Value, action.Asset)
-					case *actions.ModifyAsset:
-						summaryStr = fmt.Sprintf(
-							"assetID: %s metadata:%s owner:%s",
-							action.Asset, string(action.Metadata), tutils.Address(action.Owner),
-						)
-
-					case *actions.Transfer:
-						amountStr := strconv.FormatUint(action.Value, 10)
-						assetStr := action.Asset.String()
-						if action.Asset == ids.Empty {
-							amountStr = utils.FormatBalance(action.Value)
-							assetStr = consts.Symbol
-						}
-						summaryStr = fmt.Sprintf("%s %s -> %s", amountStr, assetStr, tutils.Address(action.To))
-					case *actions.ImportAsset:
-						wm := tx.WarpMessage
-						signers, _ := wm.Signature.NumSigners()
-						wt, _ := actions.UnmarshalWarpTransfer(wm.Payload)
-						summaryStr = fmt.Sprintf("source: %s signers: %d | ", wm.SourceChainID, signers)
-						var outputAssetID ids.ID
-						if wt.Return {
-							outputAssetID = wt.Asset
-							summaryStr += fmt.Sprintf("%s %s -> %s (return: %t)", valueString(wt.Asset, wt.Value), assetString(wt.Asset), tutils.Address(wt.To), wt.Return)
-						} else {
-							outputAssetID = actions.ImportedAssetID(wt.Asset, wm.SourceChainID)
-							summaryStr += fmt.Sprintf("%s %s (original: %s) -> %s (return: %t)", valueString(outputAssetID, wt.Value), outputAssetID, wt.Asset, tutils.Address(wt.To), wt.Return)
-						}
-						if wt.Reward > 0 {
-							summaryStr += fmt.Sprintf(" | reward: %s", valueString(outputAssetID, wt.Reward))
-						}
-						if wt.SwapIn > 0 {
-							summaryStr += fmt.Sprintf(" | swap in: %s %s swap out: %s %s expiry: %d fill: %t", valueString(outputAssetID, wt.SwapIn), assetString(outputAssetID), valueString(wt.AssetOut, wt.SwapOut), assetString(wt.AssetOut), wt.SwapExpiry, action.Fill)
-						}
-					case *actions.ExportAsset:
-						wt, _ := actions.UnmarshalWarpTransfer(result.WarpMessage.Payload)
-						summaryStr = fmt.Sprintf("destination: %s | ", action.Destination)
-						var outputAssetID ids.ID
-						if !action.Return {
-							outputAssetID = actions.ImportedAssetID(action.Asset, result.WarpMessage.SourceChainID)
-							summaryStr += fmt.Sprintf("%s %s -> %s (return: %t)", valueString(action.Asset, action.Value), assetString(action.Asset), tutils.Address(action.To), action.Return)
-						} else {
-							outputAssetID = wt.Asset
-							summaryStr += fmt.Sprintf("%s %s (original: %s) -> %s (return: %t)", valueString(action.Asset, action.Value), action.Asset, assetString(wt.Asset), tutils.Address(action.To), action.Return)
-						}
-						if wt.Reward > 0 {
-							summaryStr += fmt.Sprintf(" | reward: %s", valueString(outputAssetID, wt.Reward))
-						}
-						if wt.SwapIn > 0 {
-							summaryStr += fmt.Sprintf(" | swap in: %s %s swap out: %s %s expiry: %d", valueString(outputAssetID, wt.SwapIn), assetString(outputAssetID), valueString(wt.AssetOut, wt.SwapOut), assetString(wt.AssetOut), wt.SwapExpiry)
-						}
-					case *actions.ImportBlockMsg:
-						wm := tx.WarpMessage
-						signers, _ := wm.Signature.NumSigners()
-						wt, _ := chain.UnmarshalWarpBlock(wm.Payload)
-						summaryStr = fmt.Sprintf("source: %s signers: %d | ", wm.SourceChainID, signers)
-						summaryStr += fmt.Sprintf("(parent: %s) -> (child: %s) timestamp: %s height: %s", wt.Prnt, wt.StateRoot, valueStringInt(wt.Tmstmp), valueStringUint(wt.Hght))
-					case *actions.ExportBlockMsg:
-						wt, _ := chain.UnmarshalWarpBlock(result.WarpMessage.Payload)
-						summaryStr = fmt.Sprintf("destination: %s | ", action.Destination)
-						summaryStr += fmt.Sprintf("(parent: %s) -> (child: %s) timestamp: %s height: %s", wt.Prnt, wt.StateRoot, valueStringInt(wt.Tmstmp), valueStringUint(wt.Hght))
-					case *actions.SequencerMsg:
-						summaryStr = fmt.Sprintf("data: %s", string(action.Data))
-					}
-				}
-				utils.Outf(
-					"%s {{yellow}}%s{{/}} {{yellow}}actor:{{/}} %s {{yellow}}units:{{/}} %d {{yellow}}summary (%s):{{/}} [%s]\n",
-					status,
-					tx.ID(),
-					tutils.Address(actor),
-					result.Units,
-					reflect.TypeOf(tx.Action),
-					summaryStr,
-				)
-			}
-		}
-		return nil
+			handleTx(cli, tx, result)
+		})
 	},
-}
-
-// decodeCelestiaData will decode the data retrieved from Celestia, this data
-// was previously posted from vm and contains the block height
-// with transaction index of the SubmitPFD transaction to the DA.
-func decodeCelestiaData(celestiaData []byte) (int64, uint32, error) {
-	buf := bytes.NewBuffer(celestiaData)
-	var height int64
-	err := binary.Read(buf, binary.BigEndian, &height)
-	if err != nil {
-		return 0, 0, fmt.Errorf("error deserializing height: %w", err)
-	}
-	var index uint32
-	err = binary.Read(buf, binary.BigEndian, &index)
-	if err != nil {
-		return 0, 0, fmt.Errorf("error deserializing index: %w", err)
-	}
-	return height, index, nil
 }

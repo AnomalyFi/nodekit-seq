@@ -11,6 +11,8 @@ import (
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
+	"github.com/AnomalyFi/hypersdk/consts"
+	"github.com/AnomalyFi/hypersdk/state"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 )
 
@@ -28,36 +30,66 @@ type ImportBlockMsg struct {
 	warpMessage *warp.Message
 }
 
-func (e *ImportBlockMsg) StateKeys(rauth chain.Auth, _ ids.ID) [][]byte {
+func (e *ImportBlockMsg) StateKeys(rauth chain.Auth, _ ids.ID) []string {
 	//TODO needs to be fixed
-	return [][]byte{
-		storage.PrefixBlockKey(e.warpMsg.StateRoot, e.warpMsg.Prnt),
+	return []string{
+		string(storage.PrefixBlockKey(e.warpMsg.StateRoot, e.warpMsg.Prnt)),
 	}
 
+}
+
+func (i *ImportBlockMsg) StateKeysMaxChunks() []uint16 {
+	//TODO need to fix this
+	// Can't use [warpTransfer] because it may not be populated yet
+	chunks := []uint16{}
+	chunks = append(chunks, storage.LoanChunks)
+	chunks = append(chunks, storage.AssetChunks)
+	chunks = append(chunks, storage.BalanceChunks)
+
+	// If the [warpTransfer] specified a reward, we add the state key to make
+	// sure it is paid.
+	chunks = append(chunks, storage.BalanceChunks)
+
+	// If the [warpTransfer] requests a swap, we add the state keys to transfer
+	// the required balances.
+	if i.Fill {
+		chunks = append(chunks, storage.BalanceChunks)
+		chunks = append(chunks, storage.BalanceChunks)
+		chunks = append(chunks, storage.BalanceChunks)
+	}
+	return chunks
 }
 
 func (i *ImportBlockMsg) Execute(
 	ctx context.Context,
 	r chain.Rules,
-	db chain.Database,
+	mu state.Mutable,
 	t int64,
 	rauth chain.Auth,
 	_ ids.ID,
 	warpVerified bool,
-) (*chain.Result, error) {
-	unitsUsed := i.MaxUnits(r) // max units == units
+) (bool, uint64, []byte, *warp.UnsignedMessage, error) {
 	if !warpVerified {
-		return &chain.Result{
-			Success: false,
-			Units:   unitsUsed,
-			Output:  OutputWarpVerificationFailed,
-		}, nil
+		return false, ImportBlockComputeUnits, OutputValueZero, nil, nil
+
 	}
-	return &chain.Result{Success: true, Units: unitsUsed}, nil
+	return true, ImportBlockComputeUnits, nil, nil, nil
 }
 
-func (i *ImportBlockMsg) MaxUnits(chain.Rules) uint64 {
-	return uint64(len(i.warpMessage.Payload))
+func (i *ImportBlockMsg) MaxComputeUnits(chain.Rules) uint64 {
+	return ImportBlockComputeUnits
+}
+
+func (*ImportBlockMsg) Size() int {
+	return consts.BoolLen
+}
+
+func (*ImportBlockMsg) OutputsWarpMessage() bool {
+	return false
+}
+
+func (*ImportBlockMsg) GetTypeID() uint8 {
+	return importBlockID
 }
 
 // All we encode that is action specific for now is the type byte from the

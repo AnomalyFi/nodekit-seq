@@ -13,13 +13,11 @@ if ! [[ "$0" =~ scripts/fix.lint.sh ]]; then
 fi
 
 echo "adding license header"
-go install -v github.com/google/addlicense@latest
-addlicense -f ./LICENSE.header .
+go install -v github.com/palantir/go-license@latest
+files=()
+while IFS= read -r line; do files+=("$line"); done < <(find . -type f -name '*.go' ! -name '*.pb.go' ! -name 'mock_*.go')
+go-license --config=./license.yml "${files[@]}"
 
 echo "gofumpt files"
 go install mvdan.cc/gofumpt@latest
 gofumpt -l -w .
-
-echo "shortening long lines"
-go install github.com/segmentio/golines@latest
-golines -w .

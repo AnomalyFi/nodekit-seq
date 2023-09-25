@@ -1,5 +1,6 @@
 // Copyright (C) 2023, Ava Labs, Inc. All rights reserved.
 // See the file LICENSE for licensing terms.
+
 package config
 
 import (
@@ -9,7 +10,7 @@ import (
 	"time"
 
 	"github.com/AnomalyFi/hypersdk/config"
-	hconsts "github.com/AnomalyFi/hypersdk/consts"
+	"github.com/AnomalyFi/hypersdk/gossiper"
 	"github.com/AnomalyFi/hypersdk/trace"
 	"github.com/AnomalyFi/hypersdk/vm"
 	"github.com/ava-labs/avalanchego/ids"
@@ -24,31 +25,21 @@ import (
 var _ vm.Config = (*Config)(nil)
 
 const (
-	defaultGossipInterval              = 1 * time.Second
-	defaultGossipMaxSize               = hconsts.NetworkSizeLimit
-	defaultGossipProposerDiff          = 3
-	defaultGossipProposerDepth         = 2
-	defaultBuildProposerDiff           = 2
-	defaultVerifyTimeout               = 10
-	defaultPreferredBlocksPerSecond    = 2
 	defaultContinuousProfilerFrequency = 1 * time.Minute
 	defaultContinuousProfilerMaxFiles  = 10
-	defaultMempoolVerifyBalances       = true
+	defaultStoreTransactions           = true
+	defaultMaxOrdersPerPair            = 1024
 )
 
 type Config struct {
 	*config.Config
 
-	// Builder
-	PreferredBlocksPerSecond uint64 `json:"preferredBlocksPerSecond"`
-
 	// Gossip
-	GossipInterval      time.Duration `json:"gossipInterval"`
-	GossipMaxSize       int           `json:"gossipMaxSize"`
-	GossipProposerDiff  int           `json:"gossipProposerDiff"`
-	GossipProposerDepth int           `json:"gossipProposerDepth"`
-	BuildProposerDiff   int           `json:"buildProposerDiff"`
-	VerifyTimeout       int64         `json:"verifyTimeout"`
+	GossipMaxSize       int   `json:"gossipMaxSize"`
+	GossipProposerDiff  int   `json:"gossipProposerDiff"`
+	GossipProposerDepth int   `json:"gossipProposerDepth"`
+	NoGossipBuilderDiff int   `json:"noGossipBuilderDiff"`
+	VerifyTimeout       int64 `json:"verifyTimeout"`
 
 	// Tracing
 	TraceEnabled    bool    `json:"traceEnabled"`
@@ -61,26 +52,27 @@ type Config struct {
 	StreamingBacklogSize int `json:"streamingBacklogSize"`
 
 	// Mempool
-	MempoolSize           int      `json:"mempoolSize"`
-	MempoolPayerSize      int      `json:"mempoolPayerSize"`
-	MempoolExemptPayers   []string `json:"mempoolExemptPayers"`
-	MempoolVerifyBalances bool     `json:"mempoolVerifyBalances"`
+	MempoolSize         int      `json:"mempoolSize"`
+	MempoolPayerSize    int      `json:"mempoolPayerSize"`
+	MempoolExemptPayers []string `json:"mempoolExemptPayers"`
 
 	// Order Book
 	//
 	// This is denoted as <asset 1>-<asset 2>
-	//
-	// TODO: add ability to denote min rate/min amount for tracking to avoid spam
-	TrackedPairs []string `json:"trackedPairs"` // which asset ID pairs we care about
+	MaxOrdersPerPair int      `json:"maxOrdersPerPair"`
+	TrackedPairs     []string `json:"trackedPairs"` // which asset ID pairs we care about
 
 	// Misc
-	TestMode    bool          `json:"testMode"` // makes gossip/building manual
-	LogLevel    logging.Level `json:"logLevel"`
-	Parallelism int           `json:"parallelism"`
+	VerifySignatures  bool          `json:"verifySignatures"`
+	StoreTransactions bool          `json:"storeTransactions"`
+	TestMode          bool          `json:"testMode"` // makes gossip/building manual
+	LogLevel          logging.Level `json:"logLevel"`
+	Parallelism       int           `json:"parallelism"`
 
 	// State Sync
 	StateSyncServerDelay time.Duration `json:"stateSyncServerDelay"` // for testing
 
+	loaded             bool
 	nodeID             ids.NodeID
 	parsedExemptPayers [][]byte
 }
@@ -92,6 +84,7 @@ func New(nodeID ids.NodeID, b []byte) (*Config, error) {
 		if err := json.Unmarshal(b, c); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal config %s: %w", string(b), err)
 		}
+		c.loaded = true
 	}
 
 	// Parse any exempt payers (usually used when a single account is
@@ -109,29 +102,28 @@ func New(nodeID ids.NodeID, b []byte) (*Config, error) {
 
 func (c *Config) setDefault() {
 	c.LogLevel = c.Config.GetLogLevel()
-	c.GossipInterval = defaultGossipInterval
-	c.GossipMaxSize = defaultGossipMaxSize
-	c.GossipProposerDiff = defaultGossipProposerDiff
-	c.GossipProposerDepth = defaultGossipProposerDepth
-	c.BuildProposerDiff = defaultBuildProposerDiff
-	c.VerifyTimeout = defaultVerifyTimeout
+	gcfg := gossiper.DefaultProposerConfig()
+	c.GossipMaxSize = gcfg.GossipMaxSize
+	c.GossipProposerDiff = gcfg.GossipProposerDiff
+	c.GossipProposerDepth = gcfg.GossipProposerDepth
+	c.NoGossipBuilderDiff = gcfg.NoGossipBuilderDiff
+	c.VerifyTimeout = gcfg.VerifyTimeout
 	c.Parallelism = c.Config.GetParallelism()
-	c.PreferredBlocksPerSecond = defaultPreferredBlocksPerSecond
 	c.MempoolSize = c.Config.GetMempoolSize()
 	c.MempoolPayerSize = c.Config.GetMempoolPayerSize()
-	c.MempoolVerifyBalances = defaultMempoolVerifyBalances
 	c.StateSyncServerDelay = c.Config.GetStateSyncServerDelay()
 	c.StreamingBacklogSize = c.Config.GetStreamingBacklogSize()
+	c.VerifySignatures = c.Config.GetVerifySignatures()
+	c.StoreTransactions = defaultStoreTransactions
+	c.MaxOrdersPerPair = defaultMaxOrdersPerPair
 }
 
-func (c *Config) GetLogLevel() logging.Level          { return c.LogLevel }
-func (c *Config) GetTestMode() bool                   { return c.TestMode }
-func (c *Config) GetParallelism() int                 { return c.Parallelism }
-func (c *Config) GetPreferredBlocksPerSecond() uint64 { return c.PreferredBlocksPerSecond }
-func (c *Config) GetMempoolSize() int                 { return c.MempoolSize }
-func (c *Config) GetMempoolPayerSize() int            { return c.MempoolPayerSize }
-func (c *Config) GetMempoolExemptPayers() [][]byte    { return c.parsedExemptPayers }
-func (c *Config) GetMempoolVerifyBalances() bool      { return c.MempoolVerifyBalances }
+func (c *Config) GetLogLevel() logging.Level       { return c.LogLevel }
+func (c *Config) GetTestMode() bool                { return c.TestMode }
+func (c *Config) GetParallelism() int              { return c.Parallelism }
+func (c *Config) GetMempoolSize() int              { return c.MempoolSize }
+func (c *Config) GetMempoolPayerSize() int         { return c.MempoolPayerSize }
+func (c *Config) GetMempoolExemptPayers() [][]byte { return c.parsedExemptPayers }
 func (c *Config) GetTraceConfig() *trace.Config {
 	return &trace.Config{
 		Enabled:         c.TraceEnabled,
@@ -157,3 +149,6 @@ func (c *Config) GetContinuousProfilerConfig() *profiler.Config {
 		MaxNumFiles: defaultContinuousProfilerMaxFiles,
 	}
 }
+func (c *Config) GetVerifySignatures() bool  { return c.VerifySignatures }
+func (c *Config) GetStoreTransactions() bool { return c.StoreTransactions }
+func (c *Config) Loaded() bool               { return c.loaded }

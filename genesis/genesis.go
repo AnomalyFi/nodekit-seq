@@ -13,7 +13,9 @@ import (
 	smath "github.com/ava-labs/avalanchego/utils/math"
 
 	"github.com/AnomalyFi/hypersdk/chain"
-	"github.com/AnomalyFi/hypersdk/crypto"
+	hconsts "github.com/AnomalyFi/hypersdk/consts"
+	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
+	"github.com/AnomalyFi/hypersdk/state"
 	"github.com/AnomalyFi/hypersdk/vm"
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/storage"
@@ -31,27 +33,34 @@ type Genesis struct {
 	// Address prefix
 	HRP string `json:"hrp"`
 
-	// Block params
-	MaxBlockTxs   int    `json:"maxBlockTxs"`
-	MaxBlockUnits uint64 `json:"maxBlockUnits"` // must be possible to reach before block too large
+	// Chain Parameters
+	MinBlockGap      int64 `json:"minBlockGap"`      // ms
+	MinEmptyBlockGap int64 `json:"minEmptyBlockGap"` // ms
 
-	// Tx params
-	BaseUnits      uint64 `json:"baseUnits"`
-	ValidityWindow int64  `json:"validityWindow"` // seconds
+	// Chain Fee Parameters
+	MinUnitPrice               chain.Dimensions `json:"minUnitPrice"`
+	UnitPriceChangeDenominator chain.Dimensions `json:"unitPriceChangeDenominator"`
+	WindowTargetUnits          chain.Dimensions `json:"windowTargetUnits"` // 10s
+	MaxBlockUnits              chain.Dimensions `json:"maxBlockUnits"`     // must be possible to reach before block too large
 
-	// Unit pricing
-	MinUnitPrice               uint64 `json:"minUnitPrice"`
-	UnitPriceChangeDenominator uint64 `json:"unitPriceChangeDenominator"`
-	WindowTargetUnits          uint64 `json:"windowTargetUnits"` // 10s
+	// Tx Parameters
+	ValidityWindow int64 `json:"validityWindow"` // ms
 
-	// Block pricing
-	MinBlockCost               uint64 `json:"minBlockCost"`
-	BlockCostChangeDenominator uint64 `json:"blockCostChangeDenominator"`
-	WindowTargetBlocks         uint64 `json:"windowTargetBlocks"` // 10s
-
-	// Warp pricing
-	WarpBaseFee      uint64 `json:"warpBaseFee"`
-	WarpFeePerSigner uint64 `json:"warpFeePerSigner"`
+	// Tx Fee Parameters
+	BaseComputeUnits                  uint64 `json:"baseUnits"`
+	BaseWarpComputeUnits              uint64 `json:"baseWarpUnits"`
+	WarpComputeUnitsPerSigner         uint64 `json:"warpUnitsPerSigner"`
+	OutgoingWarpComputeUnits          uint64 `json:"outgoingWarpComputeUnits"`
+	ColdStorageKeyReadUnits           uint64 `json:"coldStorageKeyReadUnits"`
+	ColdStorageValueReadUnits         uint64 `json:"coldStorageValueReadUnits"` // per chunk
+	WarmStorageKeyReadUnits           uint64 `json:"warmStorageKeyReadUnits"`
+	WarmStorageValueReadUnits         uint64 `json:"warmStorageValueReadUnits"` // per chunk
+	StorageKeyCreateUnits             uint64 `json:"storageKeyCreateUnits"`
+	StorageValueCreateUnits           uint64 `json:"storageKeyValueUnits"` // per chunk
+	ColdStorageKeyModificationUnits   uint64 `json:"coldStorageKeyModificationUnits"`
+	ColdStorageValueModificationUnits uint64 `json:"coldStorageValueModificationUnits"` // per chunk
+	WarmStorageKeyModificationUnits   uint64 `json:"warmStorageKeyModificationUnits"`
+	WarmStorageValueModificationUnits uint64 `json:"warmStorageValueModificationUnits"` // per chunk
 
 	// Allocations
 	CustomAllocation []*CustomAllocation `json:"customAllocation"`
@@ -61,27 +70,38 @@ func Default() *Genesis {
 	return &Genesis{
 		HRP: consts.HRP,
 
-		// Block params
-		MaxBlockTxs:   20_000,    // rely on max block units
-		MaxBlockUnits: 1_800_000, // 1.8 MiB
+		// Chain Parameters
+		MinBlockGap:      100,
+		MinEmptyBlockGap: 2_500,
 
-		// Tx params
-		BaseUnits:      48, // timestamp(8) + chainID(32) + unitPrice(8)
-		ValidityWindow: 60,
+		// Chain Fee Parameters
+		MinUnitPrice:               chain.Dimensions{100, 100, 100, 100, 100},
+		UnitPriceChangeDenominator: chain.Dimensions{48, 48, 48, 48, 48},
+		WindowTargetUnits:          chain.Dimensions{20_000_000, 1_000, 1_000, 1_000, 1_000},
+		MaxBlockUnits:              chain.Dimensions{1_800_000, 2_000, 2_000, 2_000, 2_000},
 
-		// Unit pricing
-		MinUnitPrice:               1,
-		UnitPriceChangeDenominator: 48,
-		WindowTargetUnits:          20_000_000,
+		// Tx Parameters
+		ValidityWindow: 60 * hconsts.MillisecondsPerSecond, // ms
 
-		// Block pricing
-		MinBlockCost:               0,
-		BlockCostChangeDenominator: 48,
-		WindowTargetBlocks:         20, // 10s
+		// Tx Fee Compute Parameters
+		BaseComputeUnits:          1,
+		BaseWarpComputeUnits:      1_024,
+		WarpComputeUnitsPerSigner: 128,
+		OutgoingWarpComputeUnits:  1_024,
 
-		// Warp pricing
-		WarpBaseFee:      1_024,
-		WarpFeePerSigner: 128,
+		// Tx Fee Storage Parameters
+		//
+		// TODO: tune this
+		ColdStorageKeyReadUnits:           5,
+		ColdStorageValueReadUnits:         2,
+		WarmStorageKeyReadUnits:           1,
+		WarmStorageValueReadUnits:         1,
+		StorageKeyCreateUnits:             20,
+		StorageValueCreateUnits:           5,
+		ColdStorageKeyModificationUnits:   10,
+		ColdStorageValueModificationUnits: 3,
+		WarmStorageKeyModificationUnits:   5,
+		WarmStorageValueModificationUnits: 3,
 	}
 }
 
@@ -92,22 +112,16 @@ func New(b []byte, _ []byte /* upgradeBytes */) (*Genesis, error) {
 			return nil, fmt.Errorf("failed to unmarshal config %s: %w", string(b), err)
 		}
 	}
-	if g.WindowTargetUnits == 0 {
-		return nil, ErrInvalidTarget
-	}
-	if g.WindowTargetBlocks == 0 {
-		return nil, ErrInvalidTarget
-	}
 	return g, nil
 }
 
-func (g *Genesis) GetHRP() string {
-	return g.HRP
-}
-
-func (g *Genesis) Load(ctx context.Context, tracer trace.Tracer, db chain.Database) error {
+func (g *Genesis) Load(ctx context.Context, tracer trace.Tracer, mu state.Mutable) error {
 	ctx, span := tracer.Start(ctx, "Genesis.Load")
 	defer span.End()
+
+	if consts.HRP != g.HRP {
+		return ErrInvalidHRP
+	}
 
 	supply := uint64(0)
 	for _, alloc := range g.CustomAllocation {
@@ -119,17 +133,19 @@ func (g *Genesis) Load(ctx context.Context, tracer trace.Tracer, db chain.Databa
 		if err != nil {
 			return err
 		}
-		if err := storage.SetBalance(ctx, db, pk, ids.Empty, alloc.Balance); err != nil {
+		if err := storage.SetBalance(ctx, mu, pk, ids.Empty, alloc.Balance); err != nil {
 			return fmt.Errorf("%w: addr=%s, bal=%d", err, alloc.Address, alloc.Balance)
 		}
 	}
 	return storage.SetAsset(
 		ctx,
-		db,
+		mu,
 		ids.Empty,
 		[]byte(consts.Symbol),
+		consts.Decimals,
+		[]byte(consts.Name),
 		supply,
-		crypto.EmptyPublicKey,
+		ed25519.EmptyPublicKey,
 		false,
 	)
 }

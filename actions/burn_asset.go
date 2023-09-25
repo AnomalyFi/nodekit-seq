@@ -13,6 +13,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/consts"
+	"github.com/AnomalyFi/hypersdk/state"
 	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/storage"
@@ -28,52 +29,64 @@ type BurnAsset struct {
 	Value uint64 `json:"value"`
 }
 
-func (b *BurnAsset) StateKeys(rauth chain.Auth, _ ids.ID) [][]byte {
+func (*BurnAsset) GetTypeID() uint8 {
+	return burnAssetID
+}
+
+func (b *BurnAsset) StateKeys(rauth chain.Auth, _ ids.ID) []string {
 	actor := auth.GetActor(rauth)
-	return [][]byte{
-		storage.PrefixAssetKey(b.Asset),
-		storage.PrefixBalanceKey(actor, b.Asset),
+	return []string{
+		string(storage.AssetKey(b.Asset)),
+		string(storage.BalanceKey(actor, b.Asset)),
 	}
+}
+
+func (*BurnAsset) StateKeysMaxChunks() []uint16 {
+	return []uint16{storage.AssetChunks, storage.BalanceChunks}
+}
+
+func (*BurnAsset) OutputsWarpMessage() bool {
+	return false
 }
 
 func (b *BurnAsset) Execute(
 	ctx context.Context,
-	r chain.Rules,
-	db chain.Database,
+	_ chain.Rules,
+	mu state.Mutable,
 	_ int64,
 	rauth chain.Auth,
 	_ ids.ID,
 	_ bool,
-) (*chain.Result, error) {
+) (bool, uint64, []byte, *warp.UnsignedMessage, error) {
 	actor := auth.GetActor(rauth)
-	unitsUsed := b.MaxUnits(r) // max units == units
 	if b.Value == 0 {
-		return &chain.Result{Success: false, Units: unitsUsed, Output: OutputValueZero}, nil
+		return false, BurnComputeUnits, OutputValueZero, nil, nil
 	}
-	if err := storage.SubBalance(ctx, db, actor, b.Asset, b.Value); err != nil {
-		return &chain.Result{Success: false, Units: unitsUsed, Output: utils.ErrBytes(err)}, nil
+	if err := storage.SubBalance(ctx, mu, actor, b.Asset, b.Value); err != nil {
+		return false, BurnComputeUnits, utils.ErrBytes(err), nil, nil
 	}
-	exists, metadata, supply, owner, warp, err := storage.GetAsset(ctx, db, b.Asset)
+	exists, symbol, decimals, metadata, supply, owner, warp, err := storage.GetAsset(ctx, mu, b.Asset)
 	if err != nil {
-		return &chain.Result{Success: false, Units: unitsUsed, Output: utils.ErrBytes(err)}, nil
+		return false, BurnComputeUnits, utils.ErrBytes(err), nil, nil
 	}
 	if !exists {
-		return &chain.Result{Success: false, Units: unitsUsed, Output: OutputAssetMissing}, nil
+		return false, BurnComputeUnits, OutputAssetMissing, nil, nil
 	}
 	newSupply, err := smath.Sub(supply, b.Value)
 	if err != nil {
-		// This should never fail
-		return &chain.Result{Success: false, Units: unitsUsed, Output: utils.ErrBytes(err)}, nil
+		return false, BurnComputeUnits, utils.ErrBytes(err), nil, nil
 	}
-	if err := storage.SetAsset(ctx, db, b.Asset, metadata, newSupply, owner, warp); err != nil {
-		return &chain.Result{Success: false, Units: unitsUsed, Output: utils.ErrBytes(err)}, nil
+	if err := storage.SetAsset(ctx, mu, b.Asset, symbol, decimals, metadata, newSupply, owner, warp); err != nil {
+		return false, BurnComputeUnits, utils.ErrBytes(err), nil, nil
 	}
-	return &chain.Result{Success: true, Units: unitsUsed}, nil
+	return true, BurnComputeUnits, nil, nil, nil
 }
 
-func (*BurnAsset) MaxUnits(chain.Rules) uint64 {
-	// We use size as the price of this transaction but we could just as easily
-	// use any other calculation.
+func (*BurnAsset) MaxComputeUnits(chain.Rules) uint64 {
+	return BurnComputeUnits
+}
+
+func (*BurnAsset) Size() int {
 	return consts.IDLen + consts.Uint64Len
 }
 
