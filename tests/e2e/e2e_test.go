@@ -204,6 +204,7 @@ var _ = ginkgo.BeforeSuite(func() {
 
 	// Start cluster
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+
 	resp, err := anrCli.Start(
 		ctx,
 		execPath,

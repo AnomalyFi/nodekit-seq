@@ -224,7 +224,7 @@ var sequencerMsgCmd = &cobra.Command{
 		// Generate transaction
 		_, _, err = sendAndWait(ctx, nil, &actions.SequencerMsg{
 			Data:        []byte{0x00, 0x01, 0x02},
-			ChainId:     []byte{0x00},
+			ChainId:     []byte("nkit"),
 			FromAddress: recipient,
 		}, cli, scli, tcli, factory, true)
 
