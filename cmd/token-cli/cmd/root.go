@@ -1,42 +1,41 @@
 // Copyright (C) 2023, Ava Labs, Inc. All rights reserved.
 // See the file LICENSE for licensing terms.
 
-// "token-cli" implements tokenvm client operation interface.
 package cmd
 
 import (
 	"fmt"
 	"time"
 
-	"github.com/AnomalyFi/hypersdk/pebble"
+	"github.com/AnomalyFi/hypersdk/cli"
 	"github.com/AnomalyFi/hypersdk/utils"
-	"github.com/ava-labs/avalanchego/database"
 	"github.com/spf13/cobra"
 )
 
 const (
-	requestTimeout  = 30 * time.Second
 	fsModeWrite     = 0o600
 	defaultDatabase = ".token-cli"
 	defaultGenesis  = "genesis.json"
 )
 
 var (
-	dbPath string
-	db     database.Database
+	handler *Handler
 
-	genesisFile        string
-	minUnitPrice       int64
-	maxBlockUnits      int64
-	windowTargetUnits  int64
-	windowTargetBlocks int64
-	hideTxs            bool
-	randomRecipient    bool
-	maxTxBacklog       int
-	deleteOtherChains  bool
-	checkAllChains     bool
-	prometheusFile     string
-	prometheusData     string
+	dbPath            string
+	genesisFile       string
+	minBlockGap       int64
+	minUnitPrice      []string
+	maxBlockUnits     []string
+	windowTargetUnits []string
+	hideTxs           bool
+	randomRecipient   bool
+	maxTxBacklog      int
+	checkAllChains    bool
+	prometheusFile    string
+	prometheusData    string
+	runPrometheus     bool
+	maxFee            int64
+	numCores          int
 
 	rootCmd = &cobra.Command{
 		Use:        "token-cli",
@@ -63,12 +62,16 @@ func init() {
 	)
 	rootCmd.PersistentPreRunE = func(*cobra.Command, []string) error {
 		utils.Outf("{{yellow}}database:{{/}} %s\n", dbPath)
-		var err error
-		db, err = pebble.New(dbPath, pebble.NewDefaultConfig())
-		return err
+		controller := NewController(dbPath)
+		root, err := cli.New(controller)
+		if err != nil {
+			return err
+		}
+		handler = NewHandler(root)
+		return nil
 	}
 	rootCmd.PersistentPostRunE = func(*cobra.Command, []string) error {
-		return CloseDatabase()
+		return handler.Root().CloseDatabase()
 	}
 	rootCmd.SilenceErrors = true
 
@@ -79,29 +82,29 @@ func init() {
 		defaultGenesis,
 		"genesis file path",
 	)
-	genGenesisCmd.PersistentFlags().Int64Var(
+	genGenesisCmd.PersistentFlags().StringSliceVar(
 		&minUnitPrice,
 		"min-unit-price",
-		-1,
+		[]string{},
 		"minimum price",
 	)
-	genGenesisCmd.PersistentFlags().Int64Var(
+	genGenesisCmd.PersistentFlags().StringSliceVar(
 		&maxBlockUnits,
 		"max-block-units",
-		-1,
+		[]string{},
 		"max block units",
 	)
-	genGenesisCmd.PersistentFlags().Int64Var(
+	genGenesisCmd.PersistentFlags().StringSliceVar(
 		&windowTargetUnits,
 		"window-target-units",
-		-1,
+		[]string{},
 		"window target units",
 	)
 	genGenesisCmd.PersistentFlags().Int64Var(
-		&windowTargetBlocks,
-		"window-target-blocks",
+		&minBlockGap,
+		"min-block-gap",
 		-1,
-		"window target blocks",
+		"minimum block gap (ms)",
 	)
 	genesisCmd.AddCommand(
 		genGenesisCmd,
@@ -114,11 +117,18 @@ func init() {
 		false,
 		"check all chains",
 	)
+	balanceKeyCmd.PersistentFlags().IntVar(
+		&numCores,
+		"num-cores",
+		4,
+		"number of cores to use when searching for faucet solutions",
+	)
 	keyCmd.AddCommand(
 		genKeyCmd,
 		importKeyCmd,
 		setKeyCmd,
 		balanceKeyCmd,
+		faucetKeyCmd,
 	)
 
 	// chain
@@ -127,12 +137,6 @@ func init() {
 		"hide-txs",
 		false,
 		"hide txs",
-	)
-	importAvalancheOpsChainCmd.PersistentFlags().BoolVar(
-		&deleteOtherChains,
-		"delete-other-chains",
-		true,
-		"delete other chains",
 	)
 	chainCmd.AddCommand(
 		importChainCmd,
@@ -145,16 +149,20 @@ func init() {
 
 	// actions
 	actionCmd.AddCommand(
+		fundFaucetCmd,
+
 		transferCmd,
 
 		createAssetCmd,
 		mintAssetCmd,
-		sequencerMsgCmd,
 		// burnAssetCmd,
-		// modifyAssetCmd,
 
 		importAssetCmd,
 		exportAssetCmd,
+
+		sequencerMsgCmd,
+
+		//exportBlockCmd,
 	)
 
 	// spam
@@ -169,6 +177,12 @@ func init() {
 		"max-tx-backlog",
 		72_000,
 		"max tx backlog",
+	)
+	runSpamCmd.PersistentFlags().Int64Var(
+		&maxFee,
+		"max-fee",
+		-1,
+		"max fee per tx",
 	)
 	spamCmd.AddCommand(
 		runSpamCmd,
@@ -186,6 +200,12 @@ func init() {
 		"prometheus-data",
 		fmt.Sprintf("/tmp/prometheus-%d", time.Now().Unix()),
 		"prometheus data location",
+	)
+	generatePrometheusCmd.PersistentFlags().BoolVar(
+		&runPrometheus,
+		"run-prometheus",
+		true,
+		"start prometheus",
 	)
 	prometheusCmd.AddCommand(
 		generatePrometheusCmd,

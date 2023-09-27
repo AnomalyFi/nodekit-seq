@@ -14,12 +14,14 @@ type metrics struct {
 	createAsset prometheus.Counter
 	mintAsset   prometheus.Counter
 	burnAsset   prometheus.Counter
-	modifyAsset prometheus.Counter
+	//modifyAsset prometheus.Counter
 
 	transfer prometheus.Counter
 
 	importAsset  prometheus.Counter
 	exportAsset  prometheus.Counter
+	importBlock  prometheus.Counter
+	exportBlock  prometheus.Counter
 	sequencerMsg prometheus.Counter
 }
 
@@ -40,11 +42,11 @@ func newMetrics(gatherer ametrics.MultiGatherer) (*metrics, error) {
 			Name:      "burn_asset",
 			Help:      "number of burn asset actions",
 		}),
-		modifyAsset: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: "actions",
-			Name:      "modify_asset",
-			Help:      "number of modify asset actions",
-		}),
+		// modifyAsset: prometheus.NewCounter(prometheus.CounterOpts{
+		// 	Namespace: "actions",
+		// 	Name:      "modify_asset",
+		// 	Help:      "number of modify asset actions",
+		// }),
 		transfer: prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: "actions",
 			Name:      "transfer",
@@ -60,6 +62,16 @@ func newMetrics(gatherer ametrics.MultiGatherer) (*metrics, error) {
 			Name:      "export_asset",
 			Help:      "number of export asset actions",
 		}),
+		importBlock: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: "actions",
+			Name:      "import_block",
+			Help:      "number of import block actions",
+		}),
+		exportBlock: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: "actions",
+			Name:      "export_block",
+			Help:      "number of export block actions",
+		}),
 		sequencerMsg: prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: "actions",
 			Name:      "sequencer_msg",
@@ -72,10 +84,12 @@ func newMetrics(gatherer ametrics.MultiGatherer) (*metrics, error) {
 		r.Register(m.createAsset),
 		r.Register(m.mintAsset),
 		r.Register(m.burnAsset),
-		r.Register(m.modifyAsset),
+		//r.Register(m.modifyAsset),
 
 		r.Register(m.transfer),
 
+		r.Register(m.importBlock),
+		r.Register(m.exportBlock),
 		r.Register(m.importAsset),
 		r.Register(m.exportAsset),
 		r.Register(m.sequencerMsg),

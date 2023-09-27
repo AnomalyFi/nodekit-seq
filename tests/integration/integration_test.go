@@ -36,7 +36,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/consts"
-	"github.com/AnomalyFi/hypersdk/crypto"
+	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/rpc"
 	hutils "github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/hypersdk/vm"
@@ -101,14 +101,14 @@ func init() {
 }
 
 var (
-	priv    crypto.PrivateKey
+	priv    ed25519.PrivateKey
 	factory *auth.ED25519Factory
-	rsender crypto.PublicKey
+	rsender ed25519.PublicKey
 	sender  string
 
-	priv2    crypto.PrivateKey
+	priv2    ed25519.PrivateKey
 	factory2 *auth.ED25519Factory
-	rsender2 crypto.PublicKey
+	rsender2 ed25519.PublicKey
 	sender2  string
 
 	asset1   []byte
@@ -141,7 +141,7 @@ var _ = ginkgo.BeforeSuite(func() {
 	gomega.Ω(vms).Should(gomega.BeNumerically(">", 1))
 
 	var err error
-	priv, err = crypto.GeneratePrivateKey()
+	priv, err = ed25519.GeneratePrivateKey()
 	gomega.Ω(err).Should(gomega.BeNil())
 	factory = auth.NewED25519Factory(priv)
 	rsender = priv.PublicKey()
@@ -152,7 +152,7 @@ var _ = ginkgo.BeforeSuite(func() {
 		zap.String("pk", hex.EncodeToString(priv[:])),
 	)
 
-	priv2, err = crypto.GeneratePrivateKey()
+	priv2, err = ed25519.GeneratePrivateKey()
 	gomega.Ω(err).Should(gomega.BeNil())
 	factory2 = auth.NewED25519Factory(priv2)
 	rsender2 = priv2.PublicKey()
@@ -271,7 +271,7 @@ var _ = ginkgo.BeforeSuite(func() {
 		gomega.Ω(exists).Should(gomega.BeTrue())
 		gomega.Ω(string(metadata)).Should(gomega.Equal(tconsts.Symbol))
 		gomega.Ω(supply).Should(gomega.Equal(csupply))
-		gomega.Ω(owner).Should(gomega.Equal(utils.Address(crypto.EmptyPublicKey)))
+		gomega.Ω(owner).Should(gomega.Equal(utils.Address(ed25519.EmptyPublicKey)))
 		gomega.Ω(warp).Should(gomega.BeFalse())
 	}
 
@@ -336,6 +336,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 					Value: 100_000, // must be more than StateLockup
 				},
 				factory,
+				false,
 			)
 			transferTxRoot = transferTx
 			gomega.Ω(err).Should(gomega.BeNil())
@@ -448,6 +449,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 					Value: 101,
 				},
 				factory,
+				false,
 			)
 			gomega.Ω(err).Should(gomega.BeNil())
 			gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
@@ -477,6 +479,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 					Value: 200,
 				},
 				factory,
+				false,
 			)
 			gomega.Ω(err).Should(gomega.BeNil())
 			gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
@@ -491,6 +494,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 					Value: 201,
 				},
 				factory,
+				false,
 			)
 			gomega.Ω(err).Should(gomega.BeNil())
 			gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
@@ -520,6 +524,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 					Value: 203,
 				},
 				factory,
+				false,
 			)
 			gomega.Ω(err).Should(gomega.BeNil())
 			gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
@@ -600,7 +605,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 		gomega.Ω(err).Should(gomega.BeNil())
 
 		// Send tx
-		other, err := crypto.GeneratePrivateKey()
+		other, err := ed25519.GeneratePrivateKey()
 		gomega.Ω(err).Should(gomega.BeNil())
 		transfer := &actions.Transfer{
 			To:    other.PublicKey(),
@@ -615,6 +620,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 			nil,
 			transfer,
 			factory,
+			false,
 		)
 		gomega.Ω(err).Should(gomega.BeNil())
 		gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
@@ -626,7 +632,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 		gomega.Ω(results[0].Success).Should(gomega.BeTrue())
 
 		// Read item from connection
-		blk, lresults, err := cli.ListenBlock(context.TODO(), parser)
+		blk, lresults, _, err := cli.ListenBlock(context.TODO(), parser)
 		gomega.Ω(err).Should(gomega.BeNil())
 		gomega.Ω(len(blk.Txs)).Should(gomega.Equal(1))
 		tx := blk.Txs[0].Action.(*actions.Transfer)
@@ -654,7 +660,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 		gomega.Ω(err).Should(gomega.BeNil())
 
 		// Create tx
-		other, err := crypto.GeneratePrivateKey()
+		other, err := ed25519.GeneratePrivateKey()
 		gomega.Ω(err).Should(gomega.BeNil())
 		transfer := &actions.Transfer{
 			To:    other.PublicKey(),
@@ -668,6 +674,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 			nil,
 			transfer,
 			factory,
+			false,
 		)
 		gomega.Ω(err).Should(gomega.BeNil())
 
@@ -698,7 +705,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 	})
 
 	ginkgo.It("mint an asset that doesn't exist", func() {
-		other, err := crypto.GeneratePrivateKey()
+		other, err := ed25519.GeneratePrivateKey()
 		gomega.Ω(err).Should(gomega.BeNil())
 		assetID := ids.GenerateTestID()
 		parser, err := instances[0].tcli.Parser(context.Background())
@@ -713,6 +720,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Value: 10,
 			},
 			factory,
+			false,
 		)
 		gomega.Ω(err).Should(gomega.BeNil())
 		gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
@@ -740,6 +748,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Metadata: nil,
 			},
 			factory,
+			false,
 		)
 		gomega.Ω(err).Should(gomega.BeNil())
 		gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
@@ -805,6 +814,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Metadata: asset1,
 			},
 			factory,
+			false,
 		)
 		gomega.Ω(err).Should(gomega.BeNil())
 		gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
@@ -843,6 +853,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Value: 15,
 			},
 			factory,
+			false,
 		)
 		gomega.Ω(err).Should(gomega.BeNil())
 		gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
@@ -871,7 +882,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 	})
 
 	ginkgo.It("mint asset from wrong owner", func() {
-		other, err := crypto.GeneratePrivateKey()
+		other, err := ed25519.GeneratePrivateKey()
 		gomega.Ω(err).Should(gomega.BeNil())
 		parser, err := instances[0].tcli.Parser(context.Background())
 		gomega.Ω(err).Should(gomega.BeNil())
@@ -885,6 +896,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Value: 10,
 			},
 			factory2,
+			false,
 		)
 		gomega.Ω(err).Should(gomega.BeNil())
 		gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
@@ -920,6 +932,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Value: 5,
 			},
 			factory2,
+			false,
 		)
 		gomega.Ω(err).Should(gomega.BeNil())
 		gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
@@ -959,6 +972,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Value: 10,
 			},
 			factory,
+			false,
 		)
 		gomega.Ω(err).Should(gomega.BeNil())
 		gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
@@ -983,7 +997,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 	})
 
 	ginkgo.It("rejects empty mint", func() {
-		other, err := crypto.GeneratePrivateKey()
+		other, err := ed25519.GeneratePrivateKey()
 		gomega.Ω(err).Should(gomega.BeNil())
 		actionRegistry, authRegistry := instances[0].vm.Registry()
 		tx := chain.NewTx(
@@ -1028,6 +1042,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Value: consts.MaxUint64,
 			},
 			factory,
+			false,
 		)
 		gomega.Ω(err).Should(gomega.BeNil())
 		gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
@@ -1058,78 +1073,80 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 		gomega.Ω(warp).Should(gomega.BeFalse())
 	})
 
-	ginkgo.It("modify an existing asset", func() {
-		parser, err := instances[0].tcli.Parser(context.Background())
-		gomega.Ω(err).Should(gomega.BeNil())
-		submit, _, _, err := instances[0].cli.GenerateTransaction(
-			context.Background(),
-			parser,
-			nil,
-			&actions.ModifyAsset{
-				Asset:    asset1ID,
-				Metadata: []byte("blah"),
-				Owner:    crypto.EmptyPublicKey,
-			},
-			factory,
-		)
-		gomega.Ω(err).Should(gomega.BeNil())
-		gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
-		accept := expectBlk(instances[0])
-		results := accept()
-		gomega.Ω(results).Should(gomega.HaveLen(1))
-		gomega.Ω(results[0].Success).Should(gomega.BeTrue())
+	// ginkgo.It("modify an existing asset", func() {
+	// 	parser, err := instances[0].tcli.Parser(context.Background())
+	// 	gomega.Ω(err).Should(gomega.BeNil())
+	// 	submit, _, _, err := instances[0].cli.GenerateTransaction(
+	// 		context.Background(),
+	// 		parser,
+	// 		nil,
+	// 		&actions.ModifyAsset{
+	// 			Asset:    asset1ID,
+	// 			Metadata: []byte("blah"),
+	// 			Owner:    ed25519.EmptyPublicKey,
+	// 		},
+	// 		factory,
+	// 		false,
+	// 	)
+	// 	gomega.Ω(err).Should(gomega.BeNil())
+	// 	gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
+	// 	accept := expectBlk(instances[0])
+	// 	results := accept()
+	// 	gomega.Ω(results).Should(gomega.HaveLen(1))
+	// 	gomega.Ω(results[0].Success).Should(gomega.BeTrue())
 
-		balance, err := instances[0].tcli.Balance(context.TODO(), sender2, asset1ID)
-		gomega.Ω(err).Should(gomega.BeNil())
-		gomega.Ω(balance).Should(gomega.Equal(uint64(10)))
-		balance, err = instances[0].tcli.Balance(context.TODO(), sender, asset1ID)
-		gomega.Ω(err).Should(gomega.BeNil())
-		gomega.Ω(balance).Should(gomega.Equal(uint64(0)))
+	// 	balance, err := instances[0].tcli.Balance(context.TODO(), sender2, asset1ID)
+	// 	gomega.Ω(err).Should(gomega.BeNil())
+	// 	gomega.Ω(balance).Should(gomega.Equal(uint64(10)))
+	// 	balance, err = instances[0].tcli.Balance(context.TODO(), sender, asset1ID)
+	// 	gomega.Ω(err).Should(gomega.BeNil())
+	// 	gomega.Ω(balance).Should(gomega.Equal(uint64(0)))
 
-		exists, metadata, supply, owner, warp, err := instances[0].tcli.Asset(
-			context.TODO(),
-			asset1ID,
-		)
-		gomega.Ω(err).Should(gomega.BeNil())
-		gomega.Ω(exists).Should(gomega.BeTrue())
-		gomega.Ω(metadata).Should(gomega.Equal([]byte("blah")))
-		gomega.Ω(supply).Should(gomega.Equal(uint64(10)))
-		gomega.Ω(owner).Should(gomega.Equal(utils.Address(crypto.EmptyPublicKey)))
-		gomega.Ω(warp).Should(gomega.BeFalse())
-	})
+	// 	exists, metadata, supply, owner, warp, err := instances[0].tcli.Asset(
+	// 		context.TODO(),
+	// 		asset1ID,
+	// 	)
+	// 	gomega.Ω(err).Should(gomega.BeNil())
+	// 	gomega.Ω(exists).Should(gomega.BeTrue())
+	// 	gomega.Ω(metadata).Should(gomega.Equal([]byte("blah")))
+	// 	gomega.Ω(supply).Should(gomega.Equal(uint64(10)))
+	// 	gomega.Ω(owner).Should(gomega.Equal(utils.Address(ed25519.EmptyPublicKey)))
+	// 	gomega.Ω(warp).Should(gomega.BeFalse())
+	// })
 
-	ginkgo.It("modify an asset that doesn't exist", func() {
-		assetID := ids.GenerateTestID()
-		parser, err := instances[0].tcli.Parser(context.Background())
-		gomega.Ω(err).Should(gomega.BeNil())
-		submit, _, _, err := instances[0].cli.GenerateTransaction(
-			context.Background(),
-			parser,
-			nil,
-			&actions.ModifyAsset{
-				Asset:    assetID,
-				Metadata: []byte("cool"),
-				Owner:    rsender,
-			},
-			factory,
-		)
-		gomega.Ω(err).Should(gomega.BeNil())
-		gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
-		accept := expectBlk(instances[0])
-		results := accept()
-		gomega.Ω(results).Should(gomega.HaveLen(1))
-		result := results[0]
-		gomega.Ω(result.Success).Should(gomega.BeFalse())
-		gomega.Ω(string(result.Output)).
-			Should(gomega.ContainSubstring("asset missing"))
+	// ginkgo.It("modify an asset that doesn't exist", func() {
+	// 	assetID := ids.GenerateTestID()
+	// 	parser, err := instances[0].tcli.Parser(context.Background())
+	// 	gomega.Ω(err).Should(gomega.BeNil())
+	// 	submit, _, _, err := instances[0].cli.GenerateTransaction(
+	// 		context.Background(),
+	// 		parser,
+	// 		nil,
+	// 		&actions.ModifyAsset{
+	// 			Asset:    assetID,
+	// 			Metadata: []byte("cool"),
+	// 			Owner:    rsender,
+	// 		},
+	// 		factory,
+	// 		false,
+	// 	)
+	// 	gomega.Ω(err).Should(gomega.BeNil())
+	// 	gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
+	// 	accept := expectBlk(instances[0])
+	// 	results := accept()
+	// 	gomega.Ω(results).Should(gomega.HaveLen(1))
+	// 	result := results[0]
+	// 	gomega.Ω(result.Success).Should(gomega.BeFalse())
+	// 	gomega.Ω(string(result.Output)).
+	// 		Should(gomega.ContainSubstring("asset missing"))
 
-		exists, _, _, _, _, err := instances[0].tcli.Asset(context.TODO(), assetID)
-		gomega.Ω(err).Should(gomega.BeNil())
-		gomega.Ω(exists).Should(gomega.BeFalse())
-	})
+	// 	exists, _, _, _, _, err := instances[0].tcli.Asset(context.TODO(), assetID)
+	// 	gomega.Ω(err).Should(gomega.BeNil())
+	// 	gomega.Ω(exists).Should(gomega.BeFalse())
+	// })
 
 	ginkgo.It("rejects mint of native token", func() {
-		other, err := crypto.GeneratePrivateKey()
+		other, err := ed25519.GeneratePrivateKey()
 		gomega.Ω(err).Should(gomega.BeNil())
 		actionRegistry, authRegistry := instances[0].vm.Registry()
 		tx := chain.NewTx(
@@ -1172,6 +1189,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Metadata: asset2,
 			},
 			factory,
+			false,
 		)
 		gomega.Ω(err).Should(gomega.BeNil())
 		gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
@@ -1191,6 +1209,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Value: 10,
 			},
 			factory,
+			false,
 		)
 		gomega.Ω(err).Should(gomega.BeNil())
 		gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
@@ -1215,6 +1234,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Metadata: asset3,
 			},
 			factory2,
+			false,
 		)
 		gomega.Ω(err).Should(gomega.BeNil())
 		gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
@@ -1234,6 +1254,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Value: 10,
 			},
 			factory2,
+			false,
 		)
 		gomega.Ω(err).Should(gomega.BeNil())
 		gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
@@ -1802,6 +1823,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 			wm,
 			&actions.ImportAsset{},
 			factory,
+			false,
 		)
 		gomega.Ω(err).Should(gomega.BeNil())
 		gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
@@ -1843,6 +1865,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Destination: dest,
 			},
 			factory,
+			false,
 		)
 		gomega.Ω(err).Should(gomega.BeNil())
 		gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
@@ -1886,6 +1909,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Destination: ids.GenerateTestID(),
 			},
 			factory,
+			false,
 		)
 		gomega.Ω(err).Should(gomega.BeNil())
 		gomega.Ω(submit(context.Background())).Should(gomega.BeNil())

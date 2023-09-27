@@ -8,6 +8,7 @@ import (
 
 	"github.com/ava-labs/avalanchego/ids"
 
+	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	"github.com/AnomalyFi/nodekit-seq/utils"
 )
@@ -34,16 +35,17 @@ type TxArgs struct {
 }
 
 type TxReply struct {
-	Timestamp int64  `json:"timestamp"`
-	Success   bool   `json:"success"`
-	Units     uint64 `json:"units"`
+	Timestamp int64            `json:"timestamp"`
+	Success   bool             `json:"success"`
+	Units     chain.Dimensions `json:"units"`
+	Fee       uint64           `json:"fee"`
 }
 
 func (j *JSONRPCServer) Tx(req *http.Request, args *TxArgs, reply *TxReply) error {
 	ctx, span := j.c.Tracer().Start(req.Context(), "Server.Tx")
 	defer span.End()
 
-	found, t, success, units, err := j.c.GetTransaction(ctx, args.TxID)
+	found, t, success, units, fee, err := j.c.GetTransaction(ctx, args.TxID)
 	if err != nil {
 		return err
 	}
@@ -53,6 +55,7 @@ func (j *JSONRPCServer) Tx(req *http.Request, args *TxArgs, reply *TxReply) erro
 	reply.Timestamp = t
 	reply.Success = success
 	reply.Units = units
+	reply.Fee = fee
 	return nil
 }
 
@@ -61,6 +64,8 @@ type AssetArgs struct {
 }
 
 type AssetReply struct {
+	Symbol   []byte `json:"symbol"`
+	Decimals uint8  `json:"decimals"`
 	Metadata []byte `json:"metadata"`
 	Supply   uint64 `json:"supply"`
 	Owner    string `json:"owner"`
@@ -71,13 +76,15 @@ func (j *JSONRPCServer) Asset(req *http.Request, args *AssetArgs, reply *AssetRe
 	ctx, span := j.c.Tracer().Start(req.Context(), "Server.Asset")
 	defer span.End()
 
-	exists, metadata, supply, owner, warp, err := j.c.GetAssetFromState(ctx, args.Asset)
+	exists, symbol, decimals, metadata, supply, owner, warp, err := j.c.GetAssetFromState(ctx, args.Asset)
 	if err != nil {
 		return err
 	}
 	if !exists {
 		return ErrAssetNotFound
 	}
+	reply.Symbol = symbol
+	reply.Decimals = decimals
 	reply.Metadata = metadata
 	reply.Supply = supply
 	reply.Owner = utils.Address(owner)

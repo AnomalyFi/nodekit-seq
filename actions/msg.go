@@ -8,52 +8,72 @@ import (
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
-	"github.com/AnomalyFi/hypersdk/crypto"
+	"github.com/AnomalyFi/hypersdk/consts"
+	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
+	"github.com/AnomalyFi/hypersdk/state"
+	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
 )
 
 var _ chain.Action = (*SequencerMsg)(nil)
-
+  
 type SequencerMsg struct {
-	ChainId     []byte           `protobuf:"bytes,1,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
-	Data        []byte           `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
-	FromAddress crypto.PublicKey `json:"from_address"`
+  ChainId     []byte            `protobuf:"bytes,1,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
+	Data        []byte            `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	FromAddress ed25519.PublicKey `json:"from_address"`
 	// `protobuf:"bytes,3,opt,name=from_address,json=fromAddress,proto3" json:"from_address,omitempty"`
 }
 
-func (t *SequencerMsg) StateKeys(rauth chain.Auth, _ ids.ID) [][]byte {
+func (*SequencerMsg) GetTypeID() uint8 {
+	return msgID
+}
+
+func (t *SequencerMsg) StateKeys(rauth chain.Auth, _ ids.ID) []string {
 	// owner, err := utils.ParseAddress(t.FromAddress)
 	// if err != nil {
 	// 	return nil, err
 	// }
 
-	return [][]byte{
+	return []string{
 		// We always pay fees with the native asset (which is [ids.Empty])
-		storage.PrefixBalanceKey(t.FromAddress, ids.Empty),
-		t.ChainId,
-		t.Data,
+		string(storage.BalanceKey(auth.GetActor(rauth), ids.Empty)),
+		// string(t.ChainId),
+		// string(t.Data),
 	}
+}
+
+// TODO fix this
+func (*SequencerMsg) StateKeysMaxChunks() []uint16 {
+	return []uint16{storage.BalanceChunks}
+}
+
+func (*SequencerMsg) OutputsWarpMessage() bool {
+	return false
 }
 
 func (t *SequencerMsg) Execute(
 	ctx context.Context,
-	r chain.Rules,
-	db chain.Database,
+	_ chain.Rules,
+	mu state.Mutable,
 	_ int64,
 	rauth chain.Auth,
 	_ ids.ID,
 	_ bool,
-) (*chain.Result, error) {
-	unitsUsed := t.MaxUnits(r) // max units == units
-	return &chain.Result{Success: true, Units: unitsUsed}, nil
+) (bool, uint64, []byte, *warp.UnsignedMessage, error) {
+	return true, MsgComputeUnits, nil, nil, nil
 }
 
-func (*SequencerMsg) MaxUnits(chain.Rules) uint64 {
+func (*SequencerMsg) MaxComputeUnits(chain.Rules) uint64 {
+	return MsgComputeUnits
+}
+
+func (*SequencerMsg) Size() int {
+	//TODO this should be larger because it should consider the max byte array length
 	// We use size as the price of this transaction but we could just as easily
 	// use any other calculation.
-	return crypto.PublicKeyLen + crypto.SignatureLen
+	return ed25519.PublicKeyLen + consts.IDLen + consts.Uint64Len
 }
 
 func (t *SequencerMsg) Marshal(p *codec.Packer) {

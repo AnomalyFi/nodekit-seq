@@ -4,22 +4,20 @@
 package actions
 
 import (
-	"github.com/ava-labs/avalanchego/ids"
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/consts"
-	"github.com/AnomalyFi/hypersdk/crypto"
+	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/utils"
+	"github.com/ava-labs/avalanchego/ids"
 )
 
-const WarpTransferSize = crypto.PublicKeyLen + consts.IDLen +
-	consts.Uint64Len + 1 + consts.Uint64Len + consts.Uint64Len +
-	consts.IDLen + consts.Uint64Len + consts.Uint64Len + consts.IDLen
-
 type WarpTransfer struct {
-	To    crypto.PublicKey `json:"to"`
-	Asset ids.ID           `json:"asset"`
-	Value uint64           `json:"value"`
+	To       ed25519.PublicKey `json:"to"`
+	Symbol   []byte            `json:"symbol"`
+	Decimals uint8             `json:"decimals"`
+	Asset    ids.ID            `json:"asset"`
+	Value    uint64            `json:"value"`
 
 	// Return is set to true when a warp message is sending funds back to the
 	// chain where they were created.
@@ -42,15 +40,29 @@ type WarpTransfer struct {
 	// TxID is the transaction that created this message. This is used to ensure
 	// there is WarpID uniqueness.
 	TxID ids.ID `json:"txID"`
+
+	// DestinationChainID is the destination of this transfer. We assume this
+	// must be populated (not anycast).
+	DestinationChainID ids.ID `json:"destinationChainID"`
+}
+
+func (w *WarpTransfer) size() int {
+	return ed25519.PublicKeyLen + codec.BytesLen(w.Symbol) + consts.Uint8Len + consts.IDLen +
+		consts.Uint64Len + consts.BoolLen +
+		consts.Uint64Len + /* op bits */
+		consts.Uint64Len + consts.Uint64Len + consts.IDLen + consts.Uint64Len + consts.Int64Len +
+		consts.IDLen + consts.IDLen
 }
 
 func (w *WarpTransfer) Marshal() ([]byte, error) {
-	p := codec.NewWriter(WarpTransferSize)
+	p := codec.NewWriter(w.size(), w.size())
 	p.PackPublicKey(w.To)
+	p.PackBytes(w.Symbol)
+	p.PackByte(w.Decimals)
 	p.PackID(w.Asset)
 	p.PackUint64(w.Value)
 	p.PackBool(w.Return)
-	op := codec.NewOptionalWriter()
+	op := codec.NewOptionalWriter(consts.Uint64Len*3 + consts.IDLen + consts.Int64Len)
 	op.PackUint64(w.Reward)
 	op.PackUint64(w.SwapIn)
 	op.PackID(w.AssetOut)
@@ -58,6 +70,7 @@ func (w *WarpTransfer) Marshal() ([]byte, error) {
 	op.PackInt64(w.SwapExpiry)
 	p.PackOptional(op)
 	p.PackID(w.TxID)
+	p.PackID(w.DestinationChainID)
 	return p.Bytes(), p.Err()
 }
 
@@ -73,9 +86,17 @@ func ImportedAssetMetadata(assetID ids.ID, sourceChainID ids.ID) []byte {
 }
 
 func UnmarshalWarpTransfer(b []byte) (*WarpTransfer, error) {
+	maxWarpTransferSize := ed25519.PublicKeyLen + codec.BytesLenSize(MaxSymbolSize) + consts.Uint8Len + consts.IDLen +
+		consts.Uint64Len + consts.BoolLen +
+		consts.Uint64Len + /* op bits */
+		consts.Uint64Len + consts.Uint64Len + consts.IDLen + consts.Uint64Len + consts.Int64Len +
+		consts.IDLen + consts.IDLen
+
 	var transfer WarpTransfer
-	p := codec.NewReader(b, WarpTransferSize)
+	p := codec.NewReader(b, maxWarpTransferSize)
 	p.UnpackPublicKey(false, &transfer.To)
+	p.UnpackBytes(MaxSymbolSize, true, &transfer.Symbol)
+	transfer.Decimals = p.UnpackByte()
 	p.UnpackID(false, &transfer.Asset)
 	transfer.Value = p.UnpackUint64(true)
 	transfer.Return = p.UnpackBool()
@@ -87,6 +108,7 @@ func UnmarshalWarpTransfer(b []byte) (*WarpTransfer, error) {
 	transfer.SwapExpiry = op.UnpackInt64()
 	op.Done()
 	p.UnpackID(true, &transfer.TxID)
+	p.UnpackID(true, &transfer.DestinationChainID)
 	if err := p.Err(); err != nil {
 		return nil, err
 	}

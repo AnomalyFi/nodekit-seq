@@ -10,9 +10,8 @@ import (
 	"github.com/AnomalyFi/hypersdk/builder"
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/gossiper"
-	"github.com/AnomalyFi/hypersdk/pebble"
 	hrpc "github.com/AnomalyFi/hypersdk/rpc"
-	"github.com/AnomalyFi/hypersdk/utils"
+	hstorage "github.com/AnomalyFi/hypersdk/storage"
 	"github.com/AnomalyFi/hypersdk/vm"
 	ametrics "github.com/ava-labs/avalanchego/api/metrics"
 	"github.com/ava-labs/avalanchego/database"
@@ -21,6 +20,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/AnomalyFi/nodekit-seq/actions"
+	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/config"
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
@@ -67,6 +67,7 @@ func (c *Controller) Initialize(
 	vm.Handlers,
 	chain.ActionRegistry,
 	chain.AuthRegistry,
+	map[uint8]vm.AuthEngine,
 	error,
 ) {
 	c.inner = inner
@@ -77,20 +78,20 @@ func (c *Controller) Initialize(
 	var err error
 	c.metrics, err = newMetrics(gatherer)
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 
 	// Load config and genesis
 	c.config, err = config.New(c.snowCtx.NodeID, configBytes)
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 	c.snowCtx.Log.SetLevel(c.config.GetLogLevel())
-	snowCtx.Log.Info("loaded config", zap.Any("contents", c.config))
+	snowCtx.Log.Info("initialized config", zap.Bool("loaded", c.config.Loaded()), zap.Any("contents", c.config))
 
 	c.genesis, err = genesis.New(genesisBytes, upgradeBytes)
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf(
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf(
 			"unable to read genesis: %w",
 			err,
 		)
@@ -98,31 +99,14 @@ func (c *Controller) Initialize(
 	snowCtx.Log.Info("loaded genesis", zap.Any("genesis", c.genesis))
 
 	// Create DBs
-	blockPath, err := utils.InitSubDirectory(snowCtx.ChainDataDir, "block")
+	blockDB, stateDB, metaDB, err := hstorage.New(snowCtx.ChainDataDir, gatherer)
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 	// TODO: tune Pebble config based on each sub-db focus
-	cfg := pebble.NewDefaultConfig()
-	blockDB, err := pebble.New(blockPath, cfg)
+	c.metaDB = metaDB
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, nil, err
-	}
-	statePath, err := utils.InitSubDirectory(snowCtx.ChainDataDir, "state")
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, nil, err
-	}
-	stateDB, err := pebble.New(statePath, cfg)
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, nil, err
-	}
-	metaPath, err := utils.InitSubDirectory(snowCtx.ChainDataDir, "metadata")
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, nil, err
-	}
-	c.metaDB, err = pebble.New(metaPath, cfg)
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 
 	// Create handlers
@@ -136,7 +120,7 @@ func (c *Controller) Initialize(
 		common.NoLock,
 	)
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 	apis[rpc.JSONRPCEndpoint] = jsonRPCHandler
 
@@ -150,25 +134,25 @@ func (c *Controller) Initialize(
 		build = builder.NewManual(inner)
 		gossip = gossiper.NewManual(inner)
 	} else {
-		bcfg := builder.DefaultTimeConfig()
-		bcfg.PreferredBlocksPerSecond = c.config.GetPreferredBlocksPerSecond()
-		build = builder.NewTime(inner, bcfg)
+		build = builder.NewTime(inner)
 		gcfg := gossiper.DefaultProposerConfig()
-		gcfg.GossipInterval = c.config.GossipInterval
 		gcfg.GossipMaxSize = c.config.GossipMaxSize
 		gcfg.GossipProposerDiff = c.config.GossipProposerDiff
 		gcfg.GossipProposerDepth = c.config.GossipProposerDepth
-		gcfg.BuildProposerDiff = c.config.BuildProposerDiff
+		gcfg.NoGossipBuilderDiff = c.config.NoGossipBuilderDiff
 		gcfg.VerifyTimeout = c.config.VerifyTimeout
-		gossip = gossiper.NewProposer(inner, gcfg)
+		gossip, err = gossiper.NewProposer(inner, gcfg)
+		if err != nil {
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+		}
 	}
 
-	return c.config, c.genesis, build, gossip, blockDB, stateDB, apis, consts.ActionRegistry, consts.AuthRegistry, nil
+	return c.config, c.genesis, build, gossip, blockDB, stateDB, apis, consts.ActionRegistry, consts.AuthRegistry, auth.Engines(), nil
 }
 
 func (c *Controller) Rules(t int64) chain.Rules {
 	// TODO: extend with [UpgradeBytes]
-	return c.genesis.Rules(t)
+	return c.genesis.Rules(t, c.snowCtx.NetworkID, c.snowCtx.ChainID)
 }
 
 func (c *Controller) StateManager() chain.StateManager {
@@ -182,16 +166,19 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 	results := blk.Results()
 	for i, tx := range blk.Txs {
 		result := results[i]
-		err := storage.StoreTransaction(
-			ctx,
-			batch,
-			tx.ID(),
-			blk.GetTimestamp(),
-			result.Success,
-			result.Units,
-		)
-		if err != nil {
-			return err
+		if c.config.GetStoreTransactions() {
+			err := storage.StoreTransaction(
+				ctx,
+				batch,
+				tx.ID(),
+				blk.GetTimestamp(),
+				result.Success,
+				result.Consumed,
+				result.Fee,
+			)
+			if err != nil {
+				return err
+			}
 		}
 		if result.Success {
 			switch tx.Action.(type) {
@@ -201,8 +188,6 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 				c.metrics.mintAsset.Inc()
 			case *actions.BurnAsset:
 				c.metrics.burnAsset.Inc()
-			case *actions.ModifyAsset:
-				c.metrics.modifyAsset.Inc()
 			case *actions.Transfer:
 				c.metrics.transfer.Inc()
 			case *actions.SequencerMsg:

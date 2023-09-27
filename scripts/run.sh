@@ -17,50 +17,71 @@ if ! [[ "$0" =~ scripts/run.sh ]]; then
   exit 255
 fi
 
-VERSION=1.10.1
+VERSION=v1.10.10
+MAX_UINT64=18446744073709551615
 MODE=${MODE:-run}
 LOGLEVEL=${LOGLEVEL:-info}
-AVALANCHE_LOG_LEVEL=${AVALANCHE_LOG_LEVEL:-INFO}
 STATESYNC_DELAY=${STATESYNC_DELAY:-0}
-PROPOSER_MIN_BLOCK_DELAY=${PROPOSER_MIN_BLOCK_DELAY:-0}
+MIN_BLOCK_GAP=${MIN_BLOCK_GAP:-100}
+STORE_TXS=${STORE_TXS:-false}
+UNLIMITED_USAGE=${UNLIMITED_USAGE:-false}
 if [[ ${MODE} != "run" && ${MODE} != "run-single" ]]; then
-  STATESYNC_DELAY=500000000 # 500ms
-  PROPOSER_MIN_BLOCK_DELAY=100000000 # 100ms
+  LOGLEVEL=debug
+  STATESYNC_DELAY=100000000 # 100ms
+  MIN_BLOCK_GAP=250 #ms
+  STORE_TXS=true
+  UNLIMITED_USAGE=true
+fi
+
+WINDOW_TARGET_UNITS="40000000,450000,450000,450000,450000"
+MAX_BLOCK_UNITS="1800000,15000,15000,2500,15000"
+if ${UNLIMITED_USAGE}; then
+  WINDOW_TARGET_UNITS="${MAX_UINT64},${MAX_UINT64},${MAX_UINT64},${MAX_UINT64},${MAX_UINT64}"
+  # If we don't limit the block size, AvalancheGo will reject the block.
+  MAX_BLOCK_UNITS="1800000,${MAX_UINT64},${MAX_UINT64},${MAX_UINT64},${MAX_UINT64}"
 fi
 
 echo "Running with:"
+echo LOGLEVEL: ${LOGLEVEL}
 echo VERSION: ${VERSION}
 echo MODE: ${MODE}
-echo STATESYNC_DELAY: ${STATESYNC_DELAY}
-echo PROPOSER_MIN_BLOCK_DELAY: ${PROPOSER_MIN_BLOCK_DELAY}
+echo STATESYNC_DELAY \(ns\): ${STATESYNC_DELAY}
+echo MIN_BLOCK_GAP \(ms\): ${MIN_BLOCK_GAP}
+echo STORE_TXS: ${STORE_TXS}
+echo WINDOW_TARGET_UNITS: ${WINDOW_TARGET_UNITS}
+echo MAX_BLOCK_UNITS: ${MAX_BLOCK_UNITS}
 
 ############################
 # build avalanchego
 # https://github.com/ava-labs/avalanchego/releases
 GOARCH=$(go env GOARCH)
 GOOS=$(go env GOOS)
-AVALANCHEGO_PATH=/tmp/avalanchego-v${VERSION}/avalanchego
-AVALANCHEGO_PLUGIN_DIR=/tmp/avalanchego-v${VERSION}/plugins
+TMPDIR=/tmp/hypersdk
+
+echo "working directory: $TMPDIR"
+
+AVALANCHEGO_PATH=${TMPDIR}/avalanchego-${VERSION}/avalanchego
+AVALANCHEGO_PLUGIN_DIR=${TMPDIR}/avalanchego-${VERSION}/plugins
 
 if [ ! -f "$AVALANCHEGO_PATH" ]; then
   echo "building avalanchego"
   CWD=$(pwd)
 
   # Clear old folders
-  rm -rf /tmp/avalanchego-v${VERSION}
-  mkdir -p /tmp/avalanchego-v${VERSION}
-  rm -rf /tmp/avalanchego-src
-  mkdir -p /tmp/avalanchego-src
+  rm -rf ${TMPDIR}/avalanchego-${VERSION}
+  mkdir -p ${TMPDIR}/avalanchego-${VERSION}
+  rm -rf ${TMPDIR}/avalanchego-src
+  mkdir -p ${TMPDIR}/avalanchego-src
 
   # Download src
-  cd /tmp/avalanchego-src
+  cd ${TMPDIR}/avalanchego-src
   git clone https://github.com/ava-labs/avalanchego.git
   cd avalanchego
-  git checkout v${VERSION}
+  git checkout ${VERSION}
 
   # Build avalanchego
   ./scripts/build.sh
-  mv build/avalanchego /tmp/avalanchego-v${VERSION}
+  mv build/avalanchego ${TMPDIR}/avalanchego-${VERSION}
 
   cd ${CWD}
 else
@@ -73,80 +94,85 @@ fi
 echo "building tokenvm"
 
 # delete previous (if exists)
-rm -f /tmp/avalanchego-v${VERSION}/plugins/tHBYNu8ikqo4MWMHehC9iKB9mR5tB3DWzbkYmTfe9buWQ5GZ8
+rm -f ${TMPDIR}/avalanchego-${VERSION}/plugins/tHBYNu8ikqo4MWMHehC9iKB9mR5tB3DWzbkYmTfe9buWQ5GZ8
 
 # rebuild with latest code
 go build \
--o /tmp/avalanchego-v${VERSION}/plugins/tHBYNu8ikqo4MWMHehC9iKB9mR5tB3DWzbkYmTfe9buWQ5GZ8 \
+-o ${TMPDIR}/avalanchego-${VERSION}/plugins/tHBYNu8ikqo4MWMHehC9iKB9mR5tB3DWzbkYmTfe9buWQ5GZ8 \
 ./cmd/tokenvm
 
 echo "building token-cli"
-go build -v -o /tmp/token-cli ./cmd/token-cli
+go build -v -o ${TMPDIR}/token-cli ./cmd/token-cli
 
 # log everything in the avalanchego directory
-find /tmp/avalanchego-v${VERSION}
+find ${TMPDIR}/avalanchego-${VERSION}
 
 ############################
 
 ############################
 
 # Always create allocations (linter doesn't like tab)
+#
+# Make sure to replace this address with your own address
+# if you are starting your own devnet (otherwise anyone can access
+# funds using the included demo.pk)
 echo "creating allocations file"
-cat <<EOF > /tmp/allocations.json
-[{"address":"token1rvzhmceq997zntgvravfagsks6w0ryud3rylh4cdvayry0dl97nsjzf3yp", "balance":1000000000000}]
+cat <<EOF > ${TMPDIR}/allocations.json
+[{"address":"token1rvzhmceq997zntgvravfagsks6w0ryud3rylh4cdvayry0dl97nsjzf3yp", "balance":10000000000000000000}]
 EOF
 
 GENESIS_PATH=$2
 if [[ -z "${GENESIS_PATH}" ]]; then
   echo "creating VM genesis file with allocations"
-  rm -f /tmp/tokenvm.genesis
-  /tmp/token-cli genesis generate /tmp/allocations.json \
-  --max-block-units 4000000 \
-  --window-target-units 100000000000 \
-  --window-target-blocks 30 \
-  --genesis-file /tmp/tokenvm.genesis
+  rm -f ${TMPDIR}/tokenvm.genesis
+  ${TMPDIR}/token-cli genesis generate ${TMPDIR}/allocations.json \
+  --window-target-units ${WINDOW_TARGET_UNITS} \
+  --max-block-units ${MAX_BLOCK_UNITS} \
+  --min-block-gap ${MIN_BLOCK_GAP} \
+  --genesis-file ${TMPDIR}/tokenvm.genesis
 else
   echo "copying custom genesis file"
-  rm -f /tmp/tokenvm.genesis
-  cp ${GENESIS_PATH} /tmp/tokenvm.genesis
+  rm -f ${TMPDIR}/tokenvm.genesis
+  cp ${GENESIS_PATH} ${TMPDIR}/tokenvm.genesis
 fi
 
 ############################
 
 ############################
 
+# When running a validator, the [trackedPairs] should be empty/limited or
+# else malicious entities can attempt to stuff memory with dust orders to cause
+# an OOM.
 echo "creating vm config"
-rm -f /tmp/tokenvm.config
-rm -rf /tmp/tokenvm-e2e-profiles
-cat <<EOF > /tmp/tokenvm.config
+rm -f ${TMPDIR}/tokenvm.config
+rm -rf ${TMPDIR}/tokenvm-e2e-profiles
+cat <<EOF > ${TMPDIR}/tokenvm.config
 {
   "mempoolSize": 10000000,
   "mempoolPayerSize": 10000000,
   "mempoolExemptPayers":["token1rvzhmceq997zntgvravfagsks6w0ryud3rylh4cdvayry0dl97nsjzf3yp"],
   "parallelism": 5,
+  "verifySignatures":true,
+  "storeTransactions": ${STORE_TXS},
   "streamingBacklogSize": 10000000,
-  "gossipMaxSize": 32768,
-  "gossipProposerDepth": 1,
-  "buildProposerDiff": 1,
-  "verifyTimeout": 5,
   "trackedPairs":["*"],
-  "preferredBlocksPerSecond": 3,
-  "continuousProfilerDir":"/tmp/tokenvm-e2e-profiles/*",
   "logLevel": "${LOGLEVEL}",
+  "continuousProfilerDir":"${TMPDIR}/tokenvm-e2e-profiles/*",
   "stateSyncServerDelay": ${STATESYNC_DELAY}
 }
 EOF
-mkdir -p /tmp/tokenvm-e2e-profiles
+mkdir -p ${TMPDIR}/tokenvm-e2e-profiles
 
 ############################
 
 ############################
 
 echo "creating subnet config"
-rm -f /tmp/tokenvm.subnet
-cat <<EOF > /tmp/tokenvm.subnet
+rm -f ${TMPDIR}/tokenvm.subnet
+cat <<EOF > ${TMPDIR}/tokenvm.subnet
 {
-  "proposerMinBlockDelay": ${PROPOSER_MIN_BLOCK_DELAY}
+  "proposerMinBlockDelay": 0,
+  "proposerNumHistoricalBlocks": 768
 }
 EOF
 
@@ -172,7 +198,7 @@ ACK_GINKGO_RC=true ginkgo build ./tests/e2e
 # download avalanche-network-runner
 # https://github.com/ava-labs/avalanche-network-runner
 ANR_REPO_PATH=github.com/ava-labs/avalanche-network-runner
-ANR_VERSION=v1.4.1
+ANR_VERSION=v1.7.2
 # version set
 go install -v ${ANR_REPO_PATH}@${ANR_VERSION}
 
@@ -208,13 +234,13 @@ function cleanup() {
     echo ""
     echo "use the following command to terminate:"
     echo ""
-    echo "killall avalanche-network-runner"
+    echo "./scripts/stop.sh;"
     echo ""
     exit
   fi
 
   echo "avalanche-network-runner shutting down..."
-  killall avalanche-network-runner
+  ./scripts/stop.sh;
 }
 trap cleanup EXIT
 
@@ -226,10 +252,10 @@ echo "running e2e tests"
 --network-runner-grpc-gateway-endpoint="0.0.0.0:12353" \
 --avalanchego-path=${AVALANCHEGO_PATH} \
 --avalanchego-plugin-dir=${AVALANCHEGO_PLUGIN_DIR} \
---vm-genesis-path=/tmp/tokenvm.genesis \
---vm-config-path=/tmp/tokenvm.config \
---subnet-config-path=/tmp/tokenvm.subnet \
---output-path=/tmp/avalanchego-v${VERSION}/output.yaml \
+--vm-genesis-path=${TMPDIR}/tokenvm.genesis \
+--vm-config-path=${TMPDIR}/tokenvm.config \
+--subnet-config-path=${TMPDIR}/tokenvm.subnet \
+--output-path=${TMPDIR}/avalanchego-${VERSION}/output.yaml \
 --mode=${MODE}
 
 ############################
