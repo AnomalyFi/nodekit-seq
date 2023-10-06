@@ -398,8 +398,10 @@ func (j *JSONRPCServer) getBlockTransactions(req *http.Request, args *GetBlockTr
 	// Parse query parameters
 
 	//TODO either the firstBlock height is equal to height or use the hash to get it or if none of the above work then use the btree to get it
+	if args.ID != "" {
+		return nil
+	}
 
-	//TODO make this into the response
 	id, err := ids.FromString(args.ID)
 	if err != nil {
 		return err
@@ -415,6 +417,10 @@ func (j *JSONRPCServer) getBlockTransactions(req *http.Request, args *GetBlockTr
 }
 
 func (j *JSONRPCServer) getBlockTransactionsByNamespace(req *http.Request, args *GetBlockTransactionsByNamespaceArgs, reply *SEQTransactionResponse) error {
+	if args.ID != "" {
+		return nil
+	}
+
 	id, err := ids.FromString(args.ID)
 	if err != nil {
 		return err
