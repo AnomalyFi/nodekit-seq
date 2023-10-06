@@ -41,6 +41,8 @@ type Controller struct {
 	config       *config.Config
 	stateManager *StateManager
 
+	jsonRPCServer *rpc.JSONRPCServer
+
 	metrics *metrics
 
 	metaDB database.Database
@@ -114,9 +116,11 @@ func (c *Controller) Initialize(
 	// hypersdk handler are initiatlized automatically, you just need to
 	// initialize custom handlers here.
 	apis := map[string]*common.HTTPHandler{}
+	jsonRPCServer := rpc.NewJSONRPCServer(c)
+	c.jsonRPCServer = jsonRPCServer
 	jsonRPCHandler, err := hrpc.NewJSONRPCHandler(
 		consts.Name,
-		rpc.NewJSONRPCServer(c),
+		jsonRPCServer,
 		common.NoLock,
 	)
 	if err != nil {
@@ -159,9 +163,14 @@ func (c *Controller) StateManager() chain.StateManager {
 	return c.stateManager
 }
 
+// TODO I can add the blocks to the JSON RPC Server here instead of REST API
 func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) error {
 	batch := c.metaDB.NewBatch()
 	defer batch.Reset()
+
+	if err := c.jsonRPCServer.AcceptBlock(blk); err != nil {
+		c.inner.Logger().Fatal("unable to accept block in json-rpc server", zap.Error(err))
+	}
 
 	results := blk.Results()
 	for i, tx := range blk.Txs {
