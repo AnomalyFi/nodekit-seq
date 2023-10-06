@@ -147,6 +147,97 @@ func (cli *JSONRPCClient) Loan(
 	return resp.Amount, err
 }
 
+func (cli *JSONRPCClient) getBlockHeadersByHeight(
+	ctx context.Context,
+	height uint64,
+	end int64,
+) (*BlockHeadersResponse, error) {
+	resp := new(BlockHeadersResponse)
+	//TODO does this need to be lowercase for the string?
+	err := cli.requester.SendRequest(
+		ctx,
+		"getBlockHeadersByHeight",
+		&GetBlockHeadersByHeightArgs{
+			Height: height,
+			End:    end,
+		},
+		resp,
+	)
+	return resp, err
+}
+
+func (cli *JSONRPCClient) getBlockHeadersID(
+	ctx context.Context,
+	id string,
+	end int64,
+) (*BlockHeadersResponse, error) {
+	resp := new(BlockHeadersResponse)
+	//TODO does this need to be lowercase for the string?
+	err := cli.requester.SendRequest(
+		ctx,
+		"getBlockHeadersID",
+		&GetBlockHeadersIDArgs{
+			ID:  id,
+			End: end,
+		},
+		resp,
+	)
+	return resp, err
+}
+
+func (cli *JSONRPCClient) getBlockHeadersByStart(
+	ctx context.Context,
+	start int64,
+	end int64,
+) (*BlockHeadersResponse, error) {
+	resp := new(BlockHeadersResponse)
+	//TODO does this need to be lowercase for the string?
+	err := cli.requester.SendRequest(
+		ctx,
+		"getBlockHeadersByStart",
+		&GetBlockHeadersByStartArgs{
+			Start: start,
+			End:   end,
+		},
+		resp,
+	)
+	return resp, err
+}
+
+func (cli *JSONRPCClient) getBlockTransactions(
+	ctx context.Context,
+	id string,
+) (*TransactionResponse, error) {
+	resp := new(TransactionResponse)
+	//TODO does this need to be lowercase for the string?
+	err := cli.requester.SendRequest(
+		ctx,
+		"getBlockTransactions",
+		&GetBlockTransactionsArgs{
+			ID: id,
+		},
+		resp,
+	)
+	return resp, err
+}
+
+func (cli *JSONRPCClient) getBlockTransactionsByNamespace(
+	ctx context.Context,
+	id string,
+) (*SEQTransactionResponse, error) {
+	resp := new(SEQTransactionResponse)
+	//TODO does this need to be lowercase for the string?
+	err := cli.requester.SendRequest(
+		ctx,
+		"getBlockTransactions",
+		&GetBlockTransactionsByNamespaceArgs{
+			ID: id,
+		},
+		resp,
+	)
+	return resp, err
+}
+
 // TODO add more methods
 func (cli *JSONRPCClient) WaitForBalance(
 	ctx context.Context,

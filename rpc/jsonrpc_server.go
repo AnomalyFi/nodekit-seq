@@ -202,7 +202,7 @@ type GetBlockHeadersByHeightArgs struct {
 }
 
 type GetBlockHeadersIDArgs struct {
-	ID  ids.ID `json:"id"`
+	ID  string `json:"id"`
 	End int64  `json:"end"`
 }
 
@@ -212,11 +212,11 @@ type GetBlockHeadersByStartArgs struct {
 }
 
 type GetBlockTransactionsArgs struct {
-	ID ids.ID `json:"block_id"`
+	ID string `json:"block_id"`
 }
 
 type GetBlockTransactionsByNamespaceArgs struct {
-	ID        ids.ID `json:"block_id"`
+	ID        string `json:"block_id"`
 	Namespace string `json:"namespace"`
 }
 
@@ -276,10 +276,13 @@ func (j *JSONRPCServer) getBlockHeadersID(req *http.Request, args *GetBlockHeade
 
 	var firstBlock uint64
 
-	if args.ID != ids.Empty {
-
+	if args.ID != "" {
+		id, err := ids.FromString(args.ID)
+		if err != nil {
+			return err
+		}
 		//TODO make this into the response
-		block := j.headers[args.ID]
+		block := j.headers[id]
 
 		firstBlock = block.Hght
 		// Handle hash parameter
@@ -397,9 +400,14 @@ func (j *JSONRPCServer) getBlockTransactions(req *http.Request, args *GetBlockTr
 	//TODO either the firstBlock height is equal to height or use the hash to get it or if none of the above work then use the btree to get it
 
 	//TODO make this into the response
-	block := j.headers[args.ID]
+	id, err := ids.FromString(args.ID)
+	if err != nil {
+		return err
+	}
 
-	res := TransactionResponse{Txs: block.Txs, BlockId: args.ID}
+	block := j.headers[id]
+
+	res := TransactionResponse{Txs: block.Txs, BlockId: id}
 
 	reply = &res
 
@@ -407,10 +415,15 @@ func (j *JSONRPCServer) getBlockTransactions(req *http.Request, args *GetBlockTr
 }
 
 func (j *JSONRPCServer) getBlockTransactionsByNamespace(req *http.Request, args *GetBlockTransactionsByNamespaceArgs, reply *SEQTransactionResponse) error {
-	block := j.blocksWithValidTxs[args.ID]
+	id, err := ids.FromString(args.ID)
+	if err != nil {
+		return err
+	}
+
+	block := j.blocksWithValidTxs[id]
 
 	txs := block.Txs[args.Namespace]
-	res := SEQTransactionResponse{Txs: txs, BlockId: args.ID}
+	res := SEQTransactionResponse{Txs: txs, BlockId: id}
 
 	reply = &res
 
