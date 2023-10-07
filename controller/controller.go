@@ -177,6 +177,10 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 		c.inner.Logger().Fatal("unable to accept block in json-rpc server", zap.Error(err))
 	}
 
+	if err := c.commitmentManager.AcceptBlock(blk); err != nil {
+		c.inner.Logger().Fatal("unable to accept block in commitment manager", zap.Error(err))
+	}
+
 	results := blk.Results()
 	for i, tx := range blk.Txs {
 		result := results[i]
