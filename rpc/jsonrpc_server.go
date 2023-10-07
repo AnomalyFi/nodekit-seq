@@ -15,6 +15,8 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/actions"
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
+	"github.com/AnomalyFi/nodekit-seq/types"
+
 	"github.com/AnomalyFi/nodekit-seq/utils"
 
 	"github.com/tidwall/btree"
@@ -24,7 +26,7 @@ type JSONRPCServer struct {
 	c       Controller
 	headers map[ids.ID]*chain.StatefulBlock // Map block ID to block header
 
-	blocksWithValidTxs map[ids.ID]*SequencerBlock // Map block ID to block header
+	blocksWithValidTxs map[ids.ID]*types.SequencerBlock // Map block ID to block header
 
 	idsByHeight btree.Map[uint64, ids.ID] // Map block ID to block height
 
@@ -36,7 +38,7 @@ func NewJSONRPCServer(c Controller) *JSONRPCServer {
 	return &JSONRPCServer{
 		c:                  c,
 		headers:            map[ids.ID]*chain.StatefulBlock{},
-		blocksWithValidTxs: map[ids.ID]*SequencerBlock{},
+		blocksWithValidTxs: map[ids.ID]*types.SequencerBlock{},
 		idsByHeight:        btree.Map[uint64, ids.ID]{},
 		blocks:             btree.Map[int64, uint64]{},
 	}
@@ -177,23 +179,8 @@ type TransactionResponse struct {
 
 // TODO need to fix this. Tech debt
 type SEQTransactionResponse struct {
-	Txs     []*SEQTransaction `json:"txs"`
-	BlockId ids.ID            `json:"id"`
-}
-
-type SEQTransaction struct {
-	Namespace   string `json:"namespace"`
-	Tx_id       ids.ID `json:"tx_id"`
-	Index       uint64 `json:"tx_index"`
-	Transaction []byte `json:"transaction"`
-}
-
-type SequencerBlock struct {
-	StateRoot ids.ID                       `json:"state_root"`
-	Prnt      ids.ID                       `json:"parent"`
-	Tmstmp    int64                        `json:"timestamp"`
-	Hght      uint64                       `json:"height"`
-	Txs       map[string][]*SEQTransaction `json:"transactions"`
+	Txs     []*types.SEQTransaction `json:"txs"`
+	BlockId ids.ID                  `json:"id"`
 }
 
 type GetBlockHeadersByHeightArgs struct {
@@ -437,7 +424,6 @@ func (j *JSONRPCServer) getBlockTransactionsByNamespace(req *http.Request, args 
 }
 
 func (j *JSONRPCServer) AcceptBlock(blk *chain.StatelessBlock) error {
-	//TODO this should take in this data so I can have methods to return it. I can easily pack the StatelessBlock and then just unpack it so I get the stuff I need
 	ctx := context.Background()
 	msg, err := rpc.PackBlockMessage(blk)
 
@@ -446,14 +432,15 @@ func (j *JSONRPCServer) AcceptBlock(blk *chain.StatelessBlock) error {
 	}
 	parser := j.ServerParser(ctx)
 
-	//TODO need to add back SequencerOPBlock so I can get txs by chainId
 	block, results, _, id, err := rpc.UnpackBlockMessage(msg, parser)
 
 	j.headers[*id] = block
 	j.idsByHeight.Set(block.Hght, *id)
 	j.blocks.Set(block.Tmstmp, block.Hght)
 
-	seq_txs := make(map[string][]*SEQTransaction)
+	//TODO I need to call CommitmentManager.AcceptBlock here because otherwise the unpacking will be a pain
+
+	seq_txs := make(map[string][]*types.SEQTransaction)
 
 	for i, tx := range blk.Txs {
 		result := results[i]
@@ -463,9 +450,9 @@ func (j *JSONRPCServer) AcceptBlock(blk *chain.StatelessBlock) error {
 			case *actions.SequencerMsg:
 				hx := hex.EncodeToString(action.ChainId)
 				if seq_txs[hx] == nil {
-					seq_txs[hx] = make([]*SEQTransaction, 0)
+					seq_txs[hx] = make([]*types.SEQTransaction, 0)
 				}
-				new_tx := SEQTransaction{
+				new_tx := types.SEQTransaction{
 					Namespace:   hx,
 					Tx_id:       tx.ID(),
 					Transaction: action.Data,
@@ -477,7 +464,7 @@ func (j *JSONRPCServer) AcceptBlock(blk *chain.StatelessBlock) error {
 
 	}
 
-	sequencerBlock := &SequencerBlock{
+	sequencerBlock := &types.SequencerBlock{
 		StateRoot: blk.StateRoot,
 		Prnt:      blk.Prnt,
 		Tmstmp:    blk.Tmstmp,

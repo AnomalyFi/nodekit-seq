@@ -26,6 +26,7 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 
 	// "github.com/AnomalyFi/nodekit-seq/orderbook"
+	"github.com/AnomalyFi/nodekit-seq/commitment"
 	"github.com/AnomalyFi/nodekit-seq/rpc"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/AnomalyFi/nodekit-seq/version"
@@ -40,6 +41,8 @@ type Controller struct {
 	genesis      *genesis.Genesis
 	config       *config.Config
 	stateManager *StateManager
+
+	commitmentManager *commitment.CommitmentManager
 
 	jsonRPCServer *rpc.JSONRPCServer
 
@@ -128,6 +131,8 @@ func (c *Controller) Initialize(
 	}
 	apis[rpc.JSONRPCEndpoint] = jsonRPCHandler
 
+	c.commitmentManager = commitment.NewCommitmentManager(c.inner)
+	go c.commitmentManager.Run()
 	// Create builder and gossiper
 	var (
 		build  builder.Builder
