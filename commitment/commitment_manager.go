@@ -109,7 +109,7 @@ func (w *CommitmentManager) Run() {
 			w.l.Unlock()
 			w.vm.Logger().Debug("checked for ready jobs", zap.Int("pending", l))
 		case <-w.vm.StopChan():
-			w.vm.Logger().Info("stopping warp manager")
+			w.vm.Logger().Info("stopping commitment manager")
 			return
 		}
 	}
@@ -176,8 +176,10 @@ func (w *CommitmentManager) request(
 		return err
 	}
 
+	auth.GasLimit = 1_000_000
+
 	//TODO change the address
-	sequencerContractTest, err := sequencer.NewSequencer(ethcommon.HexToAddress("0x5FbDB2315678afecb367f032d93F642f64180aa3"), conn)
+	sequencerContractTest, err := sequencer.NewSequencer(ethcommon.HexToAddress("0x8EfB94E8988dAe48C2E96aBE07bda7585722C7e2"), conn)
 
 	// function call on `instance`. Retrieves pending name
 	maxBlocks, err := sequencerContractTest.MAXBLOCKS(&ethbind.CallOpts{Pending: true})
@@ -197,8 +199,11 @@ func (w *CommitmentManager) request(
 	// and if it is less so the L1 is behind SEQ then we can submit a batch
 
 	blkHeight := big.NewInt(int64(blk.Hght))
+	fmt.Println("Current Block Height:", contract_block_height)
+	fmt.Printf("Update SEQ Height: %d\n", blk.Hght)
 	if contract_block_height.Cmp(blkHeight) < 0 {
-		fmt.Println("Current Block Height:", contract_block_height)
+		// fmt.Println("Current Block Height:", contract_block_height)
+		// fmt.Printf("Update SEQ Height: %x\n", blk.Hght)
 
 		firstBlock := uint64(contract_block_height.Int64())
 
@@ -246,6 +251,7 @@ func (w *CommitmentManager) request(
 			fmt.Println("An error happened:", err)
 			return err
 		}
+
 		fmt.Printf("Update pending: 0x%x\n", tx.Hash())
 
 	}
