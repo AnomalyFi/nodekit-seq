@@ -207,7 +207,7 @@ type GetBlockTransactionsByNamespaceArgs struct {
 	Namespace string `json:"namespace"`
 }
 
-func (j *JSONRPCServer) getBlockHeadersByHeight(req *http.Request, args *GetBlockHeadersByHeightArgs, reply *BlockHeadersResponse) error {
+func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBlockHeadersByHeightArgs, reply *BlockHeadersResponse) error {
 
 	prevBlkId, success := j.idsByHeight.Get(args.Height - 1)
 
@@ -258,7 +258,7 @@ func (j *JSONRPCServer) getBlockHeadersByHeight(req *http.Request, args *GetBloc
 	return nil
 }
 
-func (j *JSONRPCServer) getBlockHeadersID(req *http.Request, args *GetBlockHeadersIDArgs, reply *BlockHeadersResponse) error {
+func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeadersIDArgs, reply *BlockHeadersResponse) error {
 	// Parse query parameters
 
 	var firstBlock uint64
@@ -325,7 +325,7 @@ func (j *JSONRPCServer) getBlockHeadersID(req *http.Request, args *GetBlockHeade
 
 }
 
-func (j *JSONRPCServer) getBlockHeadersByStart(req *http.Request, args *GetBlockHeadersByStartArgs, reply *BlockHeadersResponse) error {
+func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlockHeadersByStartArgs, reply *BlockHeadersResponse) error {
 	// Parse query parameters
 
 	var firstBlock uint64
@@ -381,7 +381,7 @@ func (j *JSONRPCServer) getBlockHeadersByStart(req *http.Request, args *GetBlock
 
 }
 
-func (j *JSONRPCServer) getBlockTransactions(req *http.Request, args *GetBlockTransactionsArgs, reply *TransactionResponse) error {
+func (j *JSONRPCServer) GetBlockTransactions(req *http.Request, args *GetBlockTransactionsArgs, reply *TransactionResponse) error {
 	// Parse query parameters
 
 	//TODO either the firstBlock height is equal to height or use the hash to get it or if none of the above work then use the btree to get it
@@ -403,7 +403,7 @@ func (j *JSONRPCServer) getBlockTransactions(req *http.Request, args *GetBlockTr
 	return nil
 }
 
-func (j *JSONRPCServer) getBlockTransactionsByNamespace(req *http.Request, args *GetBlockTransactionsByNamespaceArgs, reply *SEQTransactionResponse) error {
+func (j *JSONRPCServer) GetBlockTransactionsByNamespace(req *http.Request, args *GetBlockTransactionsByNamespaceArgs, reply *SEQTransactionResponse) error {
 	if args.ID != "" {
 		return nil
 	}

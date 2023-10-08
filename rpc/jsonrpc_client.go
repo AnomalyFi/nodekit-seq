@@ -147,7 +147,7 @@ func (cli *JSONRPCClient) Loan(
 	return resp.Amount, err
 }
 
-func (cli *JSONRPCClient) getBlockHeadersByHeight(
+func (cli *JSONRPCClient) GetBlockHeadersByHeight(
 	ctx context.Context,
 	height uint64,
 	end int64,
@@ -156,7 +156,7 @@ func (cli *JSONRPCClient) getBlockHeadersByHeight(
 	//TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,
-		"getBlockHeadersByHeight",
+		"getblockheadersbyheight",
 		&GetBlockHeadersByHeightArgs{
 			Height: height,
 			End:    end,
@@ -166,7 +166,7 @@ func (cli *JSONRPCClient) getBlockHeadersByHeight(
 	return resp, err
 }
 
-func (cli *JSONRPCClient) getBlockHeadersID(
+func (cli *JSONRPCClient) GetBlockHeadersID(
 	ctx context.Context,
 	id string,
 	end int64,
@@ -175,7 +175,7 @@ func (cli *JSONRPCClient) getBlockHeadersID(
 	//TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,
-		"getBlockHeadersID",
+		"getblockheadersid",
 		&GetBlockHeadersIDArgs{
 			ID:  id,
 			End: end,
@@ -185,7 +185,7 @@ func (cli *JSONRPCClient) getBlockHeadersID(
 	return resp, err
 }
 
-func (cli *JSONRPCClient) getBlockHeadersByStart(
+func (cli *JSONRPCClient) GetBlockHeadersByStart(
 	ctx context.Context,
 	start int64,
 	end int64,
@@ -194,7 +194,7 @@ func (cli *JSONRPCClient) getBlockHeadersByStart(
 	//TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,
-		"getBlockHeadersByStart",
+		"getblockheadersbystart",
 		&GetBlockHeadersByStartArgs{
 			Start: start,
 			End:   end,
@@ -204,7 +204,7 @@ func (cli *JSONRPCClient) getBlockHeadersByStart(
 	return resp, err
 }
 
-func (cli *JSONRPCClient) getBlockTransactions(
+func (cli *JSONRPCClient) GetBlockTransactions(
 	ctx context.Context,
 	id string,
 ) (*TransactionResponse, error) {
@@ -212,7 +212,7 @@ func (cli *JSONRPCClient) getBlockTransactions(
 	//TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,
-		"getBlockTransactions",
+		"getblocktransactions",
 		&GetBlockTransactionsArgs{
 			ID: id,
 		},
@@ -221,7 +221,7 @@ func (cli *JSONRPCClient) getBlockTransactions(
 	return resp, err
 }
 
-func (cli *JSONRPCClient) getBlockTransactionsByNamespace(
+func (cli *JSONRPCClient) GetBlockTransactionsByNamespace(
 	ctx context.Context,
 	id string,
 ) (*SEQTransactionResponse, error) {
@@ -229,7 +229,7 @@ func (cli *JSONRPCClient) getBlockTransactionsByNamespace(
 	//TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,
-		"getBlockTransactions",
+		"getblocktransactions",
 		&GetBlockTransactionsByNamespaceArgs{
 			ID: id,
 		},
