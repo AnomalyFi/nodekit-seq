@@ -223,7 +223,8 @@ func (cli *JSONRPCClient) GetBlockTransactions(
 
 func (cli *JSONRPCClient) GetBlockTransactionsByNamespace(
 	ctx context.Context,
-	id string,
+	height uint64,
+	namespace string,
 ) (*SEQTransactionResponse, error) {
 	resp := new(SEQTransactionResponse)
 	//TODO does this need to be lowercase for the string?
@@ -231,7 +232,8 @@ func (cli *JSONRPCClient) GetBlockTransactionsByNamespace(
 		ctx,
 		"getblocktransactions",
 		&GetBlockTransactionsByNamespaceArgs{
-			ID: id,
+			Height:    height,
+			Namespace: namespace,
 		},
 		resp,
 	)

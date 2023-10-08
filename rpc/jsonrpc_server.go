@@ -203,7 +203,7 @@ type GetBlockTransactionsArgs struct {
 }
 
 type GetBlockTransactionsByNamespaceArgs struct {
-	ID        string `json:"block_id"`
+	Height    uint64 `json:"height"`
 	Namespace string `json:"namespace"`
 }
 
@@ -404,21 +404,19 @@ func (j *JSONRPCServer) GetBlockTransactions(req *http.Request, args *GetBlockTr
 }
 
 func (j *JSONRPCServer) GetBlockTransactionsByNamespace(req *http.Request, args *GetBlockTransactionsByNamespaceArgs, reply *SEQTransactionResponse) error {
-	if args.ID != "" {
-		return nil
+
+	BlkId, success := j.idsByHeight.Get(args.Height)
+
+	if success {
+		block := j.blocksWithValidTxs[BlkId]
+
+		txs := block.Txs[args.Namespace]
+		res := SEQTransactionResponse{Txs: txs, BlockId: BlkId}
+
+		reply = &res
+	} else {
+		reply = &SEQTransactionResponse{}
 	}
-
-	id, err := ids.FromString(args.ID)
-	if err != nil {
-		return err
-	}
-
-	block := j.blocksWithValidTxs[id]
-
-	txs := block.Txs[args.Namespace]
-	res := SEQTransactionResponse{Txs: txs, BlockId: id}
-
-	reply = &res
 
 	return nil
 }
