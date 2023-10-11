@@ -19,8 +19,6 @@ import (
 	"github.com/ava-labs/avalanchego/utils/crypto/bls"
 	"go.uber.org/zap"
 
-	ethcommon "github.com/ethereum/go-ethereum/common"
-
 	ethbind "github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -178,8 +176,15 @@ func (w *CommitmentManager) request(
 
 	auth.GasLimit = 1_000_000
 
+	address, tx, sequencerContractTest, err := sequencer.DeploySequencerContract(auth, conn)
+
+	fmt.Printf("Contract pending deploy: 0x%x\n", address)
+	fmt.Printf("Transaction waiting to be mined: 0x%x\n\n", tx.Hash())
+
+	time.Sleep(2 * time.Second)
+
 	//TODO change the address
-	sequencerContractTest, err := sequencer.NewSequencer(ethcommon.HexToAddress("0x3a92c8145cb9694e2E52654707f3Fa71021fc4AC"), conn)
+	//sequencerContractTest, err := sequencer.NewSequencer(ethcommon.HexToAddress("0x92983EFc4EF260037B804a545243380A114F759D"), conn)
 
 	// function call on `instance`. Retrieves pending name
 	maxBlocks, err := sequencerContractTest.MAXBLOCKS(&ethbind.CallOpts{Pending: true})

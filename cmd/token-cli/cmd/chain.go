@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/ava-labs/avalanchego/ids"
@@ -38,14 +39,14 @@ var importANRChainCmd = &cobra.Command{
 var importAvalancheOpsChainCmd = &cobra.Command{
 	Use: "import-ops [chainID] [path]",
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 2 {
+		if len(args) != 1 {
 			return ErrInvalidArgs
 		}
-		_, err := ids.FromString(args[0])
-		return err
+
+		return nil
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
-		return handler.Root().ImportOps(args[0], args[1])
+		return handler.Root().ImportOps(args[0])
 	},
 }
 
@@ -68,6 +69,9 @@ var watchChainCmd = &cobra.Command{
 	RunE: func(_ *cobra.Command, args []string) error {
 		var cli *trpc.JSONRPCClient
 		return handler.Root().WatchChain(hideTxs, func(uri string, networkID uint32, chainID ids.ID) (chain.Parser, error) {
+			fmt.Println("Here is network Id: %d", networkID)
+			fmt.Println("Here is uri: %s", uri)
+
 			cli = trpc.NewJSONRPCClient(uri, networkID, chainID)
 			return cli.Parser(context.TODO())
 		}, func(tx *chain.Transaction, result *chain.Result) {
