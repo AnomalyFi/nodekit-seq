@@ -179,7 +179,7 @@ func (w *CommitmentManager) request(
 	auth.GasLimit = 1_000_000
 
 	//TODO change the address
-	sequencerContractTest, err := sequencer.NewSequencer(ethcommon.HexToAddress("0x8EfB94E8988dAe48C2E96aBE07bda7585722C7e2"), conn)
+	sequencerContractTest, err := sequencer.NewSequencer(ethcommon.HexToAddress("0x3a92c8145cb9694e2E52654707f3Fa71021fc4AC"), conn)
 
 	// function call on `instance`. Retrieves pending name
 	maxBlocks, err := sequencerContractTest.MAXBLOCKS(&ethbind.CallOpts{Pending: true})

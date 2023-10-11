@@ -23,7 +23,7 @@ import (
 
 type SEQTransaction struct {
 	Namespace   string `json:"namespace"`
-	Tx_id       ids.ID `json:"tx_id"`
+	Tx_id       string `json:"tx_id"`
 	Index       uint64 `json:"tx_index"`
 	Transaction []byte `json:"transaction"`
 }

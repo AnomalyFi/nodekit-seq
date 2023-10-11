@@ -62,7 +62,6 @@ func (j *JSONRPCServer) Genesis(_ *http.Request, _ *struct{}, reply *GenesisRepl
 }
 
 type SubmitMsgTxArgs struct {
-	Tx               []byte `json:"tx"`
 	ChainId          string `json:"chain_id"`
 	NetworkID        uint32 `json:"network_id"`
 	SecondaryChainId []byte `json:"secondary_chain_id"`
@@ -70,7 +69,7 @@ type SubmitMsgTxArgs struct {
 }
 
 type SubmitMsgTxReply struct {
-	TxID ids.ID `json:"txId"`
+	TxID string `json:"txId"`
 }
 
 func (j *JSONRPCServer) SubmitMsgTx(
@@ -143,7 +142,7 @@ func (j *JSONRPCServer) SubmitMsgTx(
 		return err
 	}
 	txID := tx.ID()
-	reply.TxID = txID
+	reply.TxID = txID.String()
 	return j.c.Submit(ctx, false, []*chain.Transaction{tx})[0]
 }
 
@@ -263,7 +262,7 @@ func (j *JSONRPCServer) Loan(req *http.Request, args *LoanArgs, reply *LoanReply
 }
 
 type BlockInfo struct {
-	BlockId   ids.ID `json:"id"`
+	BlockId   string `json:"id"`
 	Timestamp int64  `json:"timestamp"`
 	L1Head    uint64 `json:"l1_head"`
 }
@@ -275,15 +274,15 @@ type BlockHeadersResponse struct {
 	Next   BlockInfo   `json:"next"`
 }
 
+// TODO need to fix this. Tech debt
 type TransactionResponse struct {
 	Txs     []*chain.Transaction `json:"txs"`
-	BlockId ids.ID               `json:"id"`
+	BlockId string               `json:"id"`
 }
 
-// TODO need to fix this. Tech debt
 type SEQTransactionResponse struct {
 	Txs     []*types.SEQTransaction `json:"txs"`
-	BlockId ids.ID                  `json:"id"`
+	BlockId string                  `json:"id"`
 }
 
 type GetBlockHeadersByHeightArgs struct {
@@ -322,7 +321,7 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 			return err
 		}
 		Prev = BlockInfo{
-			BlockId:   prevBlkId,
+			BlockId:   prevBlkId.String(),
 			Timestamp: blk.Tmstmp,
 			L1Head:    l1Head.Uint64(),
 		}
@@ -342,7 +341,7 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 		}
 		if blk.Hght == heightKey {
 			blocks = append(blocks, BlockInfo{
-				BlockId:   id,
+				BlockId:   id.String(),
 				Timestamp: blk.Tmstmp,
 				L1Head:    l1Head.Uint64(),
 			})
@@ -359,7 +358,7 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 
 		if blk.Tmstmp > args.End {
 			Next = BlockInfo{
-				BlockId:   id,
+				BlockId:   id.String(),
 				Timestamp: blk.Tmstmp,
 				L1Head:    l1Head.Uint64(),
 			}
@@ -410,7 +409,7 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 			return err
 		}
 		Prev = BlockInfo{
-			BlockId:   prevBlkId,
+			BlockId:   prevBlkId.String(),
 			Timestamp: blk.Tmstmp,
 			L1Head:    l1Head.Uint64(),
 		}
@@ -431,7 +430,7 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 
 		if blk.Hght == heightKey {
 			blocks = append(blocks, BlockInfo{
-				BlockId:   id,
+				BlockId:   id.String(),
 				Timestamp: blk.Tmstmp,
 				L1Head:    l1Head.Uint64(),
 			})
@@ -439,7 +438,7 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 
 		if blk.Tmstmp > args.End {
 			Next = BlockInfo{
-				BlockId:   id,
+				BlockId:   id.String(),
 				Timestamp: blk.Tmstmp,
 				L1Head:    l1Head.Uint64(),
 			}
@@ -481,7 +480,7 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 			return err
 		}
 		Prev = BlockInfo{
-			BlockId:   prevBlkId,
+			BlockId:   prevBlkId.String(),
 			Timestamp: blk.Tmstmp,
 			L1Head:    l1Head.Uint64(),
 		}
@@ -502,7 +501,7 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 
 		if blk.Hght == heightKey {
 			blocks = append(blocks, BlockInfo{
-				BlockId:   id,
+				BlockId:   id.String(),
 				Timestamp: blk.Tmstmp,
 				L1Head:    l1Head.Uint64(),
 			})
@@ -510,7 +509,7 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 
 		if blk.Tmstmp > args.End {
 			Next = BlockInfo{
-				BlockId:   id,
+				BlockId:   id.String(),
 				Timestamp: blk.Tmstmp,
 				L1Head:    l1Head.Uint64(),
 			}
@@ -546,7 +545,7 @@ func (j *JSONRPCServer) GetBlockTransactions(req *http.Request, args *GetBlockTr
 
 	block := j.headers[id]
 
-	res := TransactionResponse{Txs: block.Txs, BlockId: id}
+	res := TransactionResponse{Txs: block.Txs, BlockId: id.String()}
 
 	reply = &res
 
@@ -561,7 +560,7 @@ func (j *JSONRPCServer) GetBlockTransactionsByNamespace(req *http.Request, args 
 		block := j.blocksWithValidTxs[BlkId]
 
 		txs := block.Txs[args.Namespace]
-		res := SEQTransactionResponse{Txs: txs, BlockId: BlkId}
+		res := SEQTransactionResponse{Txs: txs, BlockId: BlkId.String()}
 
 		reply = &res
 	} else {
@@ -602,7 +601,7 @@ func (j *JSONRPCServer) AcceptBlock(blk *chain.StatelessBlock) error {
 				}
 				new_tx := types.SEQTransaction{
 					Namespace:   hx,
-					Tx_id:       tx.ID(),
+					Tx_id:       tx.ID().String(),
 					Transaction: action.Data,
 					Index:       uint64(i),
 				}
