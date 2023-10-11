@@ -6,18 +6,24 @@ package rpc
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/ava-labs/avalanchego/ids"
 
 	"github.com/AnomalyFi/hypersdk/chain"
+	seqconsts "github.com/AnomalyFi/nodekit-seq/consts"
+
+	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/rpc"
+	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/actions"
-	"github.com/AnomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	"github.com/AnomalyFi/nodekit-seq/types"
 
-	"github.com/AnomalyFi/nodekit-seq/utils"
+	sequtils "github.com/AnomalyFi/nodekit-seq/utils"
 
 	ethhex "github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -53,6 +59,99 @@ type GenesisReply struct {
 func (j *JSONRPCServer) Genesis(_ *http.Request, _ *struct{}, reply *GenesisReply) (err error) {
 	reply.Genesis = j.c.Genesis()
 	return nil
+}
+
+type SubmitMsgTxArgs struct {
+	Tx               []byte `json:"tx"`
+	ChainId          string `json:"chain_id"`
+	NetworkID        uint32 `json:"network_id"`
+	SecondaryChainId []byte `json:"secondary_chain_id"`
+	Data             []byte `json:"data"`
+}
+
+type SubmitMsgTxReply struct {
+	TxID ids.ID `json:"txId"`
+}
+
+func (j *JSONRPCServer) SubmitMsgTx(
+	req *http.Request,
+	args *SubmitMsgTxArgs,
+	reply *SubmitMsgTxReply,
+) error {
+	ctx := context.Background()
+
+	chainId, err := ids.FromString(args.ChainId)
+	if err != nil {
+		return err
+	}
+
+	unitPrices, err := j.c.UnitPrices(ctx)
+	if err != nil {
+		return err
+	}
+
+	parser := j.ServerParser(ctx, args.NetworkID, chainId)
+
+	priv, err := ed25519.HexToKey(
+		"323b1d8f4eed5f0da9da93071b034f2dce9d2d22692c172f3cb252a64ddfafd01b057de320297c29ad0c1f589ea216869cf1938d88c9fbd70d6748323dbf2fa7", //nolint:lll
+	)
+	factory := auth.NewED25519Factory(priv)
+
+	tpriv, err := ed25519.GeneratePrivateKey()
+	if err != nil {
+		return err
+	}
+
+	trsender := tpriv.PublicKey()
+	action := &actions.SequencerMsg{
+		FromAddress: trsender,
+		Data:        args.Data,
+		ChainId:     args.SecondaryChainId,
+	}
+	// TODO need to define action, authFactory
+	maxUnits, err := chain.EstimateMaxUnits(parser.Rules(time.Now().UnixMilli()), action, factory, nil)
+	if err != nil {
+		return err
+	}
+	maxFee, err := chain.MulSum(unitPrices, maxUnits)
+	if err != nil {
+		return err
+	}
+
+	//TODO above is generateTransaction below is generateTransactionManual
+
+	now := time.Now().UnixMilli()
+	rules := parser.Rules(now)
+
+	base := &chain.Base{
+		Timestamp: utils.UnixRMilli(now, rules.GetValidityWindow()),
+		ChainID:   chainId,
+		MaxFee:    maxFee,
+	}
+
+	// Build transaction
+	actionRegistry, authRegistry := parser.Registry()
+	tx := chain.NewTx(base, nil, action, false)
+	tx, err = tx.Sign(factory, actionRegistry, authRegistry)
+	if err != nil {
+		return fmt.Errorf("%w: failed to sign transaction", err)
+	}
+
+	//TODO above is new!
+
+	if err := tx.AuthAsyncVerify()(); err != nil {
+		return err
+	}
+	txID := tx.ID()
+	reply.TxID = txID
+	return j.c.Submit(ctx, false, []*chain.Transaction{tx})[0]
+}
+
+type account struct {
+	priv    ed25519.PrivateKey
+	factory *auth.ED25519Factory
+	rsender ed25519.PublicKey
+	sender  string
 }
 
 type TxArgs struct {
@@ -112,7 +211,7 @@ func (j *JSONRPCServer) Asset(req *http.Request, args *AssetArgs, reply *AssetRe
 	reply.Decimals = decimals
 	reply.Metadata = metadata
 	reply.Supply = supply
-	reply.Owner = utils.Address(owner)
+	reply.Owner = sequtils.Address(owner)
 	reply.Warp = warp
 	return err
 }
@@ -130,7 +229,7 @@ func (j *JSONRPCServer) Balance(req *http.Request, args *BalanceArgs, reply *Bal
 	ctx, span := j.c.Tracer().Start(req.Context(), "Server.Balance")
 	defer span.End()
 
-	addr, err := utils.ParseAddress(args.Address)
+	addr, err := sequtils.ParseAddress(args.Address)
 	if err != nil {
 		return err
 	}
@@ -479,7 +578,7 @@ func (j *JSONRPCServer) AcceptBlock(blk *chain.StatelessBlock) error {
 	if err != nil {
 		return err
 	}
-	parser := j.ServerParser(ctx)
+	parser := j.ServerParser(ctx, 1, ids.Empty)
 
 	block, results, _, id, err := rpc.UnpackBlockMessage(msg, parser)
 
@@ -544,12 +643,12 @@ func (p *ServerParser) Rules(t int64) chain.Rules {
 }
 
 func (*ServerParser) Registry() (chain.ActionRegistry, chain.AuthRegistry) {
-	return consts.ActionRegistry, consts.AuthRegistry
+	return seqconsts.ActionRegistry, seqconsts.AuthRegistry
 }
 
-func (j *JSONRPCServer) ServerParser(ctx context.Context) chain.Parser {
+func (j *JSONRPCServer) ServerParser(ctx context.Context, networkId uint32, chainId ids.ID) chain.Parser {
 	g := j.c.Genesis()
 
 	//The only thing this is using is the ActionRegistry and AuthRegistry so this should be fine
-	return &Parser{1, ids.Empty, g}
+	return &Parser{networkId, chainId, g}
 }

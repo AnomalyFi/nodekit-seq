@@ -168,6 +168,18 @@ func (c *Controller) StateManager() chain.StateManager {
 	return c.stateManager
 }
 
+func (c *Controller) UnitPrices(ctx context.Context) (chain.Dimensions, error) {
+	return c.inner.UnitPrices(ctx)
+}
+
+func (c *Controller) Submit(
+	ctx context.Context,
+	verifySig bool,
+	txs []*chain.Transaction,
+) (errs []error) {
+	return c.inner.Submit(ctx, verifySig, txs)
+}
+
 // TODO I can add the blocks to the JSON RPC Server here instead of REST API
 func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) error {
 	batch := c.metaDB.NewBatch()

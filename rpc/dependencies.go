@@ -20,4 +20,10 @@ type Controller interface {
 	GetAssetFromState(context.Context, ids.ID) (bool, []byte, uint8, []byte, uint64, ed25519.PublicKey, bool, error)
 	GetBalanceFromState(context.Context, ed25519.PublicKey, ids.ID) (uint64, error)
 	GetLoanFromState(context.Context, ids.ID, ids.ID) (uint64, error)
+	UnitPrices(ctx context.Context) (chain.Dimensions, error)
+	Submit(
+		ctx context.Context,
+		verifySig bool,
+		txs []*chain.Transaction,
+	) (errs []error)
 }
