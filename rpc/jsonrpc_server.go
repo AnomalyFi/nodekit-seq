@@ -19,6 +19,8 @@ import (
 
 	"github.com/AnomalyFi/nodekit-seq/utils"
 
+	ethhex "github.com/ethereum/go-ethereum/common/hexutil"
+
 	"github.com/tidwall/btree"
 )
 
@@ -162,7 +164,9 @@ func (j *JSONRPCServer) Loan(req *http.Request, args *LoanArgs, reply *LoanReply
 }
 
 type BlockInfo struct {
-	BlockId ids.ID `json:"id"`
+	BlockId   ids.ID `json:"id"`
+	Timestamp int64  `json:"timestamp"`
+	L1Head    uint64 `json:"l1_head"`
 }
 
 type BlockHeadersResponse struct {
@@ -213,8 +217,15 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 
 	Prev := BlockInfo{}
 	if success {
+		blk := j.headers[prevBlkId]
+		l1Head, err := ethhex.DecodeBig(blk.L1Head)
+		if err != nil {
+			return err
+		}
 		Prev = BlockInfo{
-			BlockId: prevBlkId,
+			BlockId:   prevBlkId,
+			Timestamp: blk.Tmstmp,
+			L1Head:    l1Head.Uint64(),
 		}
 	}
 
@@ -226,9 +237,15 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 		//Does heightKey match the given block's height for the id
 		blk := j.headers[id]
 
+		l1Head, err := ethhex.DecodeBig(blk.L1Head)
+		if err != nil {
+			return false
+		}
 		if blk.Hght == heightKey {
 			blocks = append(blocks, BlockInfo{
-				BlockId: id,
+				BlockId:   id,
+				Timestamp: blk.Tmstmp,
+				L1Head:    l1Head.Uint64(),
 			})
 		}
 
@@ -243,7 +260,9 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 
 		if blk.Tmstmp > args.End {
 			Next = BlockInfo{
-				BlockId: id,
+				BlockId:   id,
+				Timestamp: blk.Tmstmp,
+				L1Head:    l1Head.Uint64(),
 			}
 			return false
 		}
@@ -286,8 +305,15 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 
 	Prev := BlockInfo{}
 	if success {
+		blk := j.headers[prevBlkId]
+		l1Head, err := ethhex.DecodeBig(blk.L1Head)
+		if err != nil {
+			return err
+		}
 		Prev = BlockInfo{
-			BlockId: prevBlkId,
+			BlockId:   prevBlkId,
+			Timestamp: blk.Tmstmp,
+			L1Head:    l1Head.Uint64(),
 		}
 	}
 
@@ -298,16 +324,25 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 	j.idsByHeight.Ascend(firstBlock, func(heightKey uint64, id ids.ID) bool {
 		//Does heightKey match the given block's height for the id
 		blk := j.headers[id]
+		l1Head, err := ethhex.DecodeBig(blk.L1Head)
+		if err != nil {
+			//TODO add error potentially
+			return false
+		}
 
 		if blk.Hght == heightKey {
 			blocks = append(blocks, BlockInfo{
-				BlockId: id,
+				BlockId:   id,
+				Timestamp: blk.Tmstmp,
+				L1Head:    l1Head.Uint64(),
 			})
 		}
 
 		if blk.Tmstmp > args.End {
 			Next = BlockInfo{
-				BlockId: id,
+				BlockId:   id,
+				Timestamp: blk.Tmstmp,
+				L1Head:    l1Head.Uint64(),
 			}
 			return false
 		}
@@ -341,8 +376,15 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 
 	Prev := BlockInfo{}
 	if success {
+		blk := j.headers[prevBlkId]
+		l1Head, err := ethhex.DecodeBig(blk.L1Head)
+		if err != nil {
+			return err
+		}
 		Prev = BlockInfo{
-			BlockId: prevBlkId,
+			BlockId:   prevBlkId,
+			Timestamp: blk.Tmstmp,
+			L1Head:    l1Head.Uint64(),
 		}
 	}
 
@@ -353,16 +395,25 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 	j.idsByHeight.Ascend(firstBlock, func(heightKey uint64, id ids.ID) bool {
 		//Does heightKey match the given block's height for the id
 		blk := j.headers[id]
+		l1Head, err := ethhex.DecodeBig(blk.L1Head)
+		if err != nil {
+			//TODO add error potentially
+			return false
+		}
 
 		if blk.Hght == heightKey {
 			blocks = append(blocks, BlockInfo{
-				BlockId: id,
+				BlockId:   id,
+				Timestamp: blk.Tmstmp,
+				L1Head:    l1Head.Uint64(),
 			})
 		}
 
 		if blk.Tmstmp > args.End {
 			Next = BlockInfo{
-				BlockId: id,
+				BlockId:   id,
+				Timestamp: blk.Tmstmp,
+				L1Head:    l1Head.Uint64(),
 			}
 			return false
 		}
