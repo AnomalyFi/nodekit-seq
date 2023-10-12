@@ -40,7 +40,6 @@ const (
 // CommitmentManager takes the new block commitments and submits them to L1
 type CommitmentManager struct {
 	vm *vm.VM
-	//appSender common.AppSender
 
 	l         sync.Mutex
 	requestID uint32
@@ -49,7 +48,7 @@ type CommitmentManager struct {
 
 	idsByHeight btree.Map[uint64, ids.ID] // Map block ID to block height
 
-	//TODO at some point maybe change this to be a FIFOMAP for optimization
+	// TODO at some point maybe change this to be a FIFOMAP for optimization
 	pendingJobs *heap.Heap[*blockJob, int64]
 	jobs        map[uint32]*blockJob
 
@@ -76,8 +75,6 @@ func NewCommitmentManager(vm *vm.VM) *CommitmentManager {
 }
 
 func (w *CommitmentManager) Run() {
-	//w.appSender = appSender
-
 	w.vm.Logger().Info("starting commitment manager")
 	defer close(w.done)
 
@@ -119,12 +116,12 @@ func (w *CommitmentManager) AcceptBlock(blk *chain.StatelessBlock) error {
 	w.headers.Put(id.String(), blk)
 	w.idsByHeight.Set(blk.Hght, id)
 
-	//TODO eventually figure out a way to not submit the empty blocks to save costs
+	// TODO eventually figure out a way to not submit the empty blocks to save costs
 
 	w.l.Lock()
 	if w.pendingJobs.Has(id) {
 		// We may already have enqueued a job when the block was accepted.
-		//TODO do I need this or not?
+		// TODO do I need this or not?
 		w.l.Unlock()
 		return nil
 	}
@@ -150,7 +147,7 @@ func (w *CommitmentManager) request(
 	ctx context.Context,
 	j *blockJob,
 ) error {
-	//TODO do I need this requestID stuff or not?
+	// TODO do I need this requestID stuff or not?
 	// requestID := w.requestID
 	// w.requestID++
 	// w.jobs[requestID] = j
@@ -184,7 +181,7 @@ func (w *CommitmentManager) request(
 
 	// time.Sleep(2 * time.Second)
 
-	//TODO change the address
+	// TODO change the address
 	sequencerContractTest, err := sequencer.NewSequencer(ethcommon.HexToAddress("0x92983EFc4EF260037B804a545243380A114F759D"), conn)
 
 	// function call on `instance`. Retrieves pending name
@@ -216,7 +213,7 @@ func (w *CommitmentManager) request(
 		blocks := make([]sequencer.SequencerWarpBlock, 0)
 
 		w.idsByHeight.Ascend(firstBlock, func(heightKey uint64, id ids.ID) bool {
-			//Does heightKey match the given block's height for the id
+			// Does heightKey match the given block's height for the id
 			blockTemp, success := w.headers.Get(id.String())
 			if !success {
 				return success
@@ -249,7 +246,6 @@ func (w *CommitmentManager) request(
 				return false
 			}
 			return true
-
 		})
 
 		tx, err := sequencerContractTest.NewBlocks(auth, blocks)

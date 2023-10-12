@@ -31,15 +31,14 @@ type ImportBlockMsg struct {
 }
 
 func (e *ImportBlockMsg) StateKeys(rauth chain.Auth, _ ids.ID) []string {
-	//TODO needs to be fixed
+	// TODO needs to be fixed
 	return []string{
 		string(storage.PrefixBlockKey(e.warpMsg.StateRoot, e.warpMsg.Prnt)),
 	}
-
 }
 
 func (i *ImportBlockMsg) StateKeysMaxChunks() []uint16 {
-	//TODO need to fix this
+	// TODO need to fix this
 	// Can't use [warpTransfer] because it may not be populated yet
 	chunks := []uint16{}
 	chunks = append(chunks, storage.LoanChunks)
@@ -71,7 +70,6 @@ func (i *ImportBlockMsg) Execute(
 ) (bool, uint64, []byte, *warp.UnsignedMessage, error) {
 	if !warpVerified {
 		return false, ImportBlockComputeUnits, OutputValueZero, nil, nil
-
 	}
 	return true, ImportBlockComputeUnits, nil, nil, nil
 }

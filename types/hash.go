@@ -25,7 +25,7 @@ package types
 type HashFn[K comparable] func(k K) uint64
 
 func HashBytes(b []byte) uint64 {
-	var hash uint64 = 5381 //magic constant, apparently this hash fewest collisions possible.
+	var hash uint64 = 5381 // magic constant, apparently this hash fewest collisions possible.
 
 	for _, chr := range b {
 		hash = ((hash << 5) + hash) + uint64(chr)
@@ -34,7 +34,7 @@ func HashBytes(b []byte) uint64 {
 }
 
 func HashString(s string) uint64 {
-	var hash uint64 = 5381 //magic constant, apparently this hash fewest collisions possible.
+	var hash uint64 = 5381 // magic constant, apparently this hash fewest collisions possible.
 
 	for _, chr := range s {
 		hash = ((hash << 5) + hash) + uint64(chr)

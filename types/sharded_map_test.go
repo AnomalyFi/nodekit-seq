@@ -40,7 +40,6 @@ func TestMap(t *testing.T) {
 			t.Fail()
 		}
 	}
-
 }
 
 func BenchmarkSyncMapPut(b *testing.B) {

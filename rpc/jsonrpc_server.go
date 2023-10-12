@@ -38,7 +38,7 @@ type JSONRPCServer struct {
 
 	idsByHeight btree.Map[uint64, ids.ID] // Map block ID to block height
 
-	//tmstp, height
+	// tmstp, height
 	blocks btree.Map[int64, uint64]
 }
 
@@ -117,7 +117,7 @@ func (j *JSONRPCServer) SubmitMsgTx(
 		return err
 	}
 
-	//TODO above is generateTransaction below is generateTransactionManual
+	// TODO above is generateTransaction below is generateTransactionManual
 
 	now := time.Now().UnixMilli()
 	rules := parser.Rules(now)
@@ -136,7 +136,7 @@ func (j *JSONRPCServer) SubmitMsgTx(
 		return fmt.Errorf("%w: failed to sign transaction", err)
 	}
 
-	//TODO above is new!
+	// TODO above is new!
 
 	if err := tx.AuthAsyncVerify()(); err != nil {
 		return err
@@ -310,7 +310,6 @@ type GetBlockTransactionsByNamespaceArgs struct {
 }
 
 func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBlockHeadersByHeightArgs, reply *BlockHeadersResponse) error {
-
 	prevBlkId, success := j.idsByHeight.Get(args.Height - 1)
 
 	Prev := BlockInfo{}
@@ -332,7 +331,7 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 	Next := BlockInfo{}
 
 	j.idsByHeight.Ascend(args.Height, func(heightKey uint64, id ids.ID) bool {
-		//Does heightKey match the given block's height for the id
+		// Does heightKey match the given block's height for the id
 		blk := j.headers[id]
 
 		l1Head, err := ethhex.DecodeBig(blk.L1Head)
@@ -353,8 +352,8 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 		// 	})
 		// }
 
-		//endNumber
-		//TODO do I want this as a timestamp
+		// endNumber
+		// TODO do I want this as a timestamp
 
 		if blk.Tmstmp > args.End {
 			Next = BlockInfo{
@@ -365,7 +364,6 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 			return false
 		}
 		return true
-
 	})
 
 	res := BlockHeadersResponse{From: args.Height, Blocks: blocks, Prev: Prev, Next: Next}
@@ -385,7 +383,7 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 		if err != nil {
 			return err
 		}
-		//TODO make this into the response
+		// TODO make this into the response
 		block := j.headers[id]
 
 		firstBlock = block.Hght
@@ -394,7 +392,7 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 	} else {
 		firstBlock = 0
 		// Handle error or default case
-		//TODO add error potentially
+		// TODO add error potentially
 		// http.Error(writer, "Invalid parameters", http.StatusBadRequest)
 		return nil
 	}
@@ -420,11 +418,11 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 	Next := BlockInfo{}
 
 	j.idsByHeight.Ascend(firstBlock, func(heightKey uint64, id ids.ID) bool {
-		//Does heightKey match the given block's height for the id
+		// Does heightKey match the given block's height for the id
 		blk := j.headers[id]
 		l1Head, err := ethhex.DecodeBig(blk.L1Head)
 		if err != nil {
-			//TODO add error potentially
+			// TODO add error potentially
 			return false
 		}
 
@@ -445,17 +443,15 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 			return false
 		}
 		return true
-
 	})
 
 	res := BlockHeadersResponse{From: firstBlock, Blocks: blocks, Prev: Prev, Next: Next}
 
 	reply = &res
-	//TODO add blocks to the list of blocks contained in this time window
+	// TODO add blocks to the list of blocks contained in this time window
 	// Marshal res to JSON and send the response
 
 	return nil
-
 }
 
 func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlockHeadersByStartArgs, reply *BlockHeadersResponse) error {
@@ -463,7 +459,7 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 
 	var firstBlock uint64
 
-	//TODO either the firstBlock height is equal to height or use the hash to get it or if none of the above work then use the btree to get it
+	// TODO either the firstBlock height is equal to height or use the hash to get it or if none of the above work then use the btree to get it
 	heightFound, success := j.blocks.Get(args.Start)
 
 	if success {
@@ -491,11 +487,11 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 	Next := BlockInfo{}
 
 	j.idsByHeight.Ascend(firstBlock, func(heightKey uint64, id ids.ID) bool {
-		//Does heightKey match the given block's height for the id
+		// Does heightKey match the given block's height for the id
 		blk := j.headers[id]
 		l1Head, err := ethhex.DecodeBig(blk.L1Head)
 		if err != nil {
-			//TODO add error potentially
+			// TODO add error potentially
 			return false
 		}
 
@@ -516,24 +512,22 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 			return false
 		}
 		return true
-
 	})
 
 	res := BlockHeadersResponse{From: firstBlock, Blocks: blocks, Prev: Prev, Next: Next}
 
-	//TODO add blocks to the list of blocks contained in this time window
+	// TODO add blocks to the list of blocks contained in this time window
 	// Marshal res to JSON and send the response
 
 	reply = &res
 
 	return nil
-
 }
 
 func (j *JSONRPCServer) GetBlockTransactions(req *http.Request, args *GetBlockTransactionsArgs, reply *TransactionResponse) error {
 	// Parse query parameters
 
-	//TODO either the firstBlock height is equal to height or use the hash to get it or if none of the above work then use the btree to get it
+	// TODO either the firstBlock height is equal to height or use the hash to get it or if none of the above work then use the btree to get it
 	if args.ID != "" {
 		return nil
 	}
@@ -553,7 +547,6 @@ func (j *JSONRPCServer) GetBlockTransactions(req *http.Request, args *GetBlockTr
 }
 
 func (j *JSONRPCServer) GetBlockTransactionsByNamespace(req *http.Request, args *GetBlockTransactionsByNamespaceArgs, reply *SEQTransactionResponse) error {
-
 	BlkId, success := j.idsByHeight.Get(args.Height)
 
 	if success {
@@ -573,7 +566,6 @@ func (j *JSONRPCServer) GetBlockTransactionsByNamespace(req *http.Request, args 
 func (j *JSONRPCServer) AcceptBlock(blk *chain.StatelessBlock) error {
 	ctx := context.Background()
 	msg, err := rpc.PackBlockMessage(blk)
-
 	if err != nil {
 		return err
 	}
@@ -585,7 +577,7 @@ func (j *JSONRPCServer) AcceptBlock(blk *chain.StatelessBlock) error {
 	j.idsByHeight.Set(block.Hght, *id)
 	j.blocks.Set(block.Tmstmp, block.Hght)
 
-	//TODO I need to call CommitmentManager.AcceptBlock here because otherwise the unpacking will be a pain
+	// TODO I need to call CommitmentManager.AcceptBlock here because otherwise the unpacking will be a pain
 
 	seq_txs := make(map[string][]*types.SEQTransaction)
 
@@ -619,7 +611,7 @@ func (j *JSONRPCServer) AcceptBlock(blk *chain.StatelessBlock) error {
 		Txs:       seq_txs,
 	}
 
-	//TODO need to fix this
+	// TODO need to fix this
 	j.blocksWithValidTxs[*id] = sequencerBlock
 
 	return nil
@@ -648,6 +640,6 @@ func (*ServerParser) Registry() (chain.ActionRegistry, chain.AuthRegistry) {
 func (j *JSONRPCServer) ServerParser(ctx context.Context, networkId uint32, chainId ids.ID) chain.Parser {
 	g := j.c.Genesis()
 
-	//The only thing this is using is the ActionRegistry and AuthRegistry so this should be fine
+	// The only thing this is using is the ActionRegistry and AuthRegistry so this should be fine
 	return &Parser{networkId, chainId, g}
 }

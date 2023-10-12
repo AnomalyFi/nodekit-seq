@@ -153,7 +153,7 @@ func (cli *JSONRPCClient) GetBlockHeadersByHeight(
 	end int64,
 ) (*BlockHeadersResponse, error) {
 	resp := new(BlockHeadersResponse)
-	//TODO does this need to be lowercase for the string?
+	// TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,
 		"getblockheadersbyheight",
@@ -172,7 +172,7 @@ func (cli *JSONRPCClient) GetBlockHeadersID(
 	end int64,
 ) (*BlockHeadersResponse, error) {
 	resp := new(BlockHeadersResponse)
-	//TODO does this need to be lowercase for the string?
+	// TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,
 		"getblockheadersid",
@@ -191,7 +191,7 @@ func (cli *JSONRPCClient) GetBlockHeadersByStart(
 	end int64,
 ) (*BlockHeadersResponse, error) {
 	resp := new(BlockHeadersResponse)
-	//TODO does this need to be lowercase for the string?
+	// TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,
 		"getblockheadersbystart",
@@ -209,7 +209,7 @@ func (cli *JSONRPCClient) GetBlockTransactions(
 	id string,
 ) (*TransactionResponse, error) {
 	resp := new(TransactionResponse)
-	//TODO does this need to be lowercase for the string?
+	// TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,
 		"getblocktransactions",
@@ -227,7 +227,7 @@ func (cli *JSONRPCClient) GetBlockTransactionsByNamespace(
 	namespace string,
 ) (*SEQTransactionResponse, error) {
 	resp := new(SEQTransactionResponse)
-	//TODO does this need to be lowercase for the string?
+	// TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,
 		"getblocktransactions",

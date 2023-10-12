@@ -18,9 +18,9 @@ import (
 )
 
 var _ chain.Action = (*SequencerMsg)(nil)
-  
+
 type SequencerMsg struct {
-  ChainId     []byte            `protobuf:"bytes,1,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
+	ChainId     []byte            `protobuf:"bytes,1,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
 	Data        []byte            `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
 	FromAddress ed25519.PublicKey `json:"from_address"`
 	// `protobuf:"bytes,3,opt,name=from_address,json=fromAddress,proto3" json:"from_address,omitempty"`
@@ -70,7 +70,7 @@ func (*SequencerMsg) MaxComputeUnits(chain.Rules) uint64 {
 }
 
 func (*SequencerMsg) Size() int {
-	//TODO this should be larger because it should consider the max byte array length
+	// TODO this should be larger because it should consider the max byte array length
 	// We use size as the price of this transaction but we could just as easily
 	// use any other calculation.
 	return ed25519.PublicKeyLen + consts.IDLen + consts.Uint64Len

@@ -1,14 +1,12 @@
 package types
 
 import (
-	//"github.com/AnomalyFi/hypersdk/chain"
-	"github.com/ava-labs/avalanchego/ids"
-	//"github.com/chainbound/shardmap"
-
 	"encoding/json"
 	"fmt"
-
 	"math/big"
+	// "github.com/AnomalyFi/hypersdk/chain"
+	"github.com/ava-labs/avalanchego/ids"
+	// "github.com/chainbound/shardmap"
 )
 
 // ! TODO I should use one or two shardmap across the jsonrpc_server and the commitmentmanager to simplify it

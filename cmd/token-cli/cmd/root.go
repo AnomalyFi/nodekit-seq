@@ -164,7 +164,7 @@ func init() {
 
 		sequencerMsgCmd,
 
-		//exportBlockCmd,
+		// exportBlockCmd,
 	)
 
 	// spam

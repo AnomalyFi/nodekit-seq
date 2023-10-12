@@ -34,7 +34,7 @@ func (*ExportBlockMsg) GetTypeID() uint8 {
 }
 
 func (e *ExportBlockMsg) StateKeys(rauth chain.Auth, _ ids.ID) []string {
-	//TODO may need to be fixed
+	// TODO may need to be fixed
 	return []string{
 		string(storage.PrefixBlockKey(e.StateRoot, e.Destination)),
 		string(storage.PrefixBlockKey(e.Prnt, e.Destination)),
@@ -52,8 +52,7 @@ func (e *ExportBlockMsg) executeLoan(
 	actor ed25519.PublicKey,
 	txID ids.ID,
 ) (bool, uint64, []byte, *warp.UnsignedMessage, error) {
-
-	//TODO may need to add a destination chainID to this
+	// TODO may need to add a destination chainID to this
 	wt := &chain.WarpBlock{
 		Prnt:      e.Prnt,
 		Tmstmp:    e.Tmstmp,
@@ -81,9 +80,8 @@ func (e *ExportBlockMsg) Execute(
 	txID ids.ID,
 	_ bool,
 ) (bool, uint64, []byte, *warp.UnsignedMessage, error) {
-
 	actor := auth.GetActor(rauth)
-	//unitsUsed := e.MaxUnits(r) // max units == units
+	// unitsUsed := e.MaxUnits(r) // max units == units
 	if e.Destination == ids.Empty {
 		// This would result in multiplying balance export by whoever imports the
 		// transaction.
@@ -97,7 +95,7 @@ func (e *ExportBlockMsg) Execute(
 }
 
 func (*ExportBlockMsg) MaxUnits(chain.Rules) uint64 {
-	//TODO fix this
+	// TODO fix this
 	return ExportBlockComputeUnits
 }
 
