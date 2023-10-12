@@ -26,6 +26,7 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 
 	// "github.com/AnomalyFi/nodekit-seq/orderbook"
+	"github.com/AnomalyFi/nodekit-seq/commitment"
 	"github.com/AnomalyFi/nodekit-seq/rpc"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/AnomalyFi/nodekit-seq/version"
@@ -40,6 +41,10 @@ type Controller struct {
 	genesis      *genesis.Genesis
 	config       *config.Config
 	stateManager *StateManager
+
+	commitmentManager *commitment.CommitmentManager
+
+	jsonRPCServer *rpc.JSONRPCServer
 
 	metrics *metrics
 
@@ -114,9 +119,11 @@ func (c *Controller) Initialize(
 	// hypersdk handler are initiatlized automatically, you just need to
 	// initialize custom handlers here.
 	apis := map[string]*common.HTTPHandler{}
+	jsonRPCServer := rpc.NewJSONRPCServer(c)
+	c.jsonRPCServer = jsonRPCServer
 	jsonRPCHandler, err := hrpc.NewJSONRPCHandler(
 		consts.Name,
-		rpc.NewJSONRPCServer(c),
+		jsonRPCServer,
 		common.NoLock,
 	)
 	if err != nil {
@@ -124,6 +131,8 @@ func (c *Controller) Initialize(
 	}
 	apis[rpc.JSONRPCEndpoint] = jsonRPCHandler
 
+	c.commitmentManager = commitment.NewCommitmentManager(c.inner)
+	go c.commitmentManager.Run()
 	// Create builder and gossiper
 	var (
 		build  builder.Builder
@@ -159,9 +168,30 @@ func (c *Controller) StateManager() chain.StateManager {
 	return c.stateManager
 }
 
+func (c *Controller) UnitPrices(ctx context.Context) (chain.Dimensions, error) {
+	return c.inner.UnitPrices(ctx)
+}
+
+func (c *Controller) Submit(
+	ctx context.Context,
+	verifySig bool,
+	txs []*chain.Transaction,
+) (errs []error) {
+	return c.inner.Submit(ctx, verifySig, txs)
+}
+
+// TODO I can add the blocks to the JSON RPC Server here instead of REST API
 func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) error {
 	batch := c.metaDB.NewBatch()
 	defer batch.Reset()
+
+	if err := c.jsonRPCServer.AcceptBlock(blk); err != nil {
+		c.inner.Logger().Fatal("unable to accept block in json-rpc server", zap.Error(err))
+	}
+
+	if err := c.commitmentManager.AcceptBlock(blk); err != nil {
+		c.inner.Logger().Fatal("unable to accept block in commitment manager", zap.Error(err))
+	}
 
 	results := blk.Results()
 	for i, tx := range blk.Txs {
