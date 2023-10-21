@@ -182,7 +182,7 @@ func (w *CommitmentManager) request(
 	// time.Sleep(2 * time.Second)
 
 	// TODO change the address
-	sequencerContractTest, err := sequencer.NewSequencer(ethcommon.HexToAddress("0x92983EFc4EF260037B804a545243380A114F759D"), conn)
+	sequencerContractTest, err := sequencer.NewSequencer(ethcommon.HexToAddress("0x7d282a0f9379134767348c4f7f164156DDA82a7c"), conn)
 
 	// function call on `instance`. Retrieves pending name
 	maxBlocks, err := sequencerContractTest.MAXBLOCKS(&ethbind.CallOpts{Pending: true})
