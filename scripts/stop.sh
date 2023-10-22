@@ -5,3 +5,5 @@
 set -e
 
 killall avalanche-network-runner
+
+docker-compose down

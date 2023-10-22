@@ -17,6 +17,8 @@ if ! [[ "$0" =~ scripts/run.sh ]]; then
   exit 255
 fi
 
+docker-compose up -d
+
 VERSION=v1.10.10
 MAX_UINT64=18446744073709551615
 MODE=${MODE:-run}
