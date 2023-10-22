@@ -117,7 +117,7 @@ builds:
           - CC=o64-clang
 
 checksum:
-  name_template: "tokenvm_checksums.txt"
+  name_template: "tokenvm_{{ .Version }}_checksums.txt"
 
 archives:
   - id: default
