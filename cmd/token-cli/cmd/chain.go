@@ -7,6 +7,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/ava-labs/avalanchego/ids"
@@ -81,5 +82,50 @@ var watchChainCmd = &cobra.Command{
 			}
 			handleTx(cli, tx, result)
 		})
+	},
+}
+
+var testHeaderCmd = &cobra.Command{
+	Use: "test-header",
+	RunE: func(*cobra.Command, []string) error {
+		ctx := context.Background()
+		_, _, _, _, _, tcli, err := handler.DefaultActor()
+		if err != nil {
+			return err
+		}
+
+		// start, err := handler.Root().PromptTime("start")
+		// if err != nil {
+		// 	return err
+		// }
+
+		// //1698200132261
+		// end, err := handler.Root().PromptTime("end")
+		// if err != nil {
+		// 	return err
+		// }
+
+		// // start_time := time.Unix(start, 0)
+		// // end_time := time.Unix(end, 0)
+
+		start := time.Now().Unix()
+
+		end := time.Now().Unix() - 120
+
+		start_time := start * 1000
+
+		end_time := end * 1000
+
+		res, err := tcli.GetBlockHeadersByStart(ctx, start_time, end_time)
+
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(res.From)
+		fmt.Println(res.Next)
+		fmt.Println(res.Prev)
+
+		return nil
 	},
 }

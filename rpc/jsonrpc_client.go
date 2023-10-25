@@ -194,7 +194,7 @@ func (cli *JSONRPCClient) GetBlockHeadersByStart(
 	// TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,
-		"getblockheadersbystart",
+		"getBlockHeadersByStart",
 		&GetBlockHeadersByStartArgs{
 			Start: start,
 			End:   end,

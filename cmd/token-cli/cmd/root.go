@@ -147,6 +147,7 @@ func init() {
 		setChainCmd,
 		chainInfoCmd,
 		watchChainCmd,
+		testHeaderCmd,
 	)
 
 	// actions
