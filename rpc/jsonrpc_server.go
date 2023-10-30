@@ -350,30 +350,26 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 		if err != nil {
 			return false
 		}
-		if blk.Hght == heightKey {
-			blocks = append(blocks, BlockInfo{
-				BlockId:   id.String(),
-				Timestamp: blk.Tmstmp,
-				L1Head:    l1Head.Uint64(),
-			})
-		}
 
-		// if blk.Hght == heightKey && blk.Tmstmp < endNumber {
-		// 	blocks = append(blocks, BlockInfo{
-		// 		BlockId: id,
-		// 	})
-		// }
+		if blk.Tmstmp >= args.End {
+			tmp := blk.Tmstmp / 1000
 
-		// endNumber
-		// TODO do I want this as a timestamp
-
-		if blk.Tmstmp > args.End {
 			Next = BlockInfo{
 				BlockId:   id.String(),
-				Timestamp: blk.Tmstmp,
+				Timestamp: tmp,
 				L1Head:    l1Head.Uint64(),
 			}
 			return false
+		}
+
+		if blk.Hght == heightKey {
+			tmp := blk.Tmstmp / 1000
+
+			blocks = append(blocks, BlockInfo{
+				BlockId:   id.String(),
+				Timestamp: tmp,
+				L1Head:    l1Head.Uint64(),
+			})
 		}
 		return true
 	})
@@ -461,21 +457,42 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 			return false
 		}
 
-		if blk.Hght == heightKey {
-			blocks = append(blocks, BlockInfo{
-				BlockId:   id.String(),
-				Timestamp: blk.Tmstmp,
-				L1Head:    l1Head.Uint64(),
-			})
-		}
+		// if blk.Hght == heightKey {
+		// 	blocks = append(blocks, BlockInfo{
+		// 		BlockId:   id.String(),
+		// 		Timestamp: blk.Tmstmp,
+		// 		L1Head:    l1Head.Uint64(),
+		// 	})
+		// }
 
-		if blk.Tmstmp > args.End {
+		// if blk.Tmstmp > args.End {
+		// 	Next = BlockInfo{
+		// 		BlockId:   id.String(),
+		// 		Timestamp: blk.Tmstmp,
+		// 		L1Head:    l1Head.Uint64(),
+		// 	}
+		// 	return false
+		// }
+
+		if blk.Tmstmp >= args.End {
+			tmp := blk.Tmstmp / 1000
+
 			Next = BlockInfo{
 				BlockId:   id.String(),
-				Timestamp: blk.Tmstmp,
+				Timestamp: tmp,
 				L1Head:    l1Head.Uint64(),
 			}
 			return false
+		}
+
+		if blk.Hght == heightKey {
+			tmp := blk.Tmstmp / 1000
+
+			blocks = append(blocks, BlockInfo{
+				BlockId:   id.String(),
+				Timestamp: tmp,
+				L1Head:    l1Head.Uint64(),
+			})
 		}
 		return true
 	})
