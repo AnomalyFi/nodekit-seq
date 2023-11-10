@@ -164,4 +164,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-//replace github.com/AnomalyFi/hypersdk => /home/noah/code/testl1/hypersdk
+replace github.com/AnomalyFi/hypersdk => /home/noah/code/testl1/hypersdk

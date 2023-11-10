@@ -78,7 +78,8 @@ func (w *CommitmentManager) Run() {
 	w.vm.Logger().Info("starting commitment manager")
 	defer close(w.done)
 
-	t := time.NewTicker(1 * time.Second)
+	//TODO increase this
+	t := time.NewTicker(6 * time.Second)
 	defer t.Stop()
 	for {
 		select {
@@ -158,15 +159,17 @@ func (w *CommitmentManager) request(
 		return errors.New("invalid request to get block")
 	}
 
-	conn, err := ethclient.Dial("http://0.0.0.0:8545")
+	conn, err := ethclient.Dial("https://devnet.nodekit.xyz")
 
+	//TODO may need to change
 	priv, err := crypto.HexToECDSA("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
 	if err != nil {
 		log.Fatalf("Failed to convert from hex to ECDSA: %v", err)
 		return err
 	}
 
-	auth, err := ethbind.NewKeyedTransactorWithChainID(priv, big.NewInt(900))
+	//! TODO just changed the chainId so this should fix it
+	auth, err := ethbind.NewKeyedTransactorWithChainID(priv, big.NewInt(32382))
 	if err != nil {
 		log.Fatalf("Failed to create authorized transactor: %v", err)
 		return err
@@ -204,19 +207,39 @@ func (w *CommitmentManager) request(
 	blkHeight := big.NewInt(int64(blk.Hght))
 	fmt.Println("Current Block Height:", contract_block_height)
 	fmt.Printf("Update SEQ Height: %d\n", blk.Hght)
-	if contract_block_height.Cmp(blkHeight) < 0 {
+	if contract_block_height.Cmp(blkHeight) <= 0 {
 		// fmt.Println("Current Block Height:", contract_block_height)
 		// fmt.Printf("Update SEQ Height: %x\n", blk.Hght)
 
 		firstBlock := uint64(contract_block_height.Int64())
 
 		blocks := make([]sequencer.SequencerWarpBlock, 0)
+		//TODO need to make this only do maximum of size 500
 
 		w.idsByHeight.Ascend(firstBlock, func(heightKey uint64, id ids.ID) bool {
 			// Does heightKey match the given block's height for the id
+			if len(blocks) >= 500 {
+				return false
+			}
+
 			blockTemp, success := w.headers.Get(id.String())
 			if !success {
 				return success
+			}
+
+			//TODO swapped these 2 functions so now it exits earlier. Need to test
+			if blockTemp.Hght >= blk.Hght {
+				root := types.NewU256().SetBytes(blockTemp.StateRoot)
+				bigRoot := root.Int
+				parentRoot := types.NewU256().SetBytes(blockTemp.Prnt)
+				bigParentRoot := parentRoot.Int
+
+				blocks = append(blocks, sequencer.SequencerWarpBlock{
+					Height:     big.NewInt(int64(blockTemp.Hght)),
+					BlockRoot:  &bigRoot,
+					ParentRoot: &bigParentRoot,
+				})
+				return false
 			}
 
 			if blockTemp.Hght == heightKey {
@@ -232,19 +255,6 @@ func (w *CommitmentManager) request(
 				})
 			}
 
-			if blockTemp.Hght > blk.Hght {
-				root := types.NewU256().SetBytes(blockTemp.StateRoot)
-				bigRoot := root.Int
-				parentRoot := types.NewU256().SetBytes(blockTemp.Prnt)
-				bigParentRoot := parentRoot.Int
-
-				blocks = append(blocks, sequencer.SequencerWarpBlock{
-					Height:     big.NewInt(int64(blockTemp.Hght)),
-					BlockRoot:  &bigRoot,
-					ParentRoot: &bigParentRoot,
-				})
-				return false
-			}
 			return true
 		})
 
