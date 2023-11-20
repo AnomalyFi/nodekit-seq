@@ -33,21 +33,21 @@ export DEPLOYER_ARCH_TYPE=$(uname -m)
 echo DEPLOYER_ARCH_TYPE: ${DEPLOYER_ARCH_TYPE}
 export DEPLOYER_OS_TYPE=$(uname | tr '[:upper:]' '[:lower:]')
 echo DEPLOYER_OS_TYPE: ${DEPLOYER_OS_TYPE}
-export AVALANCHEGO_VERSION="1.10.12"
+export AVALANCHEGO_VERSION="1.10.10"
 echo AVALANCHEGO_VERSION: ${AVALANCHEGO_VERSION}
 export HYPERSDK_VERSION="0.0.15-rc.1"
 echo HYPERSDK_VERSION: ${HYPERSDK_VERSION}
 # TODO: set deploy os/arch
 
 # Check valid setup
-if [ ${DEPLOYER_OS_TYPE} != 'darwin' ]; then
-  echo 'os is not supported' >&2
-  exit 1
-fi
-if [ ${DEPLOYER_ARCH_TYPE} != 'arm64' ]; then
-  echo 'arch is not supported' >&2
-  exit 1
-fi
+# if [ ${DEPLOYER_OS_TYPE} != 'darwin' ]; then
+#   echo 'os is not supported' >&2
+#   exit 1
+# fi
+# if [ ${DEPLOYER_ARCH_TYPE} != 'arm64' ]; then
+#   echo 'arch is not supported' >&2
+#   exit 1
+# fi
 if ! [ -x "$(command -v aws)" ]; then
   echo 'aws-cli is not installed' >&2
   exit 1
@@ -63,8 +63,8 @@ if [ -f /tmp/avalanche-ops-cache/avalancheup-aws ]; then
   cp /tmp/avalanche-ops-cache/avalancheup-aws ${DEPLOY_ARTIFACT_PREFIX}/avalancheup-aws
   echo 'found avalanche-ops in cache'
 else
-  wget https://github.com/ava-labs/avalanche-ops/releases/download/latest/avalancheup-aws.aarch64-apple-darwin
-  mv ./avalancheup-aws.aarch64-apple-darwin ${DEPLOY_ARTIFACT_PREFIX}/avalancheup-aws
+  wget https://github.com/ava-labs/avalanche-ops/releases/download/latest/avalancheup-aws.x86_64-unknown-linux-gnu
+  mv ./avalancheup-aws.x86_64-unknown-linux-gnu ${DEPLOY_ARTIFACT_PREFIX}/avalancheup-aws
   chmod +x ${DEPLOY_ARTIFACT_PREFIX}/avalancheup-aws
   cp ${DEPLOY_ARTIFACT_PREFIX}/avalancheup-aws /tmp/avalanche-ops-cache/avalancheup-aws
 fi
@@ -76,10 +76,10 @@ if [ -f /tmp/avalanche-ops-cache/token-cli ]; then
   cp /tmp/avalanche-ops-cache/token-cli ${DEPLOY_ARTIFACT_PREFIX}/token-cli
   echo 'found token-cli in cache'
 else
-  wget "https://github.com/ava-labs/hypersdk/releases/download/v${HYPERSDK_VERSION}/tokenvm_${HYPERSDK_VERSION}_${DEPLOYER_OS_TYPE}_${DEPLOYER_ARCH_TYPE}.tar.gz"
+  wget "https://github.com/AnomalyFi/nodekit-seq/releases/download/v0.8.2/tokenvm_0.8.2_linux_amd64.tar.gz"
   mkdir -p /tmp/token-installs
-  tar -xvf tokenvm_${HYPERSDK_VERSION}_${DEPLOYER_OS_TYPE}_${DEPLOYER_ARCH_TYPE}.tar.gz -C /tmp/token-installs
-  rm -rf tokenvm_${HYPERSDK_VERSION}_${DEPLOYER_OS_TYPE}_${DEPLOYER_ARCH_TYPE}.tar.gz
+  tar -xvf tokenvm_0.8.2_linux_amd64.tar.gz -C /tmp/token-installs
+  rm -rf tokenvm_0.8.2_linux_amd64.tar.gz
   mv /tmp/token-installs/token-cli ${DEPLOY_ARTIFACT_PREFIX}/token-cli
   rm -rf /tmp/token-installs
   cp ${DEPLOY_ARTIFACT_PREFIX}/token-cli /tmp/avalanche-ops-cache/token-cli
@@ -92,10 +92,10 @@ if [ -f /tmp/avalanche-ops-cache/tokenvm ]; then
   cp /tmp/avalanche-ops-cache/token-cli-dev ${DEPLOY_ARTIFACT_PREFIX}/token-cli-dev
   echo 'found tokenvm in cache'
 else
-  wget "https://github.com/ava-labs/hypersdk/releases/download/v${HYPERSDK_VERSION}/tokenvm_${HYPERSDK_VERSION}_linux_amd64.tar.gz"
+  wget "https://github.com/AnomalyFi/nodekit-seq/releases/download/v0.8.2/tokenvm_0.8.2_linux_amd64.tar.gz"
   mkdir -p /tmp/token-installs
-  tar -xvf tokenvm_${HYPERSDK_VERSION}_linux_amd64.tar.gz -C /tmp/token-installs
-  rm -rf tokenvm_${HYPERSDK_VERSION}_linux_amd64.tar.gz
+  tar -xvf tokenvm_0.8.2_linux_amd64.tar.gz -C /tmp/token-installs
+  rm -rf tokenvm_0.8.2_linux_amd64.tar.gz
   mv /tmp/token-installs/tokenvm ${DEPLOY_ARTIFACT_PREFIX}/tokenvm
   mv /tmp/token-installs/token-cli ${DEPLOY_ARTIFACT_PREFIX}/token-cli-dev
   rm -rf /tmp/token-installs
@@ -178,15 +178,14 @@ ${DEPLOY_ARTIFACT_PREFIX}/avalancheup-aws default-spec \
 --arch-type amd64 \
 --os-type ubuntu20.04 \
 --anchor-nodes 3 \
---non-anchor-nodes 7 \
---regions us-west-2,us-east-2,eu-west-1 \
+--non-anchor-nodes 2 \
+--regions us-east-1 \
 --instance-mode=on-demand \
---instance-types='{"us-west-2":["c5.4xlarge"],"us-east-2":["c5.4xlarge"],"eu-west-1":["c5.4xlarge"]}' \
+--instance-types='{"us-east-1":["c5.4xlarge"]}' \
 --ip-mode=ephemeral \
 --metrics-fetch-interval-seconds 0 \
 --upload-artifacts-prometheus-metrics-rules-file-path ${DEPLOY_ARTIFACT_PREFIX}/metrics.yml \
 --network-name custom \
---staking-amount-in-avax 2000 \
 --avalanchego-release-tag v${AVALANCHEGO_VERSION} \
 --create-dev-machine \
 --keys-to-generate 5 \
@@ -218,6 +217,7 @@ yq -i '.avalanchego_config.consensus-accepted-frontier-gossip-peer-size = 10' ${
 yq -i '.avalanchego_config.consensus-app-concurrency = 8' ${SPEC_FILE}
 yq -i '.avalanchego_config.network-compression-type = "zstd"'  ${SPEC_FILE}
 
+
 # Deploy DEVNET
 echo 'deploying DEVNET...'
 ${DEPLOY_ARTIFACT_PREFIX}/avalancheup-aws apply \
@@ -228,7 +228,7 @@ echo 'DEVNET deployed'
 #
 # TODO: prepare 1 dev machine per region
 echo 'setting up dev machine...'
-ACCESS_KEY=./aops-${DATE}-ec2-access.us-west-2.key
+ACCESS_KEY=./aops-${DATE}-ec2-access.us-east-1.key
 chmod 400 ${ACCESS_KEY}
 DEV_MACHINE_IP=$(yq '.dev_machine_ips[0]' ${SPEC_FILE})
 until (scp -o "StrictHostKeyChecking=no" -i ${ACCESS_KEY} ${SPEC_FILE} ubuntu@${DEV_MACHINE_IP}:/home/ubuntu/aops.yml)
