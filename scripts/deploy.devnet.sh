@@ -76,10 +76,10 @@ if [ -f /tmp/avalanche-ops-cache/token-cli ]; then
   cp /tmp/avalanche-ops-cache/token-cli ${DEPLOY_ARTIFACT_PREFIX}/token-cli
   echo 'found token-cli in cache'
 else
-  wget "https://github.com/AnomalyFi/nodekit-seq/releases/download/v0.8.2/tokenvm_0.8.2_linux_amd64.tar.gz"
+  wget "https://github.com/AnomalyFi/nodekit-seq/releases/download/v0.8.4/tokenvm_0.8.4_linux_amd64.tar.gz"
   mkdir -p /tmp/token-installs
-  tar -xvf tokenvm_0.8.2_linux_amd64.tar.gz -C /tmp/token-installs
-  rm -rf tokenvm_0.8.2_linux_amd64.tar.gz
+  tar -xvf tokenvm_0.8.4_linux_amd64.tar.gz -C /tmp/token-installs
+  rm -rf tokenvm_0.8.4_linux_amd64.tar.gz
   mv /tmp/token-installs/token-cli ${DEPLOY_ARTIFACT_PREFIX}/token-cli
   rm -rf /tmp/token-installs
   cp ${DEPLOY_ARTIFACT_PREFIX}/token-cli /tmp/avalanche-ops-cache/token-cli
@@ -92,10 +92,10 @@ if [ -f /tmp/avalanche-ops-cache/tokenvm ]; then
   cp /tmp/avalanche-ops-cache/token-cli-dev ${DEPLOY_ARTIFACT_PREFIX}/token-cli-dev
   echo 'found tokenvm in cache'
 else
-  wget "https://github.com/AnomalyFi/nodekit-seq/releases/download/v0.8.2/tokenvm_0.8.2_linux_amd64.tar.gz"
+  wget "https://github.com/AnomalyFi/nodekit-seq/releases/download/v0.8.4/tokenvm_0.8.4_linux_amd64.tar.gz"
   mkdir -p /tmp/token-installs
-  tar -xvf tokenvm_0.8.2_linux_amd64.tar.gz -C /tmp/token-installs
-  rm -rf tokenvm_0.8.2_linux_amd64.tar.gz
+  tar -xvf tokenvm_0.8.4_linux_amd64.tar.gz -C /tmp/token-installs
+  rm -rf tokenvm_0.8.4_linux_amd64.tar.gz
   mv /tmp/token-installs/tokenvm ${DEPLOY_ARTIFACT_PREFIX}/tokenvm
   mv /tmp/token-installs/token-cli ${DEPLOY_ARTIFACT_PREFIX}/token-cli-dev
   rm -rf /tmp/token-installs
@@ -228,9 +228,14 @@ echo 'DEVNET deployed'
 #
 # TODO: prepare 1 dev machine per region
 echo 'setting up dev machine...'
+
 ACCESS_KEY=./aops-${DATE}-ec2-access.us-east-1.key
 chmod 400 ${ACCESS_KEY}
 DEV_MACHINE_IP=$(yq '.dev_machine_ips[0]' ${SPEC_FILE})
+echo "dev machine access ${DEPLOY_PREFIX}/${ACCESS_KEY}"
+
+echo "dev machine ip ${DEV_MACHINE_IP}"
+
 until (scp -o "StrictHostKeyChecking=no" -i ${ACCESS_KEY} ${SPEC_FILE} ubuntu@${DEV_MACHINE_IP}:/home/ubuntu/aops.yml)
 do
   # During initial setup, ssh access may fail
@@ -281,3 +286,5 @@ to delete all resources, run the following command:
 --delete-elastic-ips \
 --spec-file-path ${DEPLOY_PREFIX}/${SPEC_FILE}
 EOF
+
+
