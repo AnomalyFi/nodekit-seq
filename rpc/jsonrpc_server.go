@@ -58,7 +58,7 @@ func NewJSONRPCServer(c Controller) *JSONRPCServer {
 		NumCounters: 700000,
 		MaxCost:     2240000,
 		BufferItems: 64,
-		Metrics:     true,
+		Metrics:     false,
 	}
 
 	headersCache, err := ristretto.NewCache(&config)
@@ -66,7 +66,14 @@ func NewJSONRPCServer(c Controller) *JSONRPCServer {
 		panic(err)
 	}
 
-	blocksWithValidTxsCache, err := ristretto.NewCache(&config)
+	config_new := ristretto.Config{
+		NumCounters: 700000,
+		MaxCost:     2240000,
+		BufferItems: 64,
+		Metrics:     false,
+	}
+
+	blocksWithValidTxsCache, err := ristretto.NewCache(&config_new)
 	if err != nil {
 		panic(err)
 	}
