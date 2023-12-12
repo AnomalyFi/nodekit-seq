@@ -76,10 +76,10 @@ if [ -f /tmp/avalanche-ops-cache/token-cli ]; then
   cp /tmp/avalanche-ops-cache/token-cli ${DEPLOY_ARTIFACT_PREFIX}/token-cli
   echo 'found token-cli in cache'
 else
-  wget "https://github.com/AnomalyFi/nodekit-seq/releases/download/v0.8.4/tokenvm_0.8.4_linux_amd64.tar.gz"
+  wget "https://github.com/AnomalyFi/nodekit-seq/releases/download/v0.8.7/tokenvm_0.8.7_linux_amd64.tar.gz"
   mkdir -p /tmp/token-installs
-  tar -xvf tokenvm_0.8.4_linux_amd64.tar.gz -C /tmp/token-installs
-  rm -rf tokenvm_0.8.4_linux_amd64.tar.gz
+  tar -xvf tokenvm_0.8.7_linux_amd64.tar.gz -C /tmp/token-installs
+  rm -rf tokenvm_0.8.7_linux_amd64.tar.gz
   mv /tmp/token-installs/token-cli ${DEPLOY_ARTIFACT_PREFIX}/token-cli
   rm -rf /tmp/token-installs
   cp ${DEPLOY_ARTIFACT_PREFIX}/token-cli /tmp/avalanche-ops-cache/token-cli
@@ -92,10 +92,10 @@ if [ -f /tmp/avalanche-ops-cache/tokenvm ]; then
   cp /tmp/avalanche-ops-cache/token-cli-dev ${DEPLOY_ARTIFACT_PREFIX}/token-cli-dev
   echo 'found tokenvm in cache'
 else
-  wget "https://github.com/AnomalyFi/nodekit-seq/releases/download/v0.8.4/tokenvm_0.8.4_linux_amd64.tar.gz"
+  wget "https://github.com/AnomalyFi/nodekit-seq/releases/download/v0.8.7/tokenvm_0.8.7_linux_amd64.tar.gz"
   mkdir -p /tmp/token-installs
-  tar -xvf tokenvm_0.8.4_linux_amd64.tar.gz -C /tmp/token-installs
-  rm -rf tokenvm_0.8.4_linux_amd64.tar.gz
+  tar -xvf tokenvm_0.8.7_linux_amd64.tar.gz -C /tmp/token-installs
+  rm -rf tokenvm_0.8.7_linux_amd64.tar.gz
   mv /tmp/token-installs/tokenvm ${DEPLOY_ARTIFACT_PREFIX}/tokenvm
   mv /tmp/token-installs/token-cli ${DEPLOY_ARTIFACT_PREFIX}/token-cli-dev
   rm -rf /tmp/token-installs
@@ -176,7 +176,7 @@ echo 'planning DEVNET deploy...'
 # TODO: increase size once dev machine is working
 ${DEPLOY_ARTIFACT_PREFIX}/avalancheup-aws default-spec \
 --arch-type amd64 \
---os-type ubuntu20.04 \
+--os-type ubuntu22.04 \
 --anchor-nodes 3 \
 --non-anchor-nodes 2 \
 --regions us-east-1 \
@@ -252,6 +252,8 @@ echo 'setup dev machine'
 # Generate prometheus link
 ${DEPLOY_ARTIFACT_PREFIX}/token-cli chain import-ops ${DEPLOY_PREFIX}/${SPEC_FILE}
 ${DEPLOY_ARTIFACT_PREFIX}/token-cli prometheus generate --prometheus-start=false --prometheus-base-uri=http://${DEV_MACHINE_IP}:9090
+
+
 
 # Print final logs
 cat << EOF
