@@ -4,9 +4,9 @@ go 1.20
 
 require (
 	github.com/AnomalyFi/hypersdk v0.9.0
+	github.com/Yiling-J/theine-go v0.3.1
 	github.com/ava-labs/avalanche-network-runner v1.7.2
 	github.com/ava-labs/avalanchego v1.10.10
-	github.com/dgraph-io/ristretto v0.1.1
 	github.com/ethereum/go-ethereum v1.12.0
 	github.com/fatih/color v1.13.0
 	github.com/onsi/ginkgo/v2 v2.8.1
@@ -43,9 +43,9 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0 // indirect
 	github.com/dlclark/regexp2 v1.7.0 // indirect
 	github.com/dop251/goja v0.0.0-20230605162241-28ee0ee714f3 // indirect
-	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
+	github.com/gammazero/deque v0.2.1 // indirect
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/getsentry/sentry-go v0.18.0 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
@@ -55,7 +55,6 @@ require (
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.3.0 // indirect
-	github.com/golang/glog v1.1.0 // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
@@ -80,6 +79,7 @@ require (
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jchv/go-winloader v0.0.0-20210711035445-715c2860da7e // indirect
 	github.com/klauspost/compress v1.15.15 // indirect
+	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/labstack/echo/v4 v4.10.2 // indirect
@@ -97,6 +97,7 @@ require (
 	github.com/mitchellh/pointerstructure v1.2.0 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/nbutton23/zxcvbn-go v0.0.0-20180912185939-ae427f1e4c1d // indirect
+	github.com/ncw/directio v1.0.5 // indirect
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20230110094441-db37f07504ce // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/openzipkin/zipkin-go v0.4.1 // indirect
@@ -137,6 +138,7 @@ require (
 	github.com/wailsapp/mimetype v1.4.1 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
+	github.com/zeebo/xxh3 v1.0.2 // indirect
 	go.opentelemetry.io/otel v1.11.2 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.11.2 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.11.2 // indirect
