@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Yiling-J/theine-go"
 	"github.com/ava-labs/avalanchego/ids"
 
 	"github.com/AnomalyFi/hypersdk/chain"
@@ -34,14 +33,11 @@ import (
 
 type JSONRPCServer struct {
 	c       Controller
-	headers *theine.Cache[string, *chain.StatefulBlock]
-	//*ristretto.Cache
-	//*types.ShardedMap[string, *chain.StatefulBlock]
+	headers *types.ShardedMap[string, *chain.StatefulBlock]
 	//map[ids.ID]*chain.StatefulBlock // Map block ID to block header
 
-	blocksWithValidTxs *theine.Cache[string, *types.SequencerBlock]
-	//*ristretto.Cache
-	//*types.ShardedMap[string, *types.SequencerBlock]
+	blocksWithValidTxs *types.ShardedMap[string, *types.SequencerBlock]
+
 	//map[ids.ID]*types.SequencerBlock // Map block ID to block header
 
 	idsByHeight btree.Map[uint64, ids.ID] // Map block ID to block height
@@ -51,59 +47,15 @@ type JSONRPCServer struct {
 }
 
 func NewJSONRPCServer(c Controller) *JSONRPCServer {
-	//headers := types.NewShardedMap[string, *chain.StatefulBlock](10000, 10, types.HashString)
-	//blocksWithValidTxs := types.NewShardedMap[string, *types.SequencerBlock](10000, 10, types.HashString)
-
-	idsByHeight := btree.Map[uint64, ids.ID]{}
-
-	blocks := btree.Map[int64, uint64]{}
-
-	headersBuilders := theine.NewBuilder[string, *chain.StatefulBlock](1750)
-
-	headersBuilders.RemovalListener(func(key string, value *chain.StatefulBlock, reason theine.RemoveReason) {
-		_, found := idsByHeight.Delete(value.Hght)
-		if found {
-			fmt.Println("Dropped idsByHeight")
-			fmt.Println(reason)
-		}
-		_, hit := blocks.Delete(value.Tmstmp)
-		if hit {
-			fmt.Println("Dropped blocks")
-			fmt.Println(reason)
-		}
-	})
-
-	headers, err := headersBuilders.Build()
-	if err != nil {
-		panic(err)
-	}
-
-	blocksWithValidTxsCachebuilder := theine.NewBuilder[string, *types.SequencerBlock](1750)
-
-	blocksWithValidTxsCachebuilder.RemovalListener(func(key string, value *types.SequencerBlock, reason theine.RemoveReason) {
-		_, found := idsByHeight.Delete(value.Hght)
-		if found {
-			fmt.Println("Dropped idsByHeight blocksWithValidTxsCachebuilder")
-			fmt.Println(reason)
-		}
-		_, hit := blocks.Delete(value.Tmstmp)
-		if hit {
-			fmt.Println("Dropped blocks blocksWithValidTxsCachebuilder")
-			fmt.Println(reason)
-		}
-	})
-
-	blocksWithValidTxsCache, err := blocksWithValidTxsCachebuilder.Build()
-	if err != nil {
-		panic(err)
-	}
+	headers := types.NewShardedMap[string, *chain.StatefulBlock](10000, 10, types.HashString)
+	blocksWithValidTxs := types.NewShardedMap[string, *types.SequencerBlock](10000, 10, types.HashString)
 
 	return &JSONRPCServer{
 		c:                  c,
 		headers:            headers,
-		blocksWithValidTxs: blocksWithValidTxsCache,
-		idsByHeight:        idsByHeight,
-		blocks:             blocks,
+		blocksWithValidTxs: blocksWithValidTxs,
+		idsByHeight:        btree.Map[uint64, ids.ID]{},
+		blocks:             btree.Map[int64, uint64]{},
 	}
 }
 
@@ -463,13 +415,13 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 	//prevBlkId, success := j.idsByHeight.Get(firstBlock - 1)
 
 	Prev := BlockInfo{}
-	if firstBlock > 0 {
+	if firstBlock > 1 {
 		// j.idsByHeight.Descend(firstBlock, func(heightKey uint64, id ids.ID) bool {
 
 		// 	prevBlkId = id
 		// 	return false
 		// })
-		prevBlkId, success := j.idsByHeight.Get(firstBlock)
+		prevBlkId, success := j.idsByHeight.Get(firstBlock - 1)
 
 		if success {
 			blk, found := j.headers.Get(prevBlkId.String())
@@ -574,8 +526,8 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 	})
 
 	Prev := BlockInfo{}
-	if firstBlock > 0 {
-		prevBlkId, success := j.idsByHeight.Get(firstBlock)
+	if firstBlock > 1 {
+		prevBlkId, success := j.idsByHeight.Get(firstBlock - 1)
 
 		if success {
 			blk, found := j.headers.Get(prevBlkId.String())
@@ -723,7 +675,7 @@ func (j *JSONRPCServer) AcceptBlock(blk *chain.StatelessBlock) error {
 	block, results, _, id, err := rpc.UnpackBlockMessage(msg, parser)
 
 	//TODO I should experiment with TTL
-	j.headers.SetWithTTL(id.String(), block, 1, 1*time.Hour)
+	j.headers.Put(id.String(), block)
 	// j.headers[id.String()] = block
 	j.idsByHeight.Set(block.Hght, *id)
 	j.blocks.Set(block.Tmstmp, block.Hght)
@@ -763,7 +715,7 @@ func (j *JSONRPCServer) AcceptBlock(blk *chain.StatelessBlock) error {
 	}
 
 	// TODO need to fix this
-	j.blocksWithValidTxs.SetWithTTL(id.String(), sequencerBlock, 1, 1*time.Hour)
+	j.blocksWithValidTxs.Put(id.String(), sequencerBlock)
 
 	return nil
 }
