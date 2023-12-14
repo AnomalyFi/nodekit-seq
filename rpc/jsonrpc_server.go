@@ -469,7 +469,7 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 		// 	prevBlkId = id
 		// 	return false
 		// })
-		prevBlkId, success := j.idsByHeight.Get(firstBlock - 1)
+		prevBlkId, success := j.idsByHeight.Get(firstBlock)
 
 		if success {
 			blk, found := j.headers.Get(prevBlkId.String())
@@ -566,18 +566,6 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 
 	var firstBlock uint64
 
-	//var prevBlkId ids.ID
-
-	//TODO This breaks when the Start is not exactly equal to one of our blocks
-	//heightFound, success := j.blocks.Get(args.Start)
-
-	// t, h, found := j.blocks.GetAt(0)
-
-	// if found {
-	// 	err := fmt.Errorf("timestamp %d height %d.", t, h)
-
-	// 	return err
-	// }
 	j.blocks.Ascend(args.Start, func(tmstp int64, height uint64) bool {
 
 		firstBlock = height
@@ -585,18 +573,9 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 
 	})
 
-	// if success {
-	// 	firstBlock = heightFound
-	// }
-
 	Prev := BlockInfo{}
 	if firstBlock > 0 {
-		// j.idsByHeight.Descend(firstBlock - 1, func(heightKey uint64, id ids.ID) bool {
-
-		// 	prevBlkId = id
-		// 	return false
-		// })
-		prevBlkId, success := j.idsByHeight.Get(firstBlock - 1)
+		prevBlkId, success := j.idsByHeight.Get(firstBlock)
 
 		if success {
 			blk, found := j.headers.Get(prevBlkId.String())
@@ -615,6 +594,7 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 				L1Head:    l1Head.Uint64(),
 			}
 		} else {
+			//! This is where the error is
 			return fmt.Errorf("Could not find Previous Block: %d, idsByHeight height %d, blocks height %d ", firstBlock, j.idsByHeight.Len(), j.blocks.Len())
 		}
 	} else {
