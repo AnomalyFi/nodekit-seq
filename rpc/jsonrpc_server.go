@@ -463,13 +463,13 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 	//prevBlkId, success := j.idsByHeight.Get(firstBlock - 1)
 
 	Prev := BlockInfo{}
-	if firstBlock > 0 {
+	if firstBlock > 1 {
 		// j.idsByHeight.Descend(firstBlock, func(heightKey uint64, id ids.ID) bool {
 
 		// 	prevBlkId = id
 		// 	return false
 		// })
-		prevBlkId, success := j.idsByHeight.Get(firstBlock)
+		prevBlkId, success := j.idsByHeight.Get(firstBlock - 1)
 
 		if success {
 			blk, found := j.headers.Get(prevBlkId.String())
@@ -574,8 +574,8 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 	})
 
 	Prev := BlockInfo{}
-	if firstBlock > 0 {
-		prevBlkId, success := j.idsByHeight.Get(firstBlock)
+	if firstBlock > 1 {
+		prevBlkId, success := j.idsByHeight.Get(firstBlock - 1)
 
 		if success {
 			blk, found := j.headers.Get(prevBlkId.String())
