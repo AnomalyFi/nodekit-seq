@@ -169,7 +169,7 @@ func (w *CommitmentManager) request(
 	}
 
 	//! TODO just changed the chainId so this should fix it
-	auth, err := ethbind.NewKeyedTransactorWithChainID(priv, big.NewInt(32382))
+	auth, err := ethbind.NewKeyedTransactorWithChainID(priv, big.NewInt(3151908))
 	if err != nil {
 		log.Fatalf("Failed to create authorized transactor: %v", err)
 		return err

@@ -272,6 +272,7 @@ type BlockInfo struct {
 	BlockId   string `json:"id"`
 	Timestamp int64  `json:"timestamp"`
 	L1Head    uint64 `json:"l1_head"`
+	Height    uint64 `json:"height"`
 }
 
 type BlockHeadersResponse struct {
@@ -333,6 +334,7 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 			BlockId:   prevBlkId.String(),
 			Timestamp: blk.Tmstmp,
 			L1Head:    l1Head.Uint64(),
+			Height:    blk.Hght,
 		}
 	}
 
@@ -359,6 +361,7 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 				BlockId:   id.String(),
 				Timestamp: tmp,
 				L1Head:    l1Head.Uint64(),
+				Height:    blk.Hght,
 			}
 			return false
 		}
@@ -370,6 +373,7 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 				BlockId:   id.String(),
 				Timestamp: tmp,
 				L1Head:    l1Head.Uint64(),
+				Height:    blk.Hght,
 			})
 		}
 		return true
@@ -437,6 +441,7 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 				BlockId:   prevBlkId.String(),
 				Timestamp: blk.Tmstmp,
 				L1Head:    l1Head.Uint64(),
+				Height:    blk.Hght,
 			}
 		} else {
 			return errors.New("Could not find Previous Block")
@@ -460,23 +465,6 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 			return false
 		}
 
-		// if blk.Hght == heightKey {
-		// 	blocks = append(blocks, BlockInfo{
-		// 		BlockId:   id.String(),
-		// 		Timestamp: blk.Tmstmp,
-		// 		L1Head:    l1Head.Uint64(),
-		// 	})
-		// }
-
-		// if blk.Tmstmp > args.End {
-		// 	Next = BlockInfo{
-		// 		BlockId:   id.String(),
-		// 		Timestamp: blk.Tmstmp,
-		// 		L1Head:    l1Head.Uint64(),
-		// 	}
-		// 	return false
-		// }
-
 		if blk.Tmstmp >= args.End {
 			tmp := blk.Tmstmp / 1000
 
@@ -484,6 +472,7 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 				BlockId:   id.String(),
 				Timestamp: tmp,
 				L1Head:    l1Head.Uint64(),
+				Height:    blk.Hght,
 			}
 			return false
 		}
@@ -495,6 +484,7 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 				BlockId:   id.String(),
 				Timestamp: tmp,
 				L1Head:    l1Head.Uint64(),
+				Height:    blk.Hght,
 			})
 		}
 		return true
@@ -544,6 +534,7 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 				BlockId:   prevBlkId.String(),
 				Timestamp: tmp,
 				L1Head:    l1Head.Uint64(),
+				Height:    blk.Hght,
 			}
 		} else {
 			//! This is where the error is
@@ -584,6 +575,7 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 				BlockId:   id.String(),
 				Timestamp: tmp,
 				L1Head:    l1Head.Uint64(),
+				Height:    blk.Hght,
 			}
 			return false
 		}
@@ -595,6 +587,7 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 				BlockId:   id.String(),
 				Timestamp: tmp,
 				L1Head:    l1Head.Uint64(),
+				Height:    blk.Hght,
 			})
 			fmt.Println("Match Found")
 			fmt.Println("Blocks Length After Append:", len(blocks))
