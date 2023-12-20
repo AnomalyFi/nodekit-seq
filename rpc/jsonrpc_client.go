@@ -240,6 +240,24 @@ func (cli *JSONRPCClient) GetBlockTransactionsByNamespace(
 	return resp, err
 }
 
+func (cli *JSONRPCClient) GetCommitmentBlocks(
+	ctx context.Context,
+	first uint64,
+	height uint64,
+) (*SequencerWarpBlockResponse, error) {
+	resp := new(SequencerWarpBlockResponse)
+	err := cli.requester.SendRequest(
+		ctx,
+		"getCommitmentBlocks",
+		&GetBlockCommitmentArgs{
+			First:         first,
+			CurrentHeight: height,
+		},
+		resp,
+	)
+	return resp, err
+}
+
 // TODO add more methods
 func (cli *JSONRPCClient) WaitForBalance(
 	ctx context.Context,

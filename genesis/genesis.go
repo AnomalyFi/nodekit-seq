@@ -71,7 +71,7 @@ func Default() *Genesis {
 		HRP: consts.HRP,
 
 		// Chain Parameters
-		MinBlockGap:      100,
+		MinBlockGap:      1_000,
 		MinEmptyBlockGap: 1_000,
 		//MinEmptyBlockGap used to be 2_500
 

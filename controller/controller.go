@@ -26,7 +26,7 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 
 	// "github.com/AnomalyFi/nodekit-seq/orderbook"
-	"github.com/AnomalyFi/nodekit-seq/commitment"
+
 	"github.com/AnomalyFi/nodekit-seq/rpc"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/AnomalyFi/nodekit-seq/version"
@@ -42,7 +42,7 @@ type Controller struct {
 	config       *config.Config
 	stateManager *StateManager
 
-	commitmentManager *commitment.CommitmentManager
+	//commitmentManager *commitment.CommitmentManager
 
 	jsonRPCServer *rpc.JSONRPCServer
 
@@ -131,8 +131,8 @@ func (c *Controller) Initialize(
 	}
 	apis[rpc.JSONRPCEndpoint] = jsonRPCHandler
 
-	c.commitmentManager = commitment.NewCommitmentManager(c.inner)
-	go c.commitmentManager.Run()
+	//c.commitmentManager = commitment.NewCommitmentManager(c.inner)
+	//go c.commitmentManager.Run()
 	// Create builder and gossiper
 	var (
 		build  builder.Builder
@@ -189,9 +189,9 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 		c.inner.Logger().Fatal("unable to accept block in json-rpc server", zap.Error(err))
 	}
 
-	if err := c.commitmentManager.AcceptBlock(blk); err != nil {
-		c.inner.Logger().Fatal("unable to accept block in commitment manager", zap.Error(err))
-	}
+	// if err := c.commitmentManager.AcceptBlock(blk); err != nil {
+	// 	c.inner.Logger().Fatal("unable to accept block in commitment manager", zap.Error(err))
+	// }
 
 	results := blk.Results()
 	for i, tx := range blk.Txs {
