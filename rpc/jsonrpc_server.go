@@ -327,6 +327,7 @@ type GetBlockTransactionsArgs struct {
 type GetBlockCommitmentArgs struct {
 	First         uint64 `json:"first"`
 	CurrentHeight uint64 `json:"current_height"`
+	MaxBlocks     int    `json:"max_blocks"`
 }
 
 type GetBlockTransactionsByNamespaceArgs struct {
@@ -634,7 +635,7 @@ func (j *JSONRPCServer) GetCommitmentBlocks(req *http.Request, args *GetBlockCom
 
 	j.idsByHeight.Ascend(args.First, func(heightKey uint64, id ids.ID) bool {
 		// Does heightKey match the given block's height for the id
-		if len(blocks) >= 500 {
+		if len(blocks) >= args.MaxBlocks {
 			return false
 		}
 

@@ -244,6 +244,7 @@ func (cli *JSONRPCClient) GetCommitmentBlocks(
 	ctx context.Context,
 	first uint64,
 	height uint64,
+	maxBlocks int,
 ) (*SequencerWarpBlockResponse, error) {
 	resp := new(SequencerWarpBlockResponse)
 	err := cli.requester.SendRequest(
@@ -252,6 +253,7 @@ func (cli *JSONRPCClient) GetCommitmentBlocks(
 		&GetBlockCommitmentArgs{
 			First:         first,
 			CurrentHeight: height,
+			MaxBlocks:     maxBlocks,
 		},
 		resp,
 	)
