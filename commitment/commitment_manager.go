@@ -2,22 +2,17 @@ package commitment
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"math/big"
-	"sync"
 	"time"
 
 	"github.com/AnomalyFi/hypersdk/chain"
-	"github.com/AnomalyFi/hypersdk/heap"
 	"github.com/AnomalyFi/hypersdk/vm"
 	"github.com/AnomalyFi/nodekit-seq/sequencer"
 	"github.com/AnomalyFi/nodekit-seq/types"
 
 	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/utils/crypto/bls"
-	"go.uber.org/zap"
 
 	ethbind "github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -28,36 +23,16 @@ import (
 	"github.com/tidwall/btree"
 )
 
-const (
-	maxWarpResponse   = bls.PublicKeyLen + bls.SignatureLen
-	minGatherInterval = 30 * 60 // 30 minutes
-	initialBackoff    = 0
-	backoffIncrease   = 5
-	maxRetries        = 10
-	maxOutstanding    = 8 // TODO: make a config
-)
-
 // CommitmentManager takes the new block commitments and submits them to L1
 type CommitmentManager struct {
 	vm *vm.VM
-
-	l         sync.Mutex
-	requestID uint32
 
 	headers *types.ShardedMap[string, *chain.StatelessBlock] // Map block ID to block
 
 	idsByHeight btree.Map[uint64, ids.ID] // Map block ID to block height
 
 	// TODO at some point maybe change this to be a FIFOMAP for optimization
-	pendingJobs *heap.Heap[*blockJob, int64]
-	jobs        map[uint32]*blockJob
-
 	done chan struct{}
-}
-
-type blockJob struct {
-	blockId string
-	retry   int
 }
 
 func NewCommitmentManager(vm *vm.VM) *CommitmentManager {
@@ -65,101 +40,64 @@ func NewCommitmentManager(vm *vm.VM) *CommitmentManager {
 
 	return &CommitmentManager{
 		vm:          vm,
-		pendingJobs: heap.New[*blockJob, int64](64, true),
 		idsByHeight: btree.Map[uint64, ids.ID]{},
-
-		headers: headers,
-		jobs:    map[uint32]*blockJob{},
-		done:    make(chan struct{}),
+		headers:     headers,
+		done:        make(chan struct{}),
 	}
 }
 
 func (w *CommitmentManager) Run() {
 	w.vm.Logger().Info("starting commitment manager")
-	defer close(w.done)
-
-	//TODO increase this
-	t := time.NewTicker(6 * time.Second)
-	defer t.Stop()
-	for {
-		select {
-		case <-t.C:
-			w.l.Lock()
-			now := time.Now().Unix()
-			for w.pendingJobs.Len() > 0 && len(w.jobs) < maxOutstanding {
-				first := w.pendingJobs.First()
-				if first.Val > now {
-					break
-				}
-				w.pendingJobs.Pop()
-
-				// Send request
-				job := first.Item
-				if err := w.request(context.Background(), job); err != nil {
-					w.vm.Logger().Error(
-						"unable to request signature",
-						zap.Error(err),
-					)
-				}
-			}
-			l := w.pendingJobs.Len()
-			w.l.Unlock()
-			w.vm.Logger().Debug("checked for ready jobs", zap.Int("pending", l))
-		case <-w.vm.StopChan():
-			w.vm.Logger().Info("stopping commitment manager")
-			return
-		}
-	}
-}
-
-func (w *CommitmentManager) AcceptBlock(blk *chain.StatelessBlock) error {
-	id := blk.ID()
-	w.headers.Put(id.String(), blk)
-	w.idsByHeight.Set(blk.Hght, id)
-
-	// TODO eventually figure out a way to not submit the empty blocks to save costs
-
-	w.l.Lock()
-	if w.pendingJobs.Has(id) {
-		// We may already have enqueued a job when the block was accepted.
-		// TODO do I need this or not?
-		w.l.Unlock()
-		return nil
-	}
-	w.pendingJobs.Push(&heap.Entry[*blockJob, int64]{
-		ID: id,
-		Item: &blockJob{
-			id.String(),
-			0,
-		},
-		Val:   time.Now().Unix() + initialBackoff,
-		Index: w.pendingJobs.Len(),
-	})
-	w.l.Unlock()
-	w.vm.Logger().Debug(
-		"enqueued push job",
-		zap.Stringer("blockId", id),
-	)
-	return nil
-}
-
-// you must hold [w.l] when calling this function
-func (w *CommitmentManager) request(
-	ctx context.Context,
-	j *blockJob,
-) error {
-	// TODO do I need this requestID stuff or not?
-	// requestID := w.requestID
-	// w.requestID++
-	// w.jobs[requestID] = j
-
-	blk, success := w.headers.Get(j.blockId)
-
-	if !success {
-		return errors.New("invalid request to get block")
-	}
 
 	conn, err := ethclient.Dial("https://devnet.nodekit.xyz")
+
+	sequencerContractTest, err := sequencer.NewSequencer(ethcommon.HexToAddress("0x5FbDB2315678afecb367f032d93F642f64180aa3"), conn)
+
+	// function call on `instance`. Retrieves pending name
+	maxBlocks, err := sequencerContractTest.MAXBLOCKS(&ethbind.CallOpts{Pending: true})
+	if err != nil {
+		log.Fatalf("Failed to retrieve max blocks: %v", err)
+	}
+	fmt.Println("max blocks:", maxBlocks)
+
+	if !(w.idsByHeight.Len() > 1) {
+		time.Sleep(2 * time.Second)
+	}
+
+	w.Commit(maxBlocks, sequencerContractTest, conn)
+
+}
+
+func (w *CommitmentManager) Commit(maxBlocks *big.Int, seq *sequencer.Sequencer, client *ethclient.Client) {
+	for {
+		if err := w.SyncRequest(maxBlocks, seq, client); err != nil {
+			fmt.Printf("Failed to Sync %v\n", err)
+
+			// Wait to avoid spam
+			time.Sleep(1 * time.Second)
+		}
+	}
+
+}
+
+// func (w *CommitmentManager) AcceptBlock(blk *chain.StatelessBlock) error {
+// 	id := blk.ID()
+// 	w.headers.Put(id.String(), blk)
+// 	w.idsByHeight.Set(blk.Hght, id)
+
+// 	// w.vm.Logger().Debug(
+// 	// 	"Added new block",
+// 	// 	zap.Stringer("blockId", id),
+// 	// )
+// 	return nil
+// }
+
+// you must hold [w.l] when calling this function
+func (w *CommitmentManager) SyncRequest(
+	maxBlocks *big.Int,
+	seq *sequencer.Sequencer,
+	client *ethclient.Client,
+) error {
 
 	//TODO may need to change
 	priv, err := crypto.HexToECDSA("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
@@ -169,33 +107,17 @@ func (w *CommitmentManager) request(
 	}
 
 	//! TODO just changed the chainId so this should fix it
-	auth, err := ethbind.NewKeyedTransactorWithChainID(priv, big.NewInt(3151908))
+	auth, err := ethbind.NewKeyedTransactorWithChainID(priv, big.NewInt(32382))
 	if err != nil {
 		log.Fatalf("Failed to create authorized transactor: %v", err)
 		return err
 	}
 
-	auth.GasLimit = 1_000_000
+	//TODO! Just changed this because it was potentially causing issues on OP Stack
+	//auth.GasLimit = 1_000_000
+	auth.GasLimit = 300_000
 
-	// address, tx, sequencerContractTest, err := sequencer.DeploySequencerContract(auth, conn)
-
-	// fmt.Printf("Contract pending deploy: 0x%x\n", address)
-	// fmt.Printf("Transaction waiting to be mined: 0x%x\n\n", tx.Hash())
-
-	// time.Sleep(2 * time.Second)
-
-	// TODO change the address
-	sequencerContractTest, err := sequencer.NewSequencer(ethcommon.HexToAddress("0x5FbDB2315678afecb367f032d93F642f64180aa3"), conn)
-
-	// function call on `instance`. Retrieves pending name
-	maxBlocks, err := sequencerContractTest.MAXBLOCKS(&ethbind.CallOpts{Pending: true})
-	if err != nil {
-		log.Fatalf("Failed to retrieve max blocks: %v", err)
-		return err
-	}
-	fmt.Println("max blocks:", maxBlocks)
-
-	contract_block_height, err := sequencerContractTest.BlockHeight(nil)
+	contract_block_height, err := seq.BlockHeight(nil)
 	if err != nil {
 		log.Fatalf("Failed to retrieve max blocks: %v", err)
 		return err
@@ -204,10 +126,24 @@ func (w *CommitmentManager) request(
 	// The way SEQ works with producing empty blocks means that all we need to do is once a block has 1 or more transactions we check the height on the L1 contract
 	// and if it is less so the L1 is behind SEQ then we can submit a batch
 
-	blkHeight := big.NewInt(int64(blk.Hght))
+	var blkHeight uint64
+
+	//TODO fix this later
+
+	//pivot := uint64(1000000000)
+
+	pivot, _, _ := w.idsByHeight.Max()
+
+	w.idsByHeight.Descend(pivot, func(height uint64, blk ids.ID) bool {
+		blkHeight = height
+		return false
+
+	})
+
+	blkHeightBig := big.NewInt(int64(blkHeight))
 	fmt.Println("Current Block Height:", contract_block_height)
-	fmt.Printf("Update SEQ Height: %d\n", blk.Hght)
-	if contract_block_height.Cmp(blkHeight) <= 0 {
+	fmt.Printf("Update SEQ Height: %d\n", blkHeight)
+	if contract_block_height.Cmp(blkHeightBig) <= 0 {
 		// fmt.Println("Current Block Height:", contract_block_height)
 		// fmt.Printf("Update SEQ Height: %x\n", blk.Hght)
 
@@ -228,7 +164,7 @@ func (w *CommitmentManager) request(
 			}
 
 			//TODO swapped these 2 functions so now it exits earlier. Need to test
-			if blockTemp.Hght >= blk.Hght {
+			if blockTemp.Hght >= blkHeight {
 				root := types.NewU256().SetBytes(blockTemp.StateRoot)
 				bigRoot := root.Int
 				parentRoot := types.NewU256().SetBytes(blockTemp.Prnt)
@@ -258,18 +194,29 @@ func (w *CommitmentManager) request(
 			return true
 		})
 
-		tx, err := sequencerContractTest.NewBlocks(auth, blocks)
+		fmt.Println("Created Block Batch")
+
+		tx, err := seq.NewBlocks(auth, blocks)
 		if err != nil {
 			fmt.Println("An error happened:", err)
 			return err
 		}
 
-		fmt.Printf("Update pending: 0x%x\n", tx.Hash())
+		//ch := make(chan *ethtypes.Transaction)
+		for i := 1; i < 10; i++ {
+			tx, pending, _ := client.TransactionByHash(context.TODO(), tx.Hash())
+			if !pending {
+				fmt.Printf("Update Sucessful: 0x%x\n", tx.Hash())
+
+			}
+
+			time.Sleep(time.Second * 1)
+		}
 
 	}
 	return nil
 }
 
-func (w *CommitmentManager) Done() {
-	<-w.done
-}
+// func (w *CommitmentManager) Done() {
+// 	<-w.done
+// }

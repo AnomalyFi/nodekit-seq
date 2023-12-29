@@ -7,7 +7,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/ava-labs/avalanchego/ids"
@@ -108,9 +107,12 @@ var testHeaderCmd = &cobra.Command{
 		// // start_time := time.Unix(start, 0)
 		// // end_time := time.Unix(end, 0)
 
-		start := time.Now().Unix()
+		// start := time.Now().Unix()
 
-		end := time.Now().Unix() - 120
+		// end := time.Now().Unix() - 120
+
+		start := int64(1702502928)
+		end := int64(1702502930)
 
 		start_time := start * 1000
 
