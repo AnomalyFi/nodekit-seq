@@ -42,8 +42,6 @@ type Controller struct {
 	config       *config.Config
 	stateManager *StateManager
 
-	//commitmentManager *commitment.CommitmentManager
-
 	jsonRPCServer *rpc.JSONRPCServer
 
 	metrics *metrics
@@ -131,8 +129,6 @@ func (c *Controller) Initialize(
 	}
 	apis[rpc.JSONRPCEndpoint] = jsonRPCHandler
 
-	//c.commitmentManager = commitment.NewCommitmentManager(c.inner)
-	//go c.commitmentManager.Run()
 	// Create builder and gossiper
 	var (
 		build  builder.Builder
@@ -188,10 +184,6 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 	if err := c.jsonRPCServer.AcceptBlock(blk); err != nil {
 		c.inner.Logger().Fatal("unable to accept block in json-rpc server", zap.Error(err))
 	}
-
-	// if err := c.commitmentManager.AcceptBlock(blk); err != nil {
-	// 	c.inner.Logger().Fatal("unable to accept block in commitment manager", zap.Error(err))
-	// }
 
 	results := blk.Results()
 	for i, tx := range blk.Txs {
