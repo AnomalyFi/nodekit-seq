@@ -8,6 +8,7 @@ import (
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
+	"github.com/AnomalyFi/nodekit-seq/archiver"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/trace"
@@ -26,4 +27,8 @@ type Controller interface {
 		verifySig bool,
 		txs []*chain.Transaction,
 	) (errs []error)
+	GetBlockFromArchiver(
+		ctx context.Context,
+		dbBlock *archiver.DBBlock,
+	) (*chain.StatefulBlock, error)
 }

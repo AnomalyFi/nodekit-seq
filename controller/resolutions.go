@@ -8,6 +8,7 @@ import (
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
+	"github.com/AnomalyFi/nodekit-seq/archiver"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
@@ -55,4 +56,11 @@ func (c *Controller) GetLoanFromState(
 	destination ids.ID,
 ) (uint64, error) {
 	return storage.GetLoanFromState(ctx, c.inner.ReadState, asset, destination)
+}
+
+func (c *Controller) GetBlockFromArchiver(
+	ctx context.Context,
+	dbBlock *archiver.DBBlock,
+) (*chain.StatefulBlock, error) {
+	return c.archiver.GetBlock(dbBlock, c.inner)
 }

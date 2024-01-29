@@ -20,6 +20,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/AnomalyFi/nodekit-seq/actions"
+	"github.com/AnomalyFi/nodekit-seq/archiver"
 	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/config"
 	"github.com/AnomalyFi/nodekit-seq/consts"
@@ -43,6 +44,7 @@ type Controller struct {
 	stateManager *StateManager
 
 	jsonRPCServer *rpc.JSONRPCServer
+	archiver      *archiver.ORMArchiver
 
 	metrics *metrics
 
@@ -89,6 +91,12 @@ func (c *Controller) Initialize(
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
+	// Instantiate block archiver, this is used for json rpc server
+	c.archiver, err = archiver.NewORMArchiverFromConfigBytes([]byte(c.config.ArchiverConfig))
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+	}
+
 	c.snowCtx.Log.SetLevel(c.config.GetLogLevel())
 	snowCtx.Log.Info("initialized config", zap.Bool("loaded", c.config.Loaded()), zap.Any("contents", c.config))
 
@@ -181,8 +189,9 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 	batch := c.metaDB.NewBatch()
 	defer batch.Reset()
 
-	if err := c.jsonRPCServer.AcceptBlock(blk); err != nil {
-		c.inner.Logger().Fatal("unable to accept block in json-rpc server", zap.Error(err))
+	err := c.archiver.InsertBlock(blk.StatefulBlock)
+	if err != nil {
+		c.inner.Logger().Warn("archiving block failed", zap.Error(err))
 	}
 
 	results := blk.Results()

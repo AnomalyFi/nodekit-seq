@@ -72,6 +72,9 @@ type Config struct {
 	// State Sync
 	StateSyncServerDelay time.Duration `json:"stateSyncServerDelay"` // for testing
 
+	// Archiver
+	ArchiverConfig string `json:"archiverConfig"`
+
 	loaded             bool
 	nodeID             ids.NodeID
 	parsedExemptPayers [][]byte

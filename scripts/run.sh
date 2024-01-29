@@ -138,6 +138,23 @@ fi
 
 ############################
 
+echo "validating archiver config"
+if [[ -z $ARCHIVER_CONFIG_PATH ]]; then
+	echo "No archiver config is provided"
+	ARCHIVER_CONFIG=$(echo "{\"enabled\":false,\"archiverType\":\"\",\"dsn\":\"\"}" | jq -R -s)
+else 
+	if [[ -f $ARCHIVER_CONFIG_PATH ]]; then 
+  # convert json to escaped string
+		ARCHIVER_CONFIG="$(jq -R -s '.' < $ARCHIVER_CONFIG_PATH)"
+	else 
+		echo "No such archiver file"
+    ARCHIVER_CONFIG=$(echo "{\"enabled\":false,\"archiverType\":\"\",\"dsn\":\"\"}" | jq -R -s)
+	fi
+fi
+
+echo "archiver config: "
+echo $ARCHIVER_CONFIG
+
 ############################
 
 # When running a validator, the [trackedPairs] should be empty/limited or
@@ -158,7 +175,8 @@ cat <<EOF > ${TMPDIR}/tokenvm.config
   "trackedPairs":["*"],
   "logLevel": "${LOGLEVEL}",
   "continuousProfilerDir":"${TMPDIR}/tokenvm-e2e-profiles/*",
-  "stateSyncServerDelay": ${STATESYNC_DELAY}
+  "stateSyncServerDelay": ${STATESYNC_DELAY},
+  "archiverConfig": $ARCHIVER_CONFIG
 }
 EOF
 mkdir -p ${TMPDIR}/tokenvm-e2e-profiles

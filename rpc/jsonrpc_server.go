@@ -4,6 +4,7 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
@@ -15,6 +16,7 @@ import (
 	"github.com/ava-labs/avalanchego/ids"
 
 	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/nodekit-seq/archiver"
 	seqconsts "github.com/AnomalyFi/nodekit-seq/consts"
 
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
@@ -31,7 +33,8 @@ import (
 )
 
 type JSONRPCServer struct {
-	c       Controller
+	c Controller
+
 	headers *types.ShardedMap[string, *chain.StatefulBlock]
 	//map[ids.ID]*chain.StatefulBlock // Map block ID to block header
 
@@ -769,6 +772,48 @@ func (j *JSONRPCServer) AcceptBlock(blk *chain.StatelessBlock) error {
 
 	// TODO need to fix this
 	j.blocksWithValidTxs.Put(id.String(), sequencerBlock)
+
+	return nil
+}
+
+type BlockArgs struct {
+	// either of them need to be fed
+	ID     ids.ID `json:"id"`
+	Height uint64 `json:"height"`
+}
+
+type BlockReply struct {
+	Block []byte `json:"block"`
+}
+
+func (j *JSONRPCServer) Block(req *http.Request, args *BlockArgs, reply *BlockReply) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.Block")
+	defer span.End()
+
+	var BlockID string
+	// reason of doing this is that Gorm only treat 0, nil, "" as null values
+	// ids.Empty.String() won't return a null string
+	// see: https://gorm.io/docs/query.html#Struct-amp-Map-Conditions
+	if !bytes.Equal(args.ID[:], ids.Empty[:]) {
+		BlockID = args.ID.String()
+	} else {
+		BlockID = ""
+	}
+
+	dbBlock := archiver.DBBlock{
+		BlockID: BlockID,
+		Height:  args.Height,
+	}
+
+	blk, err := j.c.GetBlockFromArchiver(ctx, &dbBlock)
+	if err != nil {
+		return err
+	}
+
+	reply.Block, err = blk.Marshal()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

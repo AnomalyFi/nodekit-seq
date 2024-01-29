@@ -310,6 +310,34 @@ func (cli *JSONRPCClient) WaitForTransaction(ctx context.Context, txID ids.ID) (
 	return success, fee, nil
 }
 
+func (cli *JSONRPCClient) GetBlock(ctx context.Context, id ids.ID, height uint64) (*chain.StatefulBlock, error) {
+	resp := new(BlockReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"block",
+		&BlockArgs{
+			ID:     id,
+			Height: height,
+		},
+		resp,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	parser, err := cli.Parser(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	blk, err := chain.UnmarshalBlock(resp.Block, parser)
+	if err != nil {
+		return nil, err
+	}
+
+	return blk, nil
+}
+
 var _ chain.Parser = (*Parser)(nil)
 
 type Parser struct {
