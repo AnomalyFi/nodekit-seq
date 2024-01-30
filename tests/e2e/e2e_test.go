@@ -1310,6 +1310,59 @@ var _ = ginkgo.Describe("[Test]", func() {
 		})
 	})
 
+	ginkgo.It("should query block", func() {
+		other, err := ed25519.GeneratePrivateKey()
+		gomega.Ω(err).Should(gomega.BeNil())
+
+		ginkgo.By("issue Transfer to the first node", func() {
+			// Generate transaction
+			parser, err := instancesA[0].tcli.Parser(context.TODO())
+			gomega.Ω(err).Should(gomega.BeNil())
+			submit, tx, _, err := instancesA[0].cli.GenerateTransaction(
+				context.Background(),
+				parser,
+				nil,
+				&actions.Transfer{
+					To:    other.PublicKey(),
+					Value: sendAmount,
+				},
+				factory,
+			)
+			gomega.Ω(err).Should(gomega.BeNil())
+			hutils.Outf("{{yellow}}generated transaction{{/}}\n")
+
+			// Broadcast and wait for transaction
+			gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
+			hutils.Outf("{{yellow}}submitted transaction{{/}}\n")
+			ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+			success, _, err := instancesA[0].tcli.WaitForTransaction(ctx, tx.ID())
+			cancel()
+			gomega.Ω(err).Should(gomega.BeNil())
+			gomega.Ω(success).Should(gomega.BeTrue())
+			hutils.Outf("{{yellow}}found transaction{{/}}\n")
+		})
+
+		ginkgo.By("check if Transfer has been accepted from all nodes", func() {
+			// height should be > 0 since already accepted one in the transfer test
+			bID, height, _, err := instancesA[0].cli.Accepted(context.Background())
+			gomega.Ω(err).Should(gomega.BeNil())
+
+			// verify three types of querying
+			blk, err := instancesA[0].tcli.GetBlock(context.TODO(), bID, height)
+			gomega.Ω(err).Should(gomega.BeNil())
+			gomega.Ω(blk.ID()).Should(gomega.Equal(bID))
+			gomega.Ω(blk.Hght).Should(gomega.Equal(height))
+			// with empty id and height
+			blk, err = instancesA[0].tcli.GetBlock(context.TODO(), ids.Empty, height)
+			gomega.Ω(blk.Hght).Should(gomega.Equal(height))
+			gomega.Ω(err).Should(gomega.BeNil())
+			// with bID and heigth 0
+			blk, err = instancesA[0].tcli.GetBlock(context.TODO(), bID, 0)
+			gomega.Ω(err).Should(gomega.BeNil())
+			gomega.Ω(blk.Hght).Should(gomega.Equal(height))
+		})
+
+	})
 	// TODO: add custom asset test
 	// TODO: test with only part of sig weight
 	// TODO: attempt to mint a warp asset
