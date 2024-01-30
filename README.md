@@ -33,10 +33,18 @@ relying on a trusted relayer or bridge (just the validators of the `SeqVM` and `
 sending the message). This feature is still in-progress and we will be sharing more details in 
 the upcoming months.
 
+## Before running tests or launching subnet
+
+1. Clone https://github.com/AnomalyFi/hypersdk and run `docker compose up -d` in hypersdk repository folder
+2. Run `docker compose -f postgresql-compose.yml` in the node-seq(this repository) folder to launch postgresql database
+3. To run e2e test, run `MODE="test" ARCHIVER_CONFIG_PATH="./archiver_config.json" ./scripts/run.sh`
+
 ## Demos
+
 The first step to running these demos is to launch your own `SeqVM` Subnet. You
 can do so by running the following command from this location (may take a few
 minutes):
+
 ```bash
 ./scripts/run.sh;
 ```
