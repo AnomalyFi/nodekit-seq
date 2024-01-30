@@ -96,3 +96,8 @@
 [01-30|10:27:32.932] INFO client/client.go:156 create blockchains
 [01-30|10:29:45.110] INFO client/client.go:225 status
 [01-30|10:30:06.217] INFO client/client.go:277 stop
+[01-30|10:40:56.864] DEBUG client/client.go:78 dialing server at  {"endpoint": "0.0.0.0:12352"}
+[01-30|10:40:56.865] INFO client/client.go:147 start
+[01-30|10:41:10.100] INFO client/client.go:156 create blockchains
+[01-30|10:43:17.122] INFO client/client.go:225 status
+[01-30|10:43:31.216] INFO client/client.go:277 stop

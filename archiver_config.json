@@ -1,0 +1,1 @@
+{"enabled":true,"archiverType":"postgresql","dsn":"host=localhost user=seq password=longsecretforseq dbname=seqdb port=5432 sslmode=disable"}

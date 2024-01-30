@@ -2,6 +2,7 @@ package archiver
 
 import (
 	"encoding/json"
+	"log"
 	"strings"
 
 	"github.com/AnomalyFi/hypersdk/chain"
@@ -51,6 +52,7 @@ func NewORMArchiverFromConfigBytes(configBytes []byte) (*ORMArchiver, error) {
 			DSN:                  conf.DSN,
 			PreferSimpleProtocol: true,
 		}))
+		log.Println("using postgresql as archiver")
 		if err != nil {
 			return nil, err
 		}
