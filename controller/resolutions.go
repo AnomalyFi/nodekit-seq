@@ -11,6 +11,7 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/archiver"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	"github.com/AnomalyFi/nodekit-seq/storage"
+	"github.com/AnomalyFi/nodekit-seq/types"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/trace"
 	"github.com/ava-labs/avalanchego/utils/logging"
@@ -61,6 +62,28 @@ func (c *Controller) GetLoanFromState(
 func (c *Controller) GetBlockFromArchiver(
 	ctx context.Context,
 	dbBlock *archiver.DBBlock,
-) (*chain.StatefulBlock, error) {
+) (*chain.StatefulBlock, *ids.ID, error) {
 	return c.archiver.GetBlock(dbBlock, c.inner)
+}
+
+func (c *Controller) GetByHeight(
+	height uint64,
+	end int64,
+	reply *types.BlockHeadersResponse,
+) error {
+	return c.archiver.GetByHeight(height, end, c.inner, reply)
+}
+
+func (c *Controller) GetByID(
+	args *types.GetBlockHeadersIDArgs,
+	reply *types.BlockHeadersResponse,
+) error {
+	return c.archiver.GetByID(args, reply, c.inner)
+}
+
+func (c *Controller) GetByStart(
+	args *types.GetBlockHeadersByStartArgs,
+	reply *types.BlockHeadersResponse,
+) error {
+	return c.archiver.GetByStart(args, reply, c.inner)
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/nodekit-seq/archiver"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
+	"github.com/AnomalyFi/nodekit-seq/types"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/trace"
 )
@@ -30,5 +31,18 @@ type Controller interface {
 	GetBlockFromArchiver(
 		ctx context.Context,
 		dbBlock *archiver.DBBlock,
-	) (*chain.StatefulBlock, error)
+	) (*chain.StatefulBlock, *ids.ID, error)
+	GetByHeight(
+		height uint64,
+		end int64,
+		reply *types.BlockHeadersResponse,
+	) error
+	GetByID(
+		args *types.GetBlockHeadersIDArgs,
+		reply *types.BlockHeadersResponse,
+	) error
+	GetByStart(
+		args *types.GetBlockHeadersByStartArgs,
+		reply *types.BlockHeadersResponse,
+	) error
 }

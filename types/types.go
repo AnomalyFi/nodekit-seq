@@ -24,6 +24,35 @@ type SequencerBlock struct {
 	Txs       map[string][]*SEQTransaction `json:"transactions"`
 }
 
+type BlockInfo struct {
+	BlockId   string `json:"id"`
+	Timestamp int64  `json:"timestamp"`
+	L1Head    uint64 `json:"l1_head"`
+	Height    uint64 `json:"height"`
+}
+
+type GetBlockHeadersByHeightArgs struct {
+	Height uint64 `json:"height"`
+	End    int64  `json:"end"`
+}
+
+type GetBlockHeadersIDArgs struct {
+	ID  string `json:"id"`
+	End int64  `json:"end"`
+}
+
+type GetBlockHeadersByStartArgs struct {
+	Start int64 `json:"start"`
+	End   int64 `json:"end"`
+}
+
+type BlockHeadersResponse struct {
+	From   uint64      `json:"from"`
+	Blocks []BlockInfo `json:"blocks"`
+	Prev   BlockInfo   `json:"prev"`
+	Next   BlockInfo   `json:"next"`
+}
+
 // A BigInt type which serializes to JSON a a hex string.
 type U256 struct {
 	big.Int

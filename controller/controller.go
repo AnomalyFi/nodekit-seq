@@ -184,12 +184,11 @@ func (c *Controller) Submit(
 	return c.inner.Submit(ctx, verifySig, txs)
 }
 
-// TODO I can add the blocks to the JSON RPC Server here instead of REST API
 func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) error {
 	batch := c.metaDB.NewBatch()
 	defer batch.Reset()
 
-	err := c.archiver.InsertBlock(blk.StatefulBlock)
+	err := c.archiver.InsertBlock(blk)
 	if err != nil {
 		c.inner.Logger().Warn("archiving block failed", zap.Error(err))
 	}

@@ -103,3 +103,8 @@ func (*CreateAsset) ValidRange(chain.Rules) (int64, int64) {
 	// Returning -1, -1 means that the action is always valid.
 	return -1, -1
 }
+
+func (*CreateAsset) NMTNamespace() []byte {
+	// byte array with 8 zeros
+	return DefaultNMTNamespace
+}
