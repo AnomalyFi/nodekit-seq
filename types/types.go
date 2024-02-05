@@ -16,6 +16,14 @@ type SEQTransaction struct {
 	Transaction []byte `json:"transaction"`
 }
 
+type SEQTransactionResponse struct {
+	Txs       []*SEQTransaction `json:"txs"`
+	BlockId   string            `json:"id"`
+	Timestamp int64             `json:"timestamp"`
+	L1Head    uint64            `json:"l1_head"`
+	Height    uint64            `json:"height"`
+}
+
 type SequencerBlock struct {
 	StateRoot ids.ID                       `json:"state_root"`
 	Prnt      ids.ID                       `json:"parent"`
@@ -46,11 +54,30 @@ type GetBlockHeadersByStartArgs struct {
 	End   int64 `json:"end"`
 }
 
+type GetBlockCommitmentArgs struct {
+	First         uint64 `json:"first"`
+	CurrentHeight uint64 `json:"current_height"`
+	MaxBlocks     int    `json:"max_blocks"`
+}
+
 type BlockHeadersResponse struct {
 	From   uint64      `json:"from"`
 	Blocks []BlockInfo `json:"blocks"`
 	Prev   BlockInfo   `json:"prev"`
 	Next   BlockInfo   `json:"next"`
+}
+
+type SequencerWarpBlockResponse struct {
+	Blocks []SequencerWarpBlock `json:"blocks"`
+}
+
+type SequencerWarpBlock struct {
+	BlockId    string   `json:"id"`
+	Timestamp  int64    `json:"timestamp"`
+	L1Head     uint64   `json:"l1_head"`
+	Height     *big.Int `json:"height"`
+	BlockRoot  *big.Int `json:"root"`
+	ParentRoot *big.Int `json:"parent"`
 }
 
 // A BigInt type which serializes to JSON a a hex string.

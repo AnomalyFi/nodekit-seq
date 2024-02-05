@@ -3,6 +3,7 @@ package archiver
 import (
 	"encoding/json"
 	"log"
+	"math/big"
 	"strings"
 
 	"github.com/AnomalyFi/hypersdk/chain"
@@ -308,5 +309,69 @@ func (oa *ORMArchiver) GetByStart(args *types.GetBlockHeadersByStartArgs, reply 
 	reply.Prev = Prev
 	reply.Next = Next
 
+	return nil
+}
+
+func (oa *ORMArchiver) GetByCommitment(args *types.GetBlockCommitmentArgs, reply *types.SequencerWarpBlockResponse, blockParser chain.Parser) error {
+
+	if args.First < 1 {
+		return nil
+	}
+	type BlockInfoWithParent struct {
+		BlockId   string `json:"id"`
+		Parent    string `json:"parent"`
+		Timestamp int64  `json:"timestamp"`
+		L1Head    uint64 `json:"l1_head"`
+		Height    uint64 `json:"height"`
+	}
+
+	//TODO check if this works
+
+	var blocks []BlockInfoWithParent
+
+	if err := oa.db.Raw("SELECT BlockId, Timestamp, L1Head, Height FROM DBBlock WHERE Height >= ? AND Height < ? ORDER BY Height LIMIT ?", args.First, args.CurrentHeight, args.MaxBlocks).Scan(&blocks).Error; err != nil {
+		return err
+	}
+
+	blocksCommitment := make([]types.SequencerWarpBlock, 0)
+
+	for _, blk := range blocks {
+
+		id, err := ids.FromString(blk.BlockId)
+		if err != nil {
+			return err
+		}
+
+		header := &types.Header{
+			Height:    blk.Height,
+			Timestamp: uint64(blk.Timestamp),
+			L1Head:    uint64(blk.L1Head),
+			TransactionsRoot: types.NmtRoot{
+				Root: id[:],
+			},
+		}
+
+		comm := header.Commit()
+
+		idParent, err := ids.FromString(blk.Parent)
+		if err != nil {
+			return err
+		}
+
+		parentRoot := types.NewU256().SetBytes(idParent)
+		bigParentRoot := parentRoot.Int
+
+		blocksCommitment = append(blocksCommitment, types.SequencerWarpBlock{
+			BlockId:    id.String(),
+			Timestamp:  blk.Timestamp,
+			L1Head:     uint64(blk.L1Head),
+			Height:     big.NewInt(int64(blk.Height)),
+			BlockRoot:  &comm.Uint256().Int,
+			ParentRoot: &bigParentRoot,
+		})
+
+	}
+
+	reply.Blocks = blocksCommitment
 	return nil
 }

@@ -87,3 +87,10 @@ func (c *Controller) GetByStart(
 ) error {
 	return c.archiver.GetByStart(args, reply, c.inner)
 }
+
+func (c *Controller) GetByCommitment(
+	args *types.GetBlockCommitmentArgs,
+	reply *types.SequencerWarpBlockResponse,
+) error {
+	return c.archiver.GetByCommitment(args, reply, c.inner)
+}

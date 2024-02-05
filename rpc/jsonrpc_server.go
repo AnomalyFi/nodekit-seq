@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"math/big"
 	"net/http"
 	"time"
 
@@ -275,35 +274,8 @@ type TransactionResponse struct {
 	BlockId string               `json:"id"`
 }
 
-type SEQTransactionResponse struct {
-	Txs       []*types.SEQTransaction `json:"txs"`
-	BlockId   string                  `json:"id"`
-	Timestamp int64                   `json:"timestamp"`
-	L1Head    uint64                  `json:"l1_head"`
-	Height    uint64                  `json:"height"`
-}
-
-type SequencerWarpBlockResponse struct {
-	Blocks []SequencerWarpBlock `json:"blocks"`
-}
-
-type SequencerWarpBlock struct {
-	BlockId    string   `json:"id"`
-	Timestamp  int64    `json:"timestamp"`
-	L1Head     uint64   `json:"l1_head"`
-	Height     *big.Int `json:"height"`
-	BlockRoot  *big.Int `json:"root"`
-	ParentRoot *big.Int `json:"parent"`
-}
-
 type GetBlockTransactionsArgs struct {
 	ID string `json:"block_id"`
-}
-
-type GetBlockCommitmentArgs struct {
-	First         uint64 `json:"first"`
-	CurrentHeight uint64 `json:"current_height"`
-	MaxBlocks     int    `json:"max_blocks"`
 }
 
 type GetBlockTransactionsByNamespaceArgs struct {
@@ -346,75 +318,11 @@ func (j *JSONRPCServer) GetBlockTransactions(req *http.Request, args *GetBlockTr
 	return nil
 }
 
-func (j *JSONRPCServer) GetCommitmentBlocks(req *http.Request, args *GetBlockCommitmentArgs, reply *SequencerWarpBlockResponse) error {
-	// Parse query parameters
-	if args.First < 1 {
-		return nil
-	}
-
-	blocks := make([]SequencerWarpBlock, 0)
-
-	j.idsByHeight.Ascend(args.First, func(heightKey uint64, id ids.ID) bool {
-		// Does heightKey match the given block's height for the id
-		if len(blocks) >= args.MaxBlocks {
-			return false
-		}
-
-		blockTemp, success := j.headers.Get(id.String())
-		if !success {
-			return success
-		}
-
-		header := &types.Header{
-			Height:    blockTemp.Hght,
-			Timestamp: uint64(blockTemp.Tmstmp),
-			L1Head:    uint64(blockTemp.L1Head),
-			TransactionsRoot: types.NmtRoot{
-				Root: id[:],
-			},
-		}
-
-		comm := header.Commit()
-
-		//TODO swapped these 2 functions so now it exits earlier. Need to test
-		if blockTemp.Hght >= args.CurrentHeight {
-			parentRoot := types.NewU256().SetBytes(blockTemp.Prnt)
-			bigParentRoot := parentRoot.Int
-
-			blocks = append(blocks, SequencerWarpBlock{
-				BlockId:    id.String(),
-				Timestamp:  blockTemp.Tmstmp,
-				L1Head:     uint64(blockTemp.L1Head),
-				Height:     big.NewInt(int64(blockTemp.Hght)),
-				BlockRoot:  &comm.Uint256().Int,
-				ParentRoot: &bigParentRoot,
-			})
-			return false
-		}
-
-		if blockTemp.Hght == heightKey {
-			parentRoot := types.NewU256().SetBytes(blockTemp.Prnt)
-			bigParentRoot := parentRoot.Int
-
-			blocks = append(blocks, SequencerWarpBlock{
-				BlockId:    id.String(),
-				Timestamp:  blockTemp.Tmstmp,
-				L1Head:     uint64(blockTemp.L1Head),
-				Height:     big.NewInt(int64(blockTemp.Hght)),
-				BlockRoot:  &comm.Uint256().Int,
-				ParentRoot: &bigParentRoot,
-			})
-		}
-
-		return true
-	})
-
-	reply.Blocks = blocks
-
-	return nil
+func (j *JSONRPCServer) GetCommitmentBlocks(req *http.Request, args *types.GetBlockCommitmentArgs, reply *types.SequencerWarpBlockResponse) error {
+	return j.c.GetByCommitment(args, reply)
 }
 
-func (j *JSONRPCServer) GetBlockTransactionsByNamespace(req *http.Request, args *GetBlockTransactionsByNamespaceArgs, reply *SEQTransactionResponse) error {
+func (j *JSONRPCServer) GetBlockTransactionsByNamespace(req *http.Request, args *GetBlockTransactionsByNamespaceArgs, reply *types.SEQTransactionResponse) error {
 	ctx, span := j.c.Tracer().Start(req.Context(), "Server.GetBlockTransactionsByNamespace")
 	defer span.End()
 

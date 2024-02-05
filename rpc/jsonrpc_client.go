@@ -226,8 +226,8 @@ func (cli *JSONRPCClient) GetBlockTransactionsByNamespace(
 	ctx context.Context,
 	height uint64,
 	namespace string,
-) (*SEQTransactionResponse, error) {
-	resp := new(SEQTransactionResponse)
+) (*types.SEQTransactionResponse, error) {
+	resp := new(types.SEQTransactionResponse)
 	// TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,

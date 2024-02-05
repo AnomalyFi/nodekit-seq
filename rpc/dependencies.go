@@ -45,4 +45,8 @@ type Controller interface {
 		args *types.GetBlockHeadersByStartArgs,
 		reply *types.BlockHeadersResponse,
 	) error
+	GetByCommitment(
+		args *types.GetBlockCommitmentArgs,
+		reply *types.SequencerWarpBlockResponse,
+	) error
 }
