@@ -3,7 +3,7 @@ module github.com/AnomalyFi/nodekit-seq
 go 1.20
 
 require (
-	github.com/AnomalyFi/hypersdk v0.9.2-0.20240113190421-be19653c0162 
+	github.com/AnomalyFi/hypersdk v0.9.2-0.20240113190421-be19653c0162
 	github.com/ava-labs/avalanche-network-runner v1.7.2
 	github.com/ava-labs/avalanchego v1.10.10
 	github.com/ethereum/go-ethereum v1.12.0
@@ -12,7 +12,7 @@ require (
 	github.com/onsi/gomega v1.26.0
 	github.com/prometheus/client_golang v1.16.0
 	github.com/spf13/cobra v1.7.0
-	github.com/tidwall/btree v1.7.0
+	github.com/tidwall/btree v1.5.0
 	github.com/wailsapp/wails/v2 v2.5.1
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
