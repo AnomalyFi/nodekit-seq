@@ -17,7 +17,7 @@ if ! [[ "$0" =~ scripts/run.sh ]]; then
   exit 255
 fi
 
-VERSION=v1.10.10
+VERSION=v1.10.10-beta.2
 MAX_UINT64=18446744073709551615
 MODE=${MODE:-run}
 LOGLEVEL=${LOGLEVEL:-info}
@@ -75,7 +75,7 @@ if [ ! -f "$AVALANCHEGO_PATH" ]; then
 
   # Download src
   cd ${TMPDIR}/avalanchego-src
-  git clone https://github.com/ava-labs/avalanchego.git
+  git clone https://github.com/AnomalyFi/avalanchego.git
   cd avalanchego
   git checkout ${VERSION}
 

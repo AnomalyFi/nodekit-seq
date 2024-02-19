@@ -40,3 +40,5 @@ const (
 	MaxMetadataSize = 256
 	MaxDecimals     = 9
 )
+
+var DefaultNMTNamespace = make([]byte, 8)
