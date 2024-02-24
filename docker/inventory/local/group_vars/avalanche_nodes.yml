@@ -16,8 +16,6 @@ avalanchego_vms_list:
     # Used in Ash CLI
     ash_vm_type: Custom
     binary_filename: tokenvm
-    aliases:
-      - tokenvm
     versions_comp:
       0.0.999:
         ge: 1.10.10

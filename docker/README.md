@@ -19,8 +19,6 @@ This guide explains how to set up a local Avalanche test network running a SEQ b
       # Used in Ash CLI
       ash_vm_type: Custom
       binary_filename: tokenvm
-      aliases:
-        - tokenvm
       versions_comp:
         0.0.999:
           ge: 1.10.10
@@ -32,7 +30,7 @@ Where:
 - **OR** `path` is a path to a local directory containing the VM archive (e.g.: `"{{ inventory_dir }}/../../files/tokenvm_0.0.999_linux_amd64.tar.gz"`)
 - `id` is the VM ID
 - `ash_vm_type` is the VM type used in the Ash CLI, should always be `Custom` if not using `SubnetEVM`
-- `aliases` is a list of aliases for the VM
+- `binary_filename` is the name of the binary file in the VM archive
 - `versions_comp` is a dictionary of version constraints for the VM. The `ge` and `le` keys are the constraints for the AvalancheGo version
 
 **Note:** In the example above, the `tokenvm` VM release [`999`](https://github.com/AshAvalanche/hypersdk/releases/tag/v0.0.999) is actually a **Nodekit SEQ** release based on branch [`ash`](https://github.com/AnomalyFi/nodekit-seq/tree/ash) (see [`../scripts/build.ash_compatible.release.sh`](../scripts/build.ash_compatible.release.sh) to build an Ash-compatible release).
@@ -55,7 +53,7 @@ Where:
 3. Install the `ash.avalanche` collection:
 
    ```bash
-   ansible-galaxy collection install git+https://github.com/AshAvalanche/ansible-avalanche-collection.git,v0.12.3
+   ansible-galaxy collection install git+https://github.com/AshAvalanche/ansible-avalanche-collection.git,0.12.1-2
    ```
 
 
@@ -104,7 +102,9 @@ The [`compose.yml`](./compose.yml) contains:
 - 5 Avalanche nodes services `avalanche-local-validator0[1-5]`
 - 1 Ethereum node service `l1`
 
-**Note:** The Dockerfile for the `l1` container can be found at [`./eth-l1/Dockerfile-l1`](./eth-l1/Dockerfile-l1). 
+**Notes:**
+- The Dockerfile for the `l1` container can be found at [`./eth-l1/Dockerfile-l1`](./eth-l1/Dockerfile-l1).
+- It is **important** than the `track-subnets` property in both `conf/bootstrap/conf/node.json` and `conf/node/conf/node.json` is empty upon running the `docker compose up -d` command.
 
 ## Wait for the network to be ready
 
@@ -214,10 +214,8 @@ To track the newly created Subnet, we need to add the Subnet ID to the `track-su
 ```bash
 ../build/token-cli chain import
 chainID: 2ArqB8j5FWQY9ZBtA3QFJgiH9EmXzbqGup5kuyPQZVZcL913Au
-✔ uri: http://177.17.0.11:9650/ext/bc/2ArqB8j5FWQY9ZBtA3QFJgiH9EmXzbqGup5kuyPQZVZcL913Au
+✔ uri: http://localhost:9650/ext/bc/2ArqB8j5FWQY9ZBtA3QFJgiH9EmXzbqGup5kuyPQZVZcL913Au
 ```
-
-**Note:** `177.17.0.11` is the IP address of the `avalanche-local-validator01` container.
 
 ## Chain watch
 
@@ -227,9 +225,9 @@ database: .token-cli
 available chains: 1 excluded: []
 1) chainID: 2ArqB8j5FWQY9ZBtA3QFJgiH9EmXzbqGup5kuyPQZVZcL913Au
 select chainID: 0 [auto-selected]
-uri: http://177.17.0.11:9650/ext/bc/2ArqB8j5FWQY9ZBtA3QFJgiH9EmXzbqGup5kuyPQZVZcL913Au
+uri: http://localhost:9650/ext/bc/2ArqB8j5FWQY9ZBtA3QFJgiH9EmXzbqGup5kuyPQZVZcL913Au
 Here is network Id: %d 12345
-Here is uri: %s http://177.17.0.11:9650/ext/bc/2ArqB8j5FWQY9ZBtA3QFJgiH9EmXzbqGup5kuyPQZVZcL913Au
+Here is uri: %s http://localhost:9650/ext/bc/2ArqB8j5FWQY9ZBtA3QFJgiH9EmXzbqGup5kuyPQZVZcL913Au
 watching for new blocks on 2ArqB8j5FWQY9ZBtA3QFJgiH9EmXzbqGup5kuyPQZVZcL913Au 👀
 height:54 l1head:%!s(int64=106) txs:0 root:kMYb8yTR9pbtfFs5hfuEZLDjVjWnepSjpRE3kkXrEeJ2JyPAA blockId:KSLxXyN7XT67n5ubbzHzW7afA6tTjn5hmyqxwr5o4JRSt5wGi size:0.10KB units consumed: [bandwidth=0 compute=0 storage(read)=0 storage(create)=0 storage(modify)=0] unit prices: [bandwidth=100 compute=100 storage(read)=100 storage(create)=100 storage(modify)=100]
 height:55 l1head:%!s(int64=107) txs:0 root:23ArBGmR9DQQLab1icAGFZbKd941FdrZuEy5oY2Yj6ZtKDri9M blockId:22zLgkd5bDmgu2qHqDBYQognAktpnp946vHx1MxDGYG38WCZPe size:0.10KB units consumed: [bandwidth=0 compute=0 storage(read)=0 storage(create)=0 storage(modify)=0] unit prices: [bandwidth=100 compute=100 storage(read)=100 storage(create)=100 storage(modify)=100] [TPS:0.00 latency:110ms gap:2474ms]
@@ -238,6 +236,14 @@ height:57 l1head:%!s(int64=109) txs:0 root:2EmEPrLQL2a8n8MNPsFExLejWUaZsPsW9tZsn
 height:58 l1head:%!s(int64=109) txs:0 root:2DdjYeckENJmq92HWsSs8D6DFQpqiCtQFjDMaMWXrjFfQPbwQw blockId:2iJPUrPDSbNjUXQd8tfkQFGyJ7nyxjtorha2TLJdx2UWrrX6HT size:0.10KB units consumed: [bandwidth=0 compute=0 storage(read)=0 storage(create)=0 storage(modify)=0] unit prices: [bandwidth=100 compute=100 storage(read)=100 storage(create)=100 storage(modify)=100] [TPS:0.00 latency:118ms gap:2532ms]
 height:59 l1head:%!s(int64=110) txs:0 root:2YmfCHEBQ5GrDqsRydPQcMTacYS1QaCdaVsPw5JkTrof6H6Jjf blockId:NppsG239uko64QQHWpPEDx9GTuQvwVRTN5wvFHmjZPgpRDBhh size:0.10KB units consumed: [bandwidth=0 compute=0 storage(read)=0 storage(create)=0 storage(modify)=0] unit prices: [bandwidth=100 compute=100 storage(read)=100 storage(create)=100 storage(modify)=100] [TPS:0.00 latency:112ms gap:2500ms]
 ```
+
+**Note:** At this point, restarting the containers again will lead to the the blockchain not being able to spin up with the followin error in `/var/log/avalanche/avalanchego/main.log`:
+
+```
+ERROR chains/manager.go:357 error creating chain {"subnetID": "29uVeLPJB1eQJkzRemU8g8wZDw5uJRqpab5U2mX9euieVwiEbL", "chainID": "2ArqB8j5FWQY9ZBtA3QFJgiH9EmXzbqGup5kuyPQZVZcL913Au", "chainAlias": "2ArqB8j5FWQY9ZBtA3QFJgiH9EmXzbqGup5kuyPQZVZcL913Au", "vmID": "tHBYNu8ikqo4MWMHehC9iKB9mR5tB3DWzbkYmTfe9buWQ5GZ8", "error": "error while creating new snowman vm rpc error: code = Unknown desc = Compact start  is not less than end "}
+```
+
+Because of this limitation, it is recommended to use a VM-based environment when iterating different version of the Nodekit SEQ "`tokenvm`" binary (see branch [`nodekit-seq`](https://github.com/AshAvalanche/ansible-avalanche-getting-started/tree/nodekit-seq) of `ansible-avalanche-getting-started`).
 
 ## Teardown
 
