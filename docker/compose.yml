@@ -4,6 +4,10 @@ networks:
       driver: default
       config:
         - subnet: 177.17.0.0/24
+  eth-pos-devnet_l1:
+    external:
+      true
+
 services:
   avalanche-local-validator01:
     image: "ash/avalanche-node-local-validator01:${AVALANCHEGO_VERSION:-1.10.10}-${AVALANCHEGO_VM_NAME:-tokenvm}-${AVALANCHEGO_VM_VERSION:-0.0.999}"
@@ -12,6 +16,7 @@ services:
       - "9650:9650"
       - "9651:9651"
     networks:
+      eth-pos-devnet_l1:
       avalanchelocal:
         ipv4_address: 177.17.0.11
     volumes:
@@ -23,6 +28,7 @@ services:
       - "9652:9650"
       - "9653:9651"
     networks:
+      eth-pos-devnet_l1:
       avalanchelocal:
         ipv4_address: 177.17.0.12
     volumes:
@@ -34,6 +40,7 @@ services:
       - "9654:9650"
       - "9655:9651"
     networks:
+      eth-pos-devnet_l1:
       avalanchelocal:
         ipv4_address: 177.17.0.13
     volumes:
@@ -45,6 +52,7 @@ services:
       - "9656:9650"
       - "9657:9651"
     networks:
+      eth-pos-devnet_l1:
       avalanchelocal:
         ipv4_address: 177.17.0.14
     volumes:
@@ -56,24 +64,25 @@ services:
       - "9658:9650"
       - "9659:9651"
     networks:
+      eth-pos-devnet_l1:
       avalanchelocal:
         ipv4_address: 177.17.0.15
     volumes:
       - ./conf/node/conf:/etc/avalanche/avalanchego/mounted-conf
-  l1:
-    build:
-      context: ./eth-l1
-      dockerfile: Dockerfile-l1
-    ports:
-      - "8545:8545"
-      - "8546:8546"
-      - "7060:6060"
-    volumes:
-      - ./eth-l1/l1_data:/db
-      - ./eth-l1/genesis-l1.json:/genesis.json
-      - ./eth-l1/test-jwt-secret.txt:/config/test-jwt-secret.txt
-    environment:
-      GETH_MINER_RECOMMIT: 100ms
-    networks:
-      avalanchelocal:
-        ipv4_address: 177.17.0.10
+  # l1:
+  #   build:
+  #     context: ./eth-l1
+  #     dockerfile: Dockerfile-l1
+  #   ports:
+  #     - "8545:8545"
+  #     - "8546:8546"
+  #     - "7060:6060"
+  #   volumes:
+  #     - ./eth-l1/l1_data:/db
+  #     - ./eth-l1/genesis-l1.json:/genesis.json
+  #     - ./eth-l1/test-jwt-secret.txt:/config/test-jwt-secret.txt
+  #   environment:
+  #     GETH_MINER_RECOMMIT: 100ms
+  #   networks:
+  #     avalanchelocal:
+  #       ipv4_address: 177.17.0.10

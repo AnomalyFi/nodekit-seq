@@ -10,14 +10,14 @@ avalanchego_staking_local_certs_dir: "{{ inventory_dir }}/../../files/staking"
 avalanchego_vms_list:
   tokenvm:
     # download_url and path are mutually exclusive
-    download_url: https://github.com/AshAvalanche/hypersdk/releases/download
+    download_url: https://github.com/AnomalyFi/nodekit-seq/releases/download
     # path: "{{ inventory_dir }}/../../files" # tokenvm_0.0.999_linux_amd64.tar.gz
     id: tHBYNu8ikqo4MWMHehC9iKB9mR5tB3DWzbkYmTfe9buWQ5GZ8
     # Used in Ash CLI
     ash_vm_type: Custom
     binary_filename: tokenvm
     versions_comp:
-      0.0.999:
+      0.9.5-beta.1:
         ge: 1.10.10
         le: 1.10.12
 
