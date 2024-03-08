@@ -164,4 +164,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/AnomalyFi/hypersdk => github.com/AshAvalanche/hypersdk v0.0.15-0.20240220190728-6dfc7f0b186e
+// replace github.com/AnomalyFi/hypersdk => github.com/AshAvalanche/hypersdk v0.0.15-0.20240220190728-6dfc7f0b186e
