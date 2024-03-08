@@ -69,20 +69,20 @@ services:
         ipv4_address: 177.17.0.15
     volumes:
       - ./conf/node/conf:/etc/avalanche/avalanchego/mounted-conf
-  # l1:
-  #   build:
-  #     context: ./eth-l1
-  #     dockerfile: Dockerfile-l1
-  #   ports:
-  #     - "8545:8545"
-  #     - "8546:8546"
-  #     - "7060:6060"
-  #   volumes:
-  #     - ./eth-l1/l1_data:/db
-  #     - ./eth-l1/genesis-l1.json:/genesis.json
-  #     - ./eth-l1/test-jwt-secret.txt:/config/test-jwt-secret.txt
-  #   environment:
-  #     GETH_MINER_RECOMMIT: 100ms
-  #   networks:
-  #     avalanchelocal:
-  #       ipv4_address: 177.17.0.10
+  l1:
+    build:
+      context: ./eth-l1
+      dockerfile: Dockerfile-l1
+    ports:
+      - "8545:8545"
+      - "8546:8546"
+      - "7060:6060"
+    volumes:
+      - ./eth-l1/l1_data:/db
+      - ./eth-l1/genesis-l1.json:/genesis.json
+      - ./eth-l1/test-jwt-secret.txt:/config/test-jwt-secret.txt
+    environment:
+      GETH_MINER_RECOMMIT: 100ms
+    networks:
+      avalanchelocal:
+        ipv4_address: 177.17.0.10
