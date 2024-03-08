@@ -4,9 +4,6 @@ networks:
       driver: default
       config:
         - subnet: 177.17.0.0/24
-  eth-pos-devnet_l1:
-    external:
-      true
 
 services:
   avalanche-local-validator01:
@@ -16,7 +13,6 @@ services:
       - "9650:9650"
       - "9651:9651"
     networks:
-      eth-pos-devnet_l1:
       avalanchelocal:
         ipv4_address: 177.17.0.11
     volumes:
@@ -28,7 +24,6 @@ services:
       - "9652:9650"
       - "9653:9651"
     networks:
-      eth-pos-devnet_l1:
       avalanchelocal:
         ipv4_address: 177.17.0.12
     volumes:
@@ -40,7 +35,6 @@ services:
       - "9654:9650"
       - "9655:9651"
     networks:
-      eth-pos-devnet_l1:
       avalanchelocal:
         ipv4_address: 177.17.0.13
     volumes:
@@ -52,7 +46,6 @@ services:
       - "9656:9650"
       - "9657:9651"
     networks:
-      eth-pos-devnet_l1:
       avalanchelocal:
         ipv4_address: 177.17.0.14
     volumes:
@@ -64,7 +57,6 @@ services:
       - "9658:9650"
       - "9659:9651"
     networks:
-      eth-pos-devnet_l1:
       avalanchelocal:
         ipv4_address: 177.17.0.15
     volumes:
