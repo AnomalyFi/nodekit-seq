@@ -1,0 +1,24 @@
+---
+avalanchego_version: 1.10.10
+avalanchego_network_id: local
+
+avalanchego_http_host: 0.0.0.0
+
+avalanchego_staking_use_local_certs: true
+avalanchego_staking_local_certs_dir: "{{ inventory_dir }}/../../files/staking"
+
+avalanchego_vms_list:
+  tokenvm:
+    # download_url and path are mutually exclusive
+    download_url: https://github.com/AnomalyFi/nodekit-seq/releases/download
+    # path: "{{ inventory_dir }}/../../files" # tokenvm_0.0.999_linux_amd64.tar.gz
+    id: tHBYNu8ikqo4MWMHehC9iKB9mR5tB3DWzbkYmTfe9buWQ5GZ8
+    # Used in Ash CLI
+    ash_vm_type: Custom
+    binary_filename: tokenvm
+    versions_comp:
+      0.9.5-beta.1:
+        ge: 1.10.10
+        le: 1.10.12
+
+validator_stake_or_weight: 100

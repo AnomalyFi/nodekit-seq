@@ -1,0 +1,17 @@
+{
+  "mempoolSize": 10000000,
+  "mempoolPayerSize": 10000000,
+  "mempoolExemptPayers": [
+    "token1rvzhmceq997zntgvravfagsks6w0ryud3rylh4cdvayry0dl97nsjzf3yp"
+  ],
+  "signatureVerificationCores": 2,
+  "rootGenerationCores": 2,
+  "transactionExecutionCores": 2,
+  "verifySignatures": true,
+  "storeTransactions": false,
+  "streamingBacklogSize": 10000000,
+  "trackedPairs": ["*"],
+  "logLevel": "info",
+  "continuousProfilerDir": "/tmp/hypersdk/tokenvm-e2e-profiles/*",
+  "stateSyncServerDelay": 0
+}

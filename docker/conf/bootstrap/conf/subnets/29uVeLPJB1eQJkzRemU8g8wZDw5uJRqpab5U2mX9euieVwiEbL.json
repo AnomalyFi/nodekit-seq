@@ -1,0 +1,4 @@
+{
+  "proposerMinBlockDelay": 0,
+  "proposerNumHistoricalBlocks": 50000
+}
