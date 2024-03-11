@@ -72,6 +72,10 @@ type Config struct {
 	// State Sync
 	StateSyncServerDelay time.Duration `json:"stateSyncServerDelay"` // for testing
 
+	// ETH L1
+	ETHRPCAddr string `json:"ethRPCAddr"`
+	ETHWSAddr  string `json:"ethWSAddr"`
+
 	loaded             bool
 	nodeID             ids.NodeID
 	parsedExemptPayers [][]byte
@@ -152,3 +156,10 @@ func (c *Config) GetContinuousProfilerConfig() *profiler.Config {
 func (c *Config) GetVerifySignatures() bool  { return c.VerifySignatures }
 func (c *Config) GetStoreTransactions() bool { return c.StoreTransactions }
 func (c *Config) Loaded() bool               { return c.loaded }
+
+func (c *Config) GetETHL1RPC() string {
+	return c.ETHRPCAddr
+}
+func (c *Config) GetETHL1WS() string {
+	return c.ETHWSAddr
+}

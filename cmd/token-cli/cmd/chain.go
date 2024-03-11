@@ -67,20 +67,20 @@ var chainInfoCmd = &cobra.Command{
 var watchChainCmd = &cobra.Command{
 	Use: "watch",
 	RunE: func(_ *cobra.Command, args []string) error {
-		pastBlocks, err := handler.Root().PromptBool("streaming from past blocks?")
-		if err != nil {
-			return err
-		}
-		var startBlock uint64
-		if pastBlocks {
-			startBlock, err = handler.Root().PromptUint64("start block")
-			if err != nil {
-				return err
-			}
-		}
+		// pastBlocks, err := handler.Root().PromptBool("streaming from past blocks?")
+		// if err != nil {
+		// 	return err
+		// }
+		// var startBlock uint64
+		// if pastBlocks {
+		// 	startBlock, err = handler.Root().PromptUint64("start block")
+		// 	if err != nil {
+		// 		return err
+		// 	}
+		// }
 
 		var cli *trpc.JSONRPCClient
-		return handler.Root().WatchChain(hideTxs, pastBlocks, startBlock, func(uri string, networkID uint32, chainID ids.ID) (chain.Parser, error) {
+		return handler.Root().WatchChain(hideTxs, func(uri string, networkID uint32, chainID ids.ID) (chain.Parser, error) {
 			fmt.Println("Here is network Id: %d", networkID)
 			fmt.Println("Here is uri: %s", uri)
 

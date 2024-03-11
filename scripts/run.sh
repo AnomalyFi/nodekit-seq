@@ -25,6 +25,8 @@ STATESYNC_DELAY=${STATESYNC_DELAY:-0}
 MIN_BLOCK_GAP=${MIN_BLOCK_GAP:-100}
 STORE_TXS=${STORE_TXS:-false}
 UNLIMITED_USAGE=${UNLIMITED_USAGE:-false}
+ETHL1RPC=${ETHL1RPC:-http://localhost:8545}
+ETHL1WS=${ETHL1WS:-ws://localhost:8546}
 if [[ ${MODE} != "run" && ${MODE} != "run-single" ]]; then
   LOGLEVEL=debug
   STATESYNC_DELAY=100000000 # 100ms
@@ -158,7 +160,9 @@ cat <<EOF > ${TMPDIR}/tokenvm.config
   "trackedPairs":["*"],
   "logLevel": "${LOGLEVEL}",
   "continuousProfilerDir":"${TMPDIR}/tokenvm-e2e-profiles/*",
-  "stateSyncServerDelay": ${STATESYNC_DELAY}
+  "stateSyncServerDelay": ${STATESYNC_DELAY},
+  "ethRPCAddr": "${ETHL1RPC}",
+  "ethWSAddr": "${ETHL1WS}"
 }
 EOF
 mkdir -p ${TMPDIR}/tokenvm-e2e-profiles
