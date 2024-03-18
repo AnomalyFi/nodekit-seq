@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.6
 
 require (
-	github.com/AnomalyFi/hypersdk v0.9.3
+	github.com/AnomalyFi/hypersdk v0.9.3-beta.1
 	github.com/ava-labs/avalanche-network-runner v1.7.2
 	github.com/ava-labs/avalanchego v1.10.10
 	github.com/ethereum/go-ethereum v1.12.0

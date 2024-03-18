@@ -72,6 +72,10 @@ type Config struct {
 	// State Sync
 	StateSyncServerDelay time.Duration `json:"stateSyncServerDelay"` // for testing
 
+	// ETH L1
+	ETHRPCAddr string `json:"ethRPCAddr"`
+	ETHWSAddr  string `json:"ethWSAddr"`
+
 	loaded             bool
 	nodeID             ids.NodeID
 	parsedExemptPayers [][]byte
@@ -116,6 +120,8 @@ func (c *Config) setDefault() {
 	c.VerifySignatures = c.Config.GetVerifySignatures()
 	c.StoreTransactions = defaultStoreTransactions
 	c.MaxOrdersPerPair = defaultMaxOrdersPerPair
+	c.ETHRPCAddr = c.Config.GetETHL1RPC()
+	c.ETHWSAddr = c.Config.GetETHL1WS()
 }
 
 func (c *Config) GetLogLevel() logging.Level       { return c.LogLevel }
@@ -152,3 +158,5 @@ func (c *Config) GetContinuousProfilerConfig() *profiler.Config {
 func (c *Config) GetVerifySignatures() bool  { return c.VerifySignatures }
 func (c *Config) GetStoreTransactions() bool { return c.StoreTransactions }
 func (c *Config) Loaded() bool               { return c.loaded }
+func (c *Config) GetETHL1RPC() string        { return c.ETHRPCAddr }
+func (c *Config) GetETHL1WS() string         { return c.ETHWSAddr }
