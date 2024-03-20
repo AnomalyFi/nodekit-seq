@@ -90,7 +90,7 @@ var watchChainCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			if lastAccepted-uint64(*acceptedWindow) > startBlock {
+			if lastAccepted > uint64(*acceptedWindow) && lastAccepted-uint64(*acceptedWindow) > startBlock {
 				return fmt.Errorf("start block is too old")
 			}
 		}
