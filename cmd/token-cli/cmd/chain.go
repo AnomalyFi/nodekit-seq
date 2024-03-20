@@ -67,6 +67,7 @@ var chainInfoCmd = &cobra.Command{
 var watchChainCmd = &cobra.Command{
 	Use: "watch",
 	RunE: func(_ *cobra.Command, args []string) error {
+		ctx := context.Background()
 		pastBlocks, err := handler.Root().PromptBool("streaming from past blocks?")
 		if err != nil {
 			return err
@@ -76,6 +77,21 @@ var watchChainCmd = &cobra.Command{
 			startBlock, err = handler.Root().PromptUint64("start block")
 			if err != nil {
 				return err
+			}
+			_, _, _, cli, _, bcli, err := handler.DefaultActor()
+			if err != nil {
+				return err
+			}
+			_, lastAccepted, _, err := cli.Accepted(ctx)
+			if err != nil {
+				return err
+			}
+			acceptedWindow, err := bcli.GetAcceptedBlockWindow(ctx)
+			if err != nil {
+				return err
+			}
+			if lastAccepted > uint64(*acceptedWindow) && lastAccepted-uint64(*acceptedWindow) > startBlock {
+				return fmt.Errorf("start block is too old")
 			}
 		}
 

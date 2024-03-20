@@ -799,3 +799,8 @@ func (j *JSONRPCServer) ServerParser(ctx context.Context, networkId uint32, chai
 	// The only thing this is using is the ActionRegistry and AuthRegistry so this should be fine
 	return &Parser{networkId, chainId, g}
 }
+
+func (j *JSONRPCServer) GetAcceptedBlockWindow(req *http.Request, _ *struct{}, reply *int) error {
+	*reply = j.c.GetAcceptedBlockWindow()
+	return nil
+}
