@@ -260,7 +260,7 @@ func (cli *JSONRPCClient) GetCommitmentBlocks(
 	return resp, err
 }
 
-func (cli *JSONRPCClient) GetAcceptedBlockWindow(ctx context.Context) (*int, error) {
+func (cli *JSONRPCClient) GetAcceptedBlockWindow(ctx context.Context) (int, error) {
 	resp := new(int)
 	err := cli.requester.SendRequest(
 		ctx,
@@ -268,7 +268,7 @@ func (cli *JSONRPCClient) GetAcceptedBlockWindow(ctx context.Context) (*int, err
 		nil,
 		resp,
 	)
-	return resp, err
+	return *resp, err
 }
 
 // TODO add more methods

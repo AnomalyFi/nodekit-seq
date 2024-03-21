@@ -56,3 +56,7 @@ func (c *Controller) GetLoanFromState(
 ) (uint64, error) {
 	return storage.GetLoanFromState(ctx, c.inner.ReadState, asset, destination)
 }
+
+func (c *Controller) GetAcceptedBlockWindow() int {
+	return c.config.GetAcceptedBlockWindow()
+}

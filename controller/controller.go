@@ -233,7 +233,3 @@ func (*Controller) Shutdown(context.Context) error {
 	// close any databases your provided.
 	return nil
 }
-
-func (c *Controller) GetAcceptedBlockWindow() int {
-	return c.config.GetAcceptedBlockWindow()
-}
