@@ -142,7 +142,7 @@ var runSpamSequencerMsgCmd = &cobra.Command{
 
 func randomBytes() ([]byte, error) {
 	// 256 kb
-	numBytes := rand.Intn(256 * 104)
+	numBytes := rand.Intn(256 * 1024)
 
 	b := make([]byte, numBytes)
 
