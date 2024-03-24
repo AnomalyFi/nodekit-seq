@@ -55,6 +55,8 @@ const (
 	feePrefix          = 0x6
 	incomingWarpPrefix = 0x7
 	outgoingWarpPrefix = 0x8
+	// contracts
+	contractPrefix = 0x9
 )
 
 const (
@@ -62,6 +64,7 @@ const (
 	AssetChunks   uint16 = 5
 	OrderChunks   uint16 = 2
 	LoanChunks    uint16 = 1
+	StateChunks   uint16 = 32
 )
 
 var (
@@ -602,4 +605,64 @@ func OutgoingWarpKeyPrefix(txID ids.ID) (k []byte) {
 	k[0] = outgoingWarpPrefix
 	copy(k[1:], txID[:])
 	return k
+}
+
+func ContractKey(txID ids.ID) (k []byte) {
+	k = make([]byte, 1+consts.IDLen+consts.Uint16Len)
+	k[0] = contractPrefix
+	copy(k[1:], txID[:])
+	binary.BigEndian.PutUint16(k[1+consts.IDLen:], consts.MaxUint16)
+	return
+}
+
+func StateStorageKey(contractAddress ids.ID, name string) (k []byte) {
+	bstring := []byte(name)
+	k = make([]byte, 1+consts.IDLen+len(bstring)+consts.Uint16Len)
+
+	k[0] = contractPrefix
+	copy(k[1:], append(contractAddress[:], bstring...))
+	binary.BigEndian.PutUint16(k[1+consts.IDLen+len(bstring):], StateChunks)
+	return k
+}
+
+func SetContract(
+	ctx context.Context,
+	mu state.Mutable,
+	txID ids.ID,
+	contractCode []byte,
+) error {
+	k := ContractKey(txID)
+	return mu.Insert(ctx, k, contractCode)
+}
+
+func GetContract(
+	ctx context.Context,
+	im state.Immutable,
+	txID ids.ID,
+) ([]byte, error) {
+	k := ContractKey(txID)
+	bt, err := im.GetValue(ctx, k)
+	if errors.Is(err, database.ErrNotFound) {
+		return nil, nil
+	}
+	return bt, err
+}
+
+func SetBytes(
+	ctx context.Context,
+	mu state.Mutable,
+	contractAddress ids.ID,
+	name string,
+	byteData []byte) error {
+	k := StateStorageKey(contractAddress, name)
+	return mu.Insert(ctx, k, byteData)
+}
+
+func GetBytes(
+	ctx context.Context,
+	im state.Immutable,
+	contractAddress ids.ID,
+	name string) ([]byte, error) {
+	k := StateStorageKey(contractAddress, name)
+	return im.GetValue(ctx, k)
 }

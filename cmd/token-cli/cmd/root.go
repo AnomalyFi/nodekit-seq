@@ -55,6 +55,7 @@ func init() {
 		actionCmd,
 		spamCmd,
 		prometheusCmd,
+		testingCmd,
 	)
 	rootCmd.PersistentFlags().StringVar(
 		&dbPath,
@@ -165,6 +166,17 @@ func init() {
 
 		importAssetCmd,
 		exportAssetCmd,
+
+		deployCmd,
+		transactCmd,
+	)
+
+	testingCmd.AddCommand(
+		deployTCmd,
+		initializeCmd,
+		// uvsCmd,
+		sdrtrCmd,
+		// vaCmd,
 	)
 
 	// spam

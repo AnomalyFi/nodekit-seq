@@ -7,6 +7,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"io/ioutil"
 	"time"
 
 	"github.com/anomalyFi/nodekit-seq/actions"
@@ -22,6 +23,7 @@ import (
 	"github.com/ava-labs/hypersdk/pubsub"
 	"github.com/ava-labs/hypersdk/rpc"
 	hutils "github.com/ava-labs/hypersdk/utils"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 )
 
@@ -780,5 +782,71 @@ var exportAssetCmd = &cobra.Command{
 			return nil
 		}
 		return handler.Root().StoreDefaultChain(destination)
+	},
+}
+
+var deployCmd = &cobra.Command{
+	Use: "deploy-contract",
+	RunE: func(*cobra.Command, []string) error {
+		ctx := context.Background()
+		_, _, factory, cli, scli, tcli, err := handler.DefaultActor()
+		if err != nil {
+			return err
+		}
+
+		codeLocation, err := handler.Root().PromptString("Contract location", 1, 1000)
+		if err != nil {
+			return err
+		}
+		code, err := ioutil.ReadFile(codeLocation)
+		if err != nil {
+			return err
+		}
+		cont, err := handler.Root().PromptContinue()
+		if !cont || err != nil {
+			return err
+		}
+		_, _, err = sendAndWait(ctx, nil, &actions.Deploy{
+			ContractCode: code,
+		}, cli, scli, tcli, factory, true)
+		return err
+	},
+}
+
+var transactCmd = &cobra.Command{
+	Use: "transact",
+	RunE: func(*cobra.Command, []string) error {
+		ctx := context.Background()
+		_, _, factory, cli, scli, tcli, err := handler.DefaultActor()
+		if err != nil {
+			return err
+		}
+
+		contractAddress, err := handler.Root().PromptAsset("contract Address", false)
+		if err != nil {
+			return err
+		}
+		functionName, err := handler.Root().PromptString("Function Name", 1, 1000)
+		if err != nil {
+			return err
+		}
+		input, err := handler.Root().PromptString("Input as hex", 1, 1000)
+		if err != nil {
+			return err
+		}
+		inputBytes := common.FromHex(input)
+
+		cont, err := handler.Root().PromptContinue()
+		if !cont || err != nil {
+			return err
+		}
+
+		_, _, err = sendAndWait(ctx, nil, &actions.Transact{
+			FunctionName:    functionName,
+			Input:           inputBytes,
+			ContractAddress: contractAddress,
+		}, cli, scli, tcli, factory, true)
+		return err
+
 	},
 }

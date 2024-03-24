@@ -170,6 +170,10 @@ func handleTx(c *trpc.JSONRPCClient, tx *chain.Transaction, result *chain.Result
 				}
 				summaryStr += fmt.Sprintf(" | swap in: %s %s (%s) swap out: %s %s expiry: %d", utils.FormatBalance(wt.SwapIn, wt.Decimals), wt.Symbol, outputAssetID, utils.FormatBalance(wt.SwapOut, outDecimals), outSymbol, wt.SwapExpiry)
 			}
+		case *actions.Deploy:
+			summaryStr = fmt.Sprintf("contract deployed at address: %s", tx.ID())
+		case *actions.Transact:
+			summaryStr = fmt.Sprintf("transaction status: %t", result.Success)
 		}
 	}
 	utils.Outf(

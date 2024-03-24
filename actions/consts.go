@@ -14,6 +14,9 @@ const (
 	fillOrderID   uint8 = 6
 	mintAssetID   uint8 = 7
 	transferID    uint8 = 8
+
+	DeployID   uint8 = 9
+	TransactID uint8 = 10
 )
 
 const (
@@ -33,4 +36,14 @@ const (
 	MaxMemoSize     = 256
 	MaxMetadataSize = 256
 	MaxDecimals     = 9
+
+	// Max chunks
+	DeployMaxChunks uint16 = 20_000
+
+	// Compute Units
+	DeployMaxComputeUnits   uint64 = 1_280_000 // DeployMaxChunks x 64(size of chunk)
+	TransactMaxComputeUnits uint64 = 10_000_000
+	BaseComputeUnits        uint64 = 10_000
+	// Num of statekeys
+	NumStateKeys int = 1024 //@todo make this changable with SEQ authentication
 )
