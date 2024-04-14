@@ -34,23 +34,23 @@ import (
 	"github.com/onsi/gomega"
 	"go.uber.org/zap"
 
-	"github.com/ava-labs/hypersdk/chain"
-	"github.com/ava-labs/hypersdk/codec"
-	hconsts "github.com/ava-labs/hypersdk/consts"
-	"github.com/ava-labs/hypersdk/crypto/ed25519"
-	"github.com/ava-labs/hypersdk/fees"
-	"github.com/ava-labs/hypersdk/pebble"
-	hutils "github.com/ava-labs/hypersdk/utils"
-	"github.com/ava-labs/hypersdk/vm"
-	"github.com/ava-labs/hypersdk/workers"
+	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/codec"
+	hconsts "github.com/AnomalyFi/hypersdk/consts"
+	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
+	"github.com/AnomalyFi/hypersdk/fees"
+	"github.com/AnomalyFi/hypersdk/pebble"
+	hutils "github.com/AnomalyFi/hypersdk/utils"
+	"github.com/AnomalyFi/hypersdk/vm"
+	"github.com/AnomalyFi/hypersdk/workers"
 
+	"github.com/AnomalyFi/hypersdk/rpc"
 	"github.com/anomalyFi/nodekit-seq/actions"
 	"github.com/anomalyFi/nodekit-seq/auth"
 	"github.com/anomalyFi/nodekit-seq/consts"
 	"github.com/anomalyFi/nodekit-seq/controller"
 	"github.com/anomalyFi/nodekit-seq/genesis"
 	trpc "github.com/anomalyFi/nodekit-seq/rpc"
-	"github.com/ava-labs/hypersdk/rpc"
 )
 
 const genesisBalance uint64 = hconsts.MaxUint64

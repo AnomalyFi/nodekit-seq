@@ -6,8 +6,8 @@ package rpc
 import (
 	"context"
 
+	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/anomalyFi/nodekit-seq/cmd/token-feed/manager"
-	"github.com/ava-labs/hypersdk/codec"
 )
 
 type Manager interface {

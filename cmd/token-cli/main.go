@@ -7,8 +7,8 @@ package main
 import (
 	"os"
 
+	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/anomalyFi/nodekit-seq/cmd/token-cli/cmd"
-	"github.com/ava-labs/hypersdk/utils"
 )
 
 func main() {

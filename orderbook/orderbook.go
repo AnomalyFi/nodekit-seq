@@ -6,11 +6,11 @@ package orderbook
 import (
 	"sync"
 
+	"github.com/AnomalyFi/hypersdk/codec"
+	"github.com/AnomalyFi/hypersdk/heap"
 	"github.com/anomalyFi/nodekit-seq/actions"
 	"github.com/anomalyFi/nodekit-seq/consts"
 	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/hypersdk/codec"
-	"github.com/ava-labs/hypersdk/heap"
 	"go.uber.org/zap"
 )
 

@@ -7,8 +7,8 @@ package cmd
 import (
 	"context"
 
+	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/hypersdk/chain"
 	"github.com/spf13/cobra"
 
 	trpc "github.com/anomalyFi/nodekit-seq/rpc"

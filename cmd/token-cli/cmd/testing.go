@@ -8,8 +8,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/anomalyFi/nodekit-seq/actions"
-	"github.com/ava-labs/hypersdk/utils"
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"

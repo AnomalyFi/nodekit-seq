@@ -4,10 +4,10 @@
 package registry
 
 import (
+	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/ava-labs/avalanchego/utils/wrappers"
 	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
-	"github.com/ava-labs/hypersdk/chain"
-	"github.com/ava-labs/hypersdk/codec"
 
 	"github.com/anomalyFi/nodekit-seq/actions"
 	"github.com/anomalyFi/nodekit-seq/auth"

@@ -78,7 +78,7 @@ if [ -f /tmp/avalanche-ops-cache/token-cli ]; then
   cp /tmp/avalanche-ops-cache/token-cli "${DEPLOY_ARTIFACT_PREFIX}/token-cli"
   echo 'found token-cli in cache'
 else
-  wget "https://github.com/ava-labs/hypersdk/releases/download/v${HYPERSDK_VERSION}/tokenvm_${HYPERSDK_VERSION}_${DEPLOYER_OS_TYPE}_${DEPLOYER_ARCH_TYPE}.tar.gz"
+  wget "https://github.com/AnomalyFi/hypersdk/releases/download/v${HYPERSDK_VERSION}/tokenvm_${HYPERSDK_VERSION}_${DEPLOYER_OS_TYPE}_${DEPLOYER_ARCH_TYPE}.tar.gz"
   mkdir -p /tmp/token-installs
   tar -xvf "tokenvm_${HYPERSDK_VERSION}_${DEPLOYER_OS_TYPE}_${DEPLOYER_ARCH_TYPE}.tar.gz" -C /tmp/token-installs
   rm -rf "tokenvm_${HYPERSDK_VERSION}_${DEPLOYER_OS_TYPE}_${DEPLOYER_ARCH_TYPE}.tar.gz"
@@ -94,7 +94,7 @@ if [ -f /tmp/avalanche-ops-cache/tokenvm ]; then
   cp /tmp/avalanche-ops-cache/token-cli-dev "${DEPLOY_ARTIFACT_PREFIX}/token-cli-dev"
   echo 'found tokenvm in cache'
 else
-  wget "https://github.com/ava-labs/hypersdk/releases/download/v${HYPERSDK_VERSION}/tokenvm_${HYPERSDK_VERSION}_linux_amd64.tar.gz"
+  wget "https://github.com/AnomalyFi/hypersdk/releases/download/v${HYPERSDK_VERSION}/tokenvm_${HYPERSDK_VERSION}_linux_amd64.tar.gz"
   mkdir -p /tmp/token-installs
   tar -xvf tokenvm_"${HYPERSDK_VERSION}"_linux_amd64.tar.gz -C /tmp/token-installs
   rm -rf tokenvm_"${HYPERSDK_VERSION}"_linux_amd64.tar.gz

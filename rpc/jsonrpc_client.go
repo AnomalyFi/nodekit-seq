@@ -11,14 +11,14 @@ import (
 
 	"github.com/ava-labs/avalanchego/ids"
 
+	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/requester"
+	"github.com/AnomalyFi/hypersdk/rpc"
+	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/anomalyFi/nodekit-seq/consts"
 	"github.com/anomalyFi/nodekit-seq/genesis"
 	"github.com/anomalyFi/nodekit-seq/orderbook"
 	_ "github.com/anomalyFi/nodekit-seq/registry" // ensure registry populated
-	"github.com/ava-labs/hypersdk/chain"
-	"github.com/ava-labs/hypersdk/requester"
-	"github.com/ava-labs/hypersdk/rpc"
-	"github.com/ava-labs/hypersdk/utils"
 )
 
 type JSONRPCClient struct {

@@ -40,7 +40,7 @@ const App = () => {
           </Content>
         </Layout>
         <Row justify="center" style={{ background: "white" }}>
-          <a onClick={() => {OpenLink("https://github.com/ava-labs/hypersdk")}}>
+          <a onClick={() => {OpenLink("https://github.com/AnomalyFi/hypersdk")}}>
           <img src={logo} style={{ width: "300px" }} />
           </a>
         </Row>

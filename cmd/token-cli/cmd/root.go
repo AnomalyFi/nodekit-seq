@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ava-labs/hypersdk/cli"
-	"github.com/ava-labs/hypersdk/utils"
+	"github.com/AnomalyFi/hypersdk/cli"
+	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/spf13/cobra"
 )
 

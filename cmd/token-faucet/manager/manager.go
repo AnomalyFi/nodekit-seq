@@ -10,6 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AnomalyFi/hypersdk/codec"
+	"github.com/AnomalyFi/hypersdk/rpc"
+	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/anomalyFi/nodekit-seq/actions"
 	"github.com/anomalyFi/nodekit-seq/auth"
 	"github.com/anomalyFi/nodekit-seq/challenge"
@@ -20,9 +23,6 @@ import (
 	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/ava-labs/avalanchego/utils/set"
 	"github.com/ava-labs/avalanchego/utils/timer"
-	"github.com/ava-labs/hypersdk/codec"
-	"github.com/ava-labs/hypersdk/rpc"
-	"github.com/ava-labs/hypersdk/utils"
 	"go.uber.org/zap"
 )
 

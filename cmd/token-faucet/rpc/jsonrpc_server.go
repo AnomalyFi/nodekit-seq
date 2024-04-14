@@ -8,8 +8,8 @@ import (
 
 	"github.com/ava-labs/avalanchego/ids"
 
+	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/anomalyFi/nodekit-seq/consts"
-	"github.com/ava-labs/hypersdk/codec"
 )
 
 type JSONRPCServer struct {
