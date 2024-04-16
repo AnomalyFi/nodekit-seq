@@ -46,6 +46,8 @@ type Controller struct {
 	metaDB database.Database
 
 	orderBook *orderbook.OrderBook
+
+	relayManager *RelayManager
 }
 
 func New() *vm.VM {
@@ -144,7 +146,11 @@ func (c *Controller) Initialize(
 			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 		}
 	}
-
+	// create relayManager & relayHandler
+	relayHandler, relaySender := networkManager.Register()
+	c.relayManager = NewRelayManager(c.inner)
+	networkManager.SetHandler(relayHandler, NewRelayHandler(c))
+	go c.relayManager.Run(relaySender)
 	// Initialize order book used to track all open orders
 	c.orderBook = orderbook.New(c, c.config.TrackedPairs, c.config.MaxOrdersPerPair)
 	return c.config, c.genesis, build, gossip, blockDB, stateDB, apis, consts.ActionRegistry, consts.AuthRegistry, auth.Engines(), nil
