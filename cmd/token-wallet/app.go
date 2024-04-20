@@ -7,7 +7,7 @@ import (
 	"context"
 	"runtime/debug"
 
-	"github.com/anomalyFi/nodekit-seq/cmd/token-wallet/backend"
+	"github.com/AnomalyFi/nodekit-seq/cmd/token-wallet/backend"
 
 	"github.com/wailsapp/wails/v2/pkg/logger"
 	"github.com/wailsapp/wails/v2/pkg/runtime"

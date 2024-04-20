@@ -7,7 +7,7 @@ import (
 	"context"
 
 	"github.com/AnomalyFi/hypersdk/codec"
-	"github.com/anomalyFi/nodekit-seq/cmd/token-feed/manager"
+	"github.com/AnomalyFi/nodekit-seq/cmd/token-feed/manager"
 )
 
 type Manager interface {

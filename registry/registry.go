@@ -9,9 +9,9 @@ import (
 	"github.com/ava-labs/avalanchego/utils/wrappers"
 	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
 
-	"github.com/anomalyFi/nodekit-seq/actions"
-	"github.com/anomalyFi/nodekit-seq/auth"
-	"github.com/anomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/actions"
+	"github.com/AnomalyFi/nodekit-seq/auth"
+	"github.com/AnomalyFi/nodekit-seq/consts"
 )
 
 // Setup types

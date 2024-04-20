@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/anomalyFi/nodekit-seq/cmd/tokenvm/version"
-	"github.com/anomalyFi/nodekit-seq/controller"
+	"github.com/AnomalyFi/nodekit-seq/cmd/tokenvm/version"
+	"github.com/AnomalyFi/nodekit-seq/controller"
 	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/ava-labs/avalanchego/utils/ulimit"
 	"github.com/ava-labs/avalanchego/vms/rpcchainvm"

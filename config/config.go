@@ -18,8 +18,8 @@ import (
 	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/ava-labs/avalanchego/utils/profiler"
 
-	"github.com/anomalyFi/nodekit-seq/consts"
-	"github.com/anomalyFi/nodekit-seq/version"
+	"github.com/AnomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/version"
 )
 
 var _ vm.Config = (*Config)(nil)

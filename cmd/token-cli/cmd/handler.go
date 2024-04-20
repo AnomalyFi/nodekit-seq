@@ -14,9 +14,9 @@ import (
 	"github.com/AnomalyFi/hypersdk/pubsub"
 	"github.com/AnomalyFi/hypersdk/rpc"
 	hutils "github.com/AnomalyFi/hypersdk/utils"
-	"github.com/anomalyFi/nodekit-seq/auth"
-	"github.com/anomalyFi/nodekit-seq/consts"
-	trpc "github.com/anomalyFi/nodekit-seq/rpc"
+	"github.com/AnomalyFi/nodekit-seq/auth"
+	"github.com/AnomalyFi/nodekit-seq/consts"
+	trpc "github.com/AnomalyFi/nodekit-seq/rpc"
 	"github.com/ava-labs/avalanchego/ids"
 )
 

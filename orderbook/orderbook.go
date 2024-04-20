@@ -8,8 +8,8 @@ import (
 
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/heap"
-	"github.com/anomalyFi/nodekit-seq/actions"
-	"github.com/anomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/actions"
+	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/ava-labs/avalanchego/ids"
 	"go.uber.org/zap"
 )

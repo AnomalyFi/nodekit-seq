@@ -15,10 +15,10 @@ import (
 	"github.com/AnomalyFi/hypersdk/requester"
 	"github.com/AnomalyFi/hypersdk/rpc"
 	"github.com/AnomalyFi/hypersdk/utils"
-	"github.com/anomalyFi/nodekit-seq/consts"
-	"github.com/anomalyFi/nodekit-seq/genesis"
-	"github.com/anomalyFi/nodekit-seq/orderbook"
-	_ "github.com/anomalyFi/nodekit-seq/registry" // ensure registry populated
+	"github.com/AnomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/genesis"
+	"github.com/AnomalyFi/nodekit-seq/orderbook"
+	_ "github.com/AnomalyFi/nodekit-seq/registry" // ensure registry populated
 )
 
 type JSONRPCClient struct {

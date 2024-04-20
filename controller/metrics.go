@@ -4,7 +4,7 @@
 package controller
 
 import (
-	"github.com/anomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/consts"
 	ametrics "github.com/ava-labs/avalanchego/api/metrics"
 	"github.com/ava-labs/avalanchego/utils/wrappers"
 	"github.com/prometheus/client_golang/prometheus"

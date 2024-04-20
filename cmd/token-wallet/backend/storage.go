@@ -15,7 +15,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/pebble"
 	hutils "github.com/AnomalyFi/hypersdk/utils"
-	tconsts "github.com/anomalyFi/nodekit-seq/consts"
+	tconsts "github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/ava-labs/avalanchego/database"
 	"github.com/ava-labs/avalanchego/ids"
 )

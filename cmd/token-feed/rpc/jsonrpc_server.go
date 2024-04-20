@@ -7,8 +7,8 @@ import (
 	"net/http"
 
 	"github.com/AnomalyFi/hypersdk/codec"
-	"github.com/anomalyFi/nodekit-seq/cmd/token-feed/manager"
-	"github.com/anomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/cmd/token-feed/manager"
+	"github.com/AnomalyFi/nodekit-seq/consts"
 )
 
 type JSONRPCServer struct {

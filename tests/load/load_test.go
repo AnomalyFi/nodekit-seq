@@ -45,12 +45,12 @@ import (
 	"github.com/AnomalyFi/hypersdk/workers"
 
 	"github.com/AnomalyFi/hypersdk/rpc"
-	"github.com/anomalyFi/nodekit-seq/actions"
-	"github.com/anomalyFi/nodekit-seq/auth"
-	"github.com/anomalyFi/nodekit-seq/consts"
-	"github.com/anomalyFi/nodekit-seq/controller"
-	"github.com/anomalyFi/nodekit-seq/genesis"
-	trpc "github.com/anomalyFi/nodekit-seq/rpc"
+	"github.com/AnomalyFi/nodekit-seq/actions"
+	"github.com/AnomalyFi/nodekit-seq/auth"
+	"github.com/AnomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/controller"
+	"github.com/AnomalyFi/nodekit-seq/genesis"
+	trpc "github.com/AnomalyFi/nodekit-seq/rpc"
 )
 
 const genesisBalance uint64 = hconsts.MaxUint64

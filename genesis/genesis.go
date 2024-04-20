@@ -18,8 +18,8 @@ import (
 	"github.com/AnomalyFi/hypersdk/fees"
 	"github.com/AnomalyFi/hypersdk/state"
 	"github.com/AnomalyFi/hypersdk/vm"
-	"github.com/anomalyFi/nodekit-seq/consts"
-	"github.com/anomalyFi/nodekit-seq/storage"
+	"github.com/AnomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/storage"
 )
 
 var _ vm.Genesis = (*Genesis)(nil)

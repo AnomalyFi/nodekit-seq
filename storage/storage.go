@@ -14,7 +14,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/fees"
 	"github.com/AnomalyFi/hypersdk/state"
-	tconsts "github.com/anomalyFi/nodekit-seq/consts"
+	tconsts "github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/ava-labs/avalanchego/database"
 	"github.com/ava-labs/avalanchego/ids"
 	smath "github.com/ava-labs/avalanchego/utils/math"

@@ -6,7 +6,7 @@ package genesis
 import (
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/fees"
-	"github.com/anomalyFi/nodekit-seq/storage"
+	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
 )
 

@@ -10,9 +10,9 @@ import (
 
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/fees"
-	"github.com/anomalyFi/nodekit-seq/consts"
-	"github.com/anomalyFi/nodekit-seq/genesis"
-	"github.com/anomalyFi/nodekit-seq/orderbook"
+	"github.com/AnomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/genesis"
+	"github.com/AnomalyFi/nodekit-seq/orderbook"
 )
 
 type JSONRPCServer struct {

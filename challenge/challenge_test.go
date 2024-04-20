@@ -12,7 +12,7 @@ import (
 //
 // goos: darwin
 // goarch: arm64
-// pkg: github.com/anomalyFi/nodekit-seq/challenge
+// pkg: github.com/AnomalyFi/nodekit-seq/challenge
 // BenchmarkSearch/difficulty=22_cores=1-12         	      10	1856272250 ns/op	1099921195 B/op	17186238 allocs/op
 // BenchmarkSearch/difficulty=22_cores=2-12         	      10	 530316125 ns/op	540141624 B/op	 8439696 allocs/op
 // BenchmarkSearch/difficulty=22_cores=4-12         	      10	 255920258 ns/op	504088876 B/op	 7876351 allocs/op

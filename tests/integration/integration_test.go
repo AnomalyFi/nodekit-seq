@@ -43,12 +43,12 @@ import (
 	hutils "github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/hypersdk/vm"
 
-	"github.com/anomalyFi/nodekit-seq/actions"
-	"github.com/anomalyFi/nodekit-seq/auth"
-	tconsts "github.com/anomalyFi/nodekit-seq/consts"
-	"github.com/anomalyFi/nodekit-seq/controller"
-	"github.com/anomalyFi/nodekit-seq/genesis"
-	trpc "github.com/anomalyFi/nodekit-seq/rpc"
+	"github.com/AnomalyFi/nodekit-seq/actions"
+	"github.com/AnomalyFi/nodekit-seq/auth"
+	tconsts "github.com/AnomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/controller"
+	"github.com/AnomalyFi/nodekit-seq/genesis"
+	trpc "github.com/AnomalyFi/nodekit-seq/rpc"
 )
 
 var (

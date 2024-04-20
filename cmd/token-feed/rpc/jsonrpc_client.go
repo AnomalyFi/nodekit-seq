@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/AnomalyFi/hypersdk/requester"
-	"github.com/anomalyFi/nodekit-seq/cmd/token-feed/manager"
+	"github.com/AnomalyFi/nodekit-seq/cmd/token-feed/manager"
 )
 
 const (

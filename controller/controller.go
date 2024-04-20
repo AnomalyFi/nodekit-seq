@@ -20,15 +20,16 @@ import (
 	"github.com/ava-labs/avalanchego/snow"
 	"go.uber.org/zap"
 
-	"github.com/anomalyFi/nodekit-seq/actions"
-	"github.com/anomalyFi/nodekit-seq/auth"
-	"github.com/anomalyFi/nodekit-seq/config"
-	"github.com/anomalyFi/nodekit-seq/consts"
-	"github.com/anomalyFi/nodekit-seq/genesis"
-	"github.com/anomalyFi/nodekit-seq/orderbook"
-	"github.com/anomalyFi/nodekit-seq/rpc"
-	"github.com/anomalyFi/nodekit-seq/storage"
-	"github.com/anomalyFi/nodekit-seq/version"
+	"github.com/AnomalyFi/nodekit-seq/actions"
+	"github.com/AnomalyFi/nodekit-seq/auth"
+	"github.com/AnomalyFi/nodekit-seq/config"
+	"github.com/AnomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/genesis"
+	"github.com/AnomalyFi/nodekit-seq/orderbook"
+	"github.com/AnomalyFi/nodekit-seq/rpc"
+	serverless "github.com/AnomalyFi/nodekit-seq/server-less"
+	"github.com/AnomalyFi/nodekit-seq/storage"
+	"github.com/AnomalyFi/nodekit-seq/version"
 )
 
 var _ vm.Controller = (*Controller)(nil)
@@ -146,10 +147,13 @@ func (c *Controller) Initialize(
 			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 		}
 	}
-	// create relayManager & relayHandler
+	// initiate serverless
+	serverless := serverless.NewServerLess(1024, 1024)
+	// initiate relayManager & relayHandler
 	relayHandler, relaySender := networkManager.Register()
-	c.relayManager = NewRelayManager(c.inner)
+	c.relayManager = NewRelayManager(c.inner, serverless)
 	networkManager.SetHandler(relayHandler, NewRelayHandler(c))
+	go serverless.Serverless(c.relayManager)
 	go c.relayManager.Run(relaySender)
 	// Initialize order book used to track all open orders
 	c.orderBook = orderbook.New(c, c.config.TrackedPairs, c.config.MaxOrdersPerPair)
@@ -232,4 +236,8 @@ func (*Controller) Shutdown(context.Context) error {
 	// Do not close any databases provided during initialization. The VM will
 	// close any databases your provided.
 	return nil
+}
+
+func (c *Controller) SendRequest(ctx context.Context, data []byte) error {
+	return c.relayManager.SendRequest(ctx, data)
 }

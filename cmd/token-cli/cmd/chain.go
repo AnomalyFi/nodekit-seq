@@ -11,7 +11,7 @@ import (
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/spf13/cobra"
 
-	trpc "github.com/anomalyFi/nodekit-seq/rpc"
+	trpc "github.com/AnomalyFi/nodekit-seq/rpc"
 )
 
 var chainCmd = &cobra.Command{

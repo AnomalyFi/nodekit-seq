@@ -1,4 +1,4 @@
-module github.com/anomalyFi/nodekit-seq
+module github.com/AnomalyFi/nodekit-seq
 
 go 1.21
 
@@ -8,6 +8,7 @@ require (
 	github.com/ava-labs/avalanchego v1.10.18
 	github.com/ethereum/go-ethereum v1.12.0
 	github.com/fatih/color v1.13.0
+	github.com/gorilla/websocket v1.5.0
 	github.com/onsi/ginkgo/v2 v2.13.1
 	github.com/onsi/gomega v1.29.0
 	github.com/prometheus/client_golang v1.16.0
@@ -63,7 +64,6 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/rpc v1.2.0 // indirect
-	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.2 // indirect
 	github.com/hashicorp/go-bexpr v0.1.10 // indirect

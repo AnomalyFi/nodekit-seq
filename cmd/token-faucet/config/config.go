@@ -6,8 +6,8 @@ package config
 import (
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
-	"github.com/anomalyFi/nodekit-seq/auth"
-	"github.com/anomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/auth"
+	"github.com/AnomalyFi/nodekit-seq/consts"
 )
 
 type Config struct {

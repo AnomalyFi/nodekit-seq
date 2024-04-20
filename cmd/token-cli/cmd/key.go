@@ -15,11 +15,11 @@ import (
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/spf13/cobra"
 
-	"github.com/anomalyFi/nodekit-seq/auth"
-	"github.com/anomalyFi/nodekit-seq/challenge"
-	frpc "github.com/anomalyFi/nodekit-seq/cmd/token-faucet/rpc"
-	tconsts "github.com/anomalyFi/nodekit-seq/consts"
-	trpc "github.com/anomalyFi/nodekit-seq/rpc"
+	"github.com/AnomalyFi/nodekit-seq/auth"
+	"github.com/AnomalyFi/nodekit-seq/challenge"
+	frpc "github.com/AnomalyFi/nodekit-seq/cmd/token-faucet/rpc"
+	tconsts "github.com/AnomalyFi/nodekit-seq/consts"
+	trpc "github.com/AnomalyFi/nodekit-seq/rpc"
 )
 
 var keyCmd = &cobra.Command{
