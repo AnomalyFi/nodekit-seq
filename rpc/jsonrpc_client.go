@@ -271,6 +271,22 @@ func (cli *JSONRPCClient) GetAcceptedBlockWindow(ctx context.Context) (int, erro
 	return *resp, err
 }
 
+func (cli *JSONRPCClient) SubmitMsgTx(ctx context.Context, chainID string, networkID uint32, secondaryChainID []byte, data []byte) (string, error) {
+	resp := new(SubmitMsgTxReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"submitMsgTx",
+		&SubmitMsgTxArgs{
+			ChainId:          chainID,
+			NetworkID:        networkID,
+			SecondaryChainId: secondaryChainID,
+			Data:             data,
+		},
+		resp,
+	)
+	return resp.TxID, err
+}
+
 // TODO add more methods
 func (cli *JSONRPCClient) WaitForBalance(
 	ctx context.Context,
