@@ -23,6 +23,7 @@ require (
 require (
 	github.com/bits-and-blooms/bitset v1.8.0 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
+	github.com/celestiaorg/nmt v0.20.0 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
 	github.com/fxamacker/cbor/v2 v2.5.0 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
@@ -178,4 +179,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-// replace github.com/AnomalyFi/hypersdk => ../hypersdk
+replace github.com/AnomalyFi/hypersdk => ../hypersdk

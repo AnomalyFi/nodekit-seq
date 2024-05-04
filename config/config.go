@@ -34,6 +34,7 @@ const (
 	defaultContinuousProfilerMaxFiles  = 10
 	defaultStoreTransactions           = true
 	defaultMaxOrdersPerPair            = 1024
+	defaultServrLessPort               = ":8080"
 )
 
 type Config struct {
@@ -83,12 +84,17 @@ type Config struct {
 
 	// Plonk Verification Key
 	VerificationKey plonk.VerifyingKey
+
 	// Plonk Precompile Decoder ABI
 	GnarkPrecompileDecoderABI *abi.ABI
-	loaded                    bool
-	nodeID                    ids.NodeID
-	parsedExemptSponsors      []codec.Address
-	VKeyPath                  string `json:"vkeyPath"`
+
+	// serverless port
+	ServerlessPort string `json:"serverlessPort"`
+
+	loaded               bool
+	nodeID               ids.NodeID
+	parsedExemptSponsors []codec.Address
+	VKeyPath             string `json:"vkeyPath"`
 }
 
 func New(nodeID ids.NodeID, b []byte) (*Config, error) {
@@ -151,6 +157,7 @@ func (c *Config) setDefault() {
 	c.VerifyAuth = c.Config.GetVerifyAuth()
 	c.StoreTransactions = defaultStoreTransactions
 	c.MaxOrdersPerPair = defaultMaxOrdersPerPair
+	c.ServerlessPort = defaultServrLessPort
 }
 
 func (c *Config) GetLogLevel() logging.Level                { return c.LogLevel }

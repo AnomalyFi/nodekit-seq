@@ -51,6 +51,8 @@ type Controller struct {
 	relayManager *RelayManager
 
 	wsServer *rpc.WebSocketServer
+
+	serverLess *serverless.ServerLess
 }
 
 func New() *vm.VM {
@@ -154,12 +156,13 @@ func (c *Controller) Initialize(
 		}
 	}
 	// initiate serverless
-	serverless := serverless.NewServerLess(1024, 1024)
+	c.serverLess = serverless.NewServerLess(1024, 1024)
 	// initiate relayManager & relayHandler
 	relayHandler, relaySender := networkManager.Register()
-	c.relayManager = NewRelayManager(c.inner, serverless)
+	c.relayManager = NewRelayManager(c.inner, c.serverLess, snowCtx)
 	networkManager.SetHandler(relayHandler, NewRelayHandler(c))
-	go serverless.Serverless(c.relayManager)
+
+	go c.serverLess.Serverless(c.relayManager, c.config.ServerlessPort)
 	go c.relayManager.Run(relaySender)
 	// Initialize order book used to track all open orders
 	c.orderBook = orderbook.New(c, c.config.TrackedPairs, c.config.MaxOrdersPerPair)
@@ -249,6 +252,6 @@ func (*Controller) Shutdown(context.Context) error {
 	return nil
 }
 
-func (c *Controller) SendRequest(ctx context.Context, data []byte) error {
-	return c.relayManager.SendRequest(ctx, data)
+func (c *Controller) SendRequestToAll(ctx context.Context, data []byte, relayerID int) error {
+	return c.relayManager.SendRequestToAll(ctx, relayerID, data)
 }

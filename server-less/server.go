@@ -2,20 +2,20 @@ package serverless
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"sync"
 
-	// "github.com/AnomalyFi/nodekit-seq/controller"
 	"github.com/gorilla/websocket"
 )
 
 type ServerLess struct {
-	Clients     map[int]*websocket.Conn
-	Upgrader    websocket.Upgrader
-	clientsL    sync.Mutex
-	SendRequest func(context.Context, []byte) error
+	Clients          map[int]*websocket.Conn
+	Upgrader         websocket.Upgrader
+	clientsL         sync.Mutex
+	SendRequestToAll func(context.Context, int, []byte) error
 }
 
 func NewServerLess(readBufferSize, writeBufferSize int) *ServerLess {
@@ -28,6 +28,7 @@ func NewServerLess(readBufferSize, writeBufferSize int) *ServerLess {
 	}
 }
 
+// register a new relayer or update the existing relayer
 func (s *ServerLess) registerRelayer(w http.ResponseWriter, r *http.Request) {
 	// Upgrade the HTTP connection to a WebSocket connection
 	conn, err := s.Upgrader.Upgrade(w, r, nil)
@@ -46,21 +47,24 @@ func (s *ServerLess) registerRelayer(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 	}
+	// add/update relayer
 	s.clientsL.Lock()
 	s.Clients[realyerID] = conn
 	s.clientsL.Unlock()
 }
 
+// @todo lets see, how the both below methods work
+
+// send data received from peer to the client relayer
 func (s *ServerLess) SendToClient(relayerID int, data []byte) error {
-	// send data to client/conn
 	s.clientsL.Lock()
 	conn, ok := s.Clients[relayerID]
 	s.clientsL.Unlock()
 	if !ok {
-		return fmt.Errorf("relayer does not exist for this validator with relayerId: %d", relayerID)
+		return fmt.Errorf("relayer does not exist with Id: %d", relayerID)
 	}
 
-	err := conn.WriteMessage(websocket.BinaryMessage, data) // make differentiability
+	err := conn.WriteMessage(websocket.BinaryMessage, data)
 	if err != nil {
 		s.clientsL.Lock()
 		delete(s.Clients, relayerID)
@@ -70,23 +74,32 @@ func (s *ServerLess) SendToClient(relayerID int, data []byte) error {
 	return nil
 }
 
+// send data to all the validators
 func (s *ServerLess) SendToPeers(w http.ResponseWriter, r *http.Request) {
-	// send data to all peers
-	// data can be anything arbitary.
-	s.SendRequest(context.TODO(), []byte{})
+	var rawData SendToPeersData
+	err := json.NewDecoder(r.Body).Decode(&rawData)
+	defer r.Body.Close()
+	if err != nil { //@todo send better error status code and messages
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+	// data unmarshalled successfully, send it to all the validators
+	if err := s.SendRequestToAll(context.Background(), rawData.RelayerID, rawData.RawData); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
+// send signature only to the validator, that satisfied the relay request
 func (s *ServerLess) Settle(w http.ResponseWriter, r *http.Request) {
-	// sends the signed signature only to the validator realyer who successfully satisfied relay request
 
 }
 
-// it is on the individual relayers to keep track of all the nodeID's realted requests
-func (s *ServerLess) Serverless(controller Controller) {
-	s.SendRequest = controller.SendRequest
-	//@todo add all handlers for bidirectional communication
+// start the websocker server for bi-directional communication between relayers and node.
+// it is on the relayers to validate the data they recieve from peers and to send valid data to peers.
+func (s *ServerLess) Serverless(relayManager RelayManager, port string) {
+	s.SendRequestToAll = relayManager.SendRequestToAll
 	http.HandleFunc("/register-relayer", s.registerRelayer)
 	http.HandleFunc("/send", s.SendToPeers)
 	http.HandleFunc("/settle", s.Settle)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(port, nil))
 }

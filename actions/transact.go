@@ -278,3 +278,6 @@ func (t *Transact) Execute(
 	hasEncError = false
 	return hasEncError, gasUsed, []byte{byte(result)}, nil, nil
 }
+func (*Transact) NMTNamespace() []byte {
+	return DefaultNMTNamespace
+}

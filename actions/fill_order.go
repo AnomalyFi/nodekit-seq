@@ -210,3 +210,6 @@ func (o *OrderResult) Marshal() ([]byte, error) {
 	p.PackUint64(o.Remaining)
 	return p.Bytes(), p.Err()
 }
+func (*FillOrder) NMTNamespace() []byte {
+	return DefaultNMTNamespace
+}

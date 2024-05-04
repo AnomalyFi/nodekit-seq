@@ -2,6 +2,6 @@ package serverless
 
 import "context"
 
-type Controller interface {
-	SendRequest(context.Context, []byte) error
+type RelayManager interface {
+	SendRequestToAll(context.Context, int, []byte) error
 }

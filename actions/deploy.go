@@ -91,3 +91,7 @@ func (*Deploy) ValidRange(chain.Rules) (int64, int64) {
 func (d *Deploy) Chunks() uint16 {
 	return uint16(len(d.ContractCode) / 64) // size of chunk = 64
 }
+
+func (*Deploy) NMTNamespace() []byte {
+	return DefaultNMTNamespace
+}

@@ -47,3 +47,5 @@ const (
 	// Num of statekeys
 	NumStateKeys int = 1024 //@todo make this changable with SEQ authentication
 )
+
+var DefaultNMTNamespace = make([]byte, 8)
