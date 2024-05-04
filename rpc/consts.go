@@ -5,6 +5,6 @@ package rpc
 
 const (
 	JSONRPCEndpoint = "/tokenapi"
-
-	ordersToSend = 128
+	WSEndPoint      = "/seq-ws"
+	ordersToSend    = 128
 )

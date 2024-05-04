@@ -10,6 +10,9 @@ import (
 	"sync"
 
 	"github.com/ava-labs/avalanchego/ids"
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/backend/plonk"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/requester"
@@ -232,7 +235,7 @@ type Parser struct {
 }
 
 func (p *Parser) Rules(t int64) chain.Rules {
-	return p.genesis.Rules(t, p.networkID, p.chainID)
+	return p.genesis.Rules(t, p.networkID, p.chainID, plonk.NewVerifyingKey(ecc.BN254), &abi.ABI{})
 }
 
 func (*Parser) Registry() (chain.ActionRegistry, chain.AuthRegistry) {

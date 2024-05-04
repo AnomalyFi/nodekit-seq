@@ -12,6 +12,7 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/orderbook"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/trace"
+	"github.com/ava-labs/avalanchego/utils/logging"
 )
 
 type Controller interface {
@@ -32,4 +33,5 @@ type Controller interface {
 		error,
 	)
 	GetLoanFromState(context.Context, ids.ID, ids.ID) (uint64, error)
+	Logger() logging.Logger
 }

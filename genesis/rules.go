@@ -4,10 +4,15 @@
 package genesis
 
 import (
+	"math/big"
+
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/fees"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
+	"github.com/consensys/gnark/backend/plonk"
+	"github.com/consensys/gnark/frontend"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 )
 
 var _ chain.Rules = (*Rules)(nil)
@@ -15,13 +20,23 @@ var _ chain.Rules = (*Rules)(nil)
 type Rules struct {
 	g *Genesis
 
-	networkID uint32
-	chainID   ids.ID
+	networkID             uint32
+	chainID               ids.ID
+	verificationKey       plonk.VerifyingKey
+	GnarkPrecompileABI    *abi.ABI
+	FunctionIDBigIntCache *map[*big.Int]frontend.Variable
+}
+
+type RulesHelper struct {
+	VerificationKey       plonk.VerifyingKey
+	GnarkPrecompileABI    *abi.ABI
+	FunctionIDBigIntCache *map[*big.Int]frontend.Variable
 }
 
 // TODO: use upgradeBytes
-func (g *Genesis) Rules(_ int64, networkID uint32, chainID ids.ID) *Rules {
-	return &Rules{g, networkID, chainID}
+func (g *Genesis) Rules(_ int64, networkID uint32, chainID ids.ID, verificationKey plonk.VerifyingKey, GnarkPrecompileABI *abi.ABI) *Rules {
+	d := make(map[*big.Int]frontend.Variable)
+	return &Rules{g, networkID, chainID, verificationKey, GnarkPrecompileABI, &d}
 }
 
 func (*Rules) GetWarpConfig(ids.ID) (bool, uint64, uint64) {
@@ -112,6 +127,6 @@ func (r *Rules) GetWindowTargetUnits() fees.Dimensions {
 	return r.g.WindowTargetUnits
 }
 
-func (*Rules) FetchCustom(string) (any, bool) {
-	return nil, false
+func (r *Rules) FetchCustom(string) (any, bool) {
+	return RulesHelper{r.verificationKey, r.GnarkPrecompileABI, r.FunctionIDBigIntCache}, false
 }

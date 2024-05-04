@@ -49,6 +49,8 @@ type Controller struct {
 	orderBook *orderbook.OrderBook
 
 	relayManager *RelayManager
+
+	wsServer *rpc.WebSocketServer
 }
 
 func New() *vm.VM {
@@ -124,6 +126,10 @@ func (c *Controller) Initialize(
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 	apis[rpc.JSONRPCEndpoint] = jsonRPCHandler
+	// websocket server for serving commitment callbacks esp for relayers
+	wsServer, pubsubServer := rpc.NewWebSocketServer(c, c.config.GetStreamingBacklogSize())
+	c.wsServer = wsServer
+	apis[rpc.WSEndPoint] = pubsubServer
 
 	// Create builder and gossiper
 	var (
@@ -162,7 +168,7 @@ func (c *Controller) Initialize(
 
 func (c *Controller) Rules(t int64) chain.Rules {
 	// TODO: extend with [UpgradeBytes]
-	return c.genesis.Rules(t, c.snowCtx.NetworkID, c.snowCtx.ChainID)
+	return c.genesis.Rules(t, c.snowCtx.NetworkID, c.snowCtx.ChainID, c.config.VerificationKey, c.config.GnarkPrecompileDecoderABI)
 }
 
 func (c *Controller) StateManager() chain.StateManager {
@@ -172,6 +178,11 @@ func (c *Controller) StateManager() chain.StateManager {
 func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) error {
 	batch := c.metaDB.NewBatch()
 	defer batch.Reset()
+
+	// filter the transactions in websocket_packer.go and send to the listeners
+	if err := c.wsServer.AcceptBlockWithSEQWasmTxs(blk); err != nil {
+		c.Logger().Info("failed to send block to websocket server", zap.Error(err))
+	}
 
 	results := blk.Results()
 	for i, tx := range blk.Txs {

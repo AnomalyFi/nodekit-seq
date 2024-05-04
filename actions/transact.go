@@ -1,8 +1,11 @@
 package actions
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"errors"
+	"math/big"
 	"strconv"
 
 	"github.com/AnomalyFi/hypersdk/chain"
@@ -10,9 +13,15 @@ import (
 	"github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/state"
 	"github.com/AnomalyFi/hypersdk/utils"
+	"github.com/AnomalyFi/nodekit-seq/genesis"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/backend/plonk"
+	"github.com/consensys/gnark/frontend"
+	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
+	"github.com/succinctlabs/gnark-plonky2-verifier/variables"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 )
@@ -78,7 +87,7 @@ func UnmarshalTransact(p *codec.Packer, _ *warp.Message) (chain.Action, error) {
 
 func (t *Transact) Execute(
 	ctx context.Context,
-	_ chain.Rules,
+	rules chain.Rules,
 	mu state.Mutable,
 	_ int64,
 	actor codec.Address,
@@ -151,11 +160,87 @@ func (t *Transact) Execute(
 			storage.SetBytes(ctx, mu, contractAddress, slot, bytes)
 		}
 	}
+	// precompiles
+	gnarkVerify := func(ctxInner context.Context, m api.Module, ptr uint32, size uint32) uint32 {
+		// fetch vk, abi from cache(these should exist)
+		rHA, _ := rules.FetchCustom("")
+		helper := rHA.(genesis.RulesHelper)
+		vk := helper.VerificationKey
+		abi := helper.GnarkPrecompileABI
+		// read from memory
+		dataBytes, ok := m.Memory().Read(ptr, size)
+		if !ok {
+			return 0
+		}
+		// abi unpack
+		method := abi.Methods["gnarkPrecompileInputsDummyFunction"]
+		upack, err := method.Inputs.Unpack(dataBytes)
+		if err != nil {
+			return 0
+		}
+		input := upack[0].(*GnarkPrecompileInputs)
+		// build digest from digest big int
+		digest, ok := (*helper.FunctionIDBigIntCache)[input.FunctionIdBigInt]
+		if !ok {
+			cirucitDigest := frontend.Variable(input.FunctionIdBigInt)
+			digestInner := poseidon.BN254HashOut(cirucitDigest)
+			(*helper.FunctionIDBigIntCache)[input.FunctionIdBigInt] = digestInner
+			digest = digestInner
+		}
+		// build proof
+		proof := plonk.NewProof(ecc.BN254)
+		_, err = proof.ReadFrom(bytes.NewBuffer(input.Proof))
+		if err != nil {
+			// ill-structured proof
+			return 0
+		}
+		// prepare input and output for verification
+		inputHash := sha256.Sum256(input.Input)
+		outputHash := sha256.Sum256(input.Output)
+		inputHashB := new(big.Int).SetBytes(inputHash[:])
+		outputHashB := new(big.Int).SetBytes(outputHash[:])
+		inputHashM := new(big.Int).And(inputHashB, mask)
+		outputHashM := new(big.Int).And(outputHashB, mask)
+		if inputHashM.BitLen() > 253 || outputHashM.BitLen() > 253 {
+			// ill-structured input or output
+			return 0
+		}
+		assg := &Plonky2xVerifierCircuit{
+			VerifierDigest: digest,
+			InputHash:      inputHashM,
+			OutputHash:     outputHashM,
+			ProofWithPis:   variables.ProofWithPublicInputs{},
+			VerifierData:   variables.VerifierOnlyCircuitData{},
+		}
+		wit, err := frontend.NewWitness(assg, ecc.BN254.ScalarField())
+		if err != nil {
+			// this usually will not happen
+			return 0
+		}
+		pubWit, err := wit.Public()
+		if err != nil {
+			// this usually will not happend
+			return 0
+		}
+		err = plonk.Verify(proof, vk, pubWit)
+		if err != nil {
+			// wrong proof - pubWit - vk pair or malicious proof
+			return 0
+		}
+		return 1
+	}
+	// fallbacks
+	addBalance := func(ctxInner context.Context, m api.Module) {}
+	subBalance := func(ctxInner context.Context, m api.Module) {}
+
 	_, err = r.NewHostModuleBuilder("env").NewFunctionBuilder().
 		WithFunc(stateGetBytesInner).Export("stateGetBytes").
 		NewFunctionBuilder().WithFunc(stateStoreBytesInner).Export("stateStoreBytes").
 		NewFunctionBuilder().WithFunc(stateStoreDynamicBytesInner).Export("stateStoreDynamicBytes").
 		NewFunctionBuilder().WithFunc(stateGetDynamicBytesInner).Export("stateGetDynamicBytes").
+		NewFunctionBuilder().WithFunc(gnarkVerify).Export("gnarkVerify").
+		NewFunctionBuilder().WithFunc(addBalance).Export("addBalance").
+		NewFunctionBuilder().WithFunc(subBalance).Export("subBalance").
 		Instantiate(ctxWasm)
 
 	if err != nil {

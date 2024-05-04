@@ -6,6 +6,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -17,9 +18,13 @@ import (
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/ava-labs/avalanchego/utils/profiler"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/version"
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/backend/plonk"
 )
 
 var _ vm.Config = (*Config)(nil)
@@ -76,9 +81,14 @@ type Config struct {
 	// State Sync
 	StateSyncServerDelay time.Duration `json:"stateSyncServerDelay"` // for testing
 
-	loaded               bool
-	nodeID               ids.NodeID
-	parsedExemptSponsors []codec.Address
+	// Plonk Verification Key
+	VerificationKey plonk.VerifyingKey
+	// Plonk Precompile Decoder ABI
+	GnarkPrecompileDecoderABI *abi.ABI
+	loaded                    bool
+	nodeID                    ids.NodeID
+	parsedExemptSponsors      []codec.Address
+	VKeyPath                  string `json:"vkeyPath"`
 }
 
 func New(nodeID ids.NodeID, b []byte) (*Config, error) {
@@ -90,6 +100,25 @@ func New(nodeID ids.NodeID, b []byte) (*Config, error) {
 		}
 		c.loaded = true
 	}
+
+	// load verification key.
+	vkeyFile, err := os.Open(c.VKeyPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open verification key file: %w", err)
+	}
+	defer vkeyFile.Close()
+	vk := plonk.NewVerifyingKey(ecc.BN254)
+	_, err = vk.ReadFrom(vkeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read verification key: %w", err)
+	}
+	c.VerificationKey = vk
+
+	// cache the precompile decoder ABI
+	var GnarkPrecompMetaData = &bind.MetaData{
+		ABI: "[{\"inputs\":[{\"components\":[{\"internalType\":\"bytes\",\"name\":\"input\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"output\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"function_id_big_int\",\"type\":\"uint256\"}],\"internalType\":\"structgnarkPrecompile.GnarkPrecompileInputs\",\"name\":\"inputs\",\"type\":\"tuple\"}],\"name\":\"gnarkPrecompileInputsDummyFunction\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	}
+	c.GnarkPrecompileDecoderABI, _ = GnarkPrecompMetaData.GetAbi()
 
 	// Parse any exempt sponsors (usually used when a single account is
 	// broadcasting many txs at once)
