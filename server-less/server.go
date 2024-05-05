@@ -4,27 +4,32 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"sync"
 
+	"github.com/ava-labs/avalanchego/ids"
+	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/gorilla/websocket"
+	"go.uber.org/zap"
 )
 
 type ServerLess struct {
-	Clients          map[int]*websocket.Conn
-	Upgrader         websocket.Upgrader
-	clientsL         sync.Mutex
-	SendRequestToAll func(context.Context, int, []byte) error
+	Clients                 map[int]*websocket.Conn
+	Upgrader                websocket.Upgrader
+	clientsL                sync.Mutex
+	logger                  logging.Logger
+	SendRequestToAll        func(context.Context, int, []byte) error
+	SendRequestToIndividual func(context.Context, int, ids.NodeID, []byte) error
 }
 
-func NewServerLess(readBufferSize, writeBufferSize int) *ServerLess {
+func NewServerLess(readBufferSize, writeBufferSize int, logger logging.Logger) *ServerLess {
 	return &ServerLess{
 		Clients: make(map[int]*websocket.Conn),
 		Upgrader: websocket.Upgrader{
 			ReadBufferSize:  readBufferSize,
 			WriteBufferSize: writeBufferSize,
 		},
+		logger: logger,
 	}
 }
 
@@ -33,27 +38,44 @@ func (s *ServerLess) registerRelayer(w http.ResponseWriter, r *http.Request) {
 	// Upgrade the HTTP connection to a WebSocket connection
 	conn, err := s.Upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
+		s.logger.Error("Failed to upgrade the connection", zap.Error(err))
 		return
 	}
+	defer conn.Close()
 	// Read the identification number from the client
 	var realyerID int
 	err = conn.ReadJSON(&realyerID)
 	if err != nil {
-		log.Println(err)
+		s.logger.Error("Failed to read the relayer ID", zap.Error(err))
 		return
 	}
 	err = conn.WriteMessage(websocket.TextMessage, []byte("connected"))
 	if err != nil {
-		log.Println(err)
+		s.logger.Error("Failed to send the connection confirmation", zap.Error(err))
 	}
 	// add/update relayer
 	s.clientsL.Lock()
 	s.Clients[realyerID] = conn
 	s.clientsL.Unlock()
+	// handle the messages from the client
+	for {
+		_, data, err := conn.ReadMessage()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				s.logger.Error("Failed to read the message", zap.Error(err))
+			}
+			break
+		}
+		switch data[0] {
+		case sendToPeersMode:
+			s.SendToPeers(data[1:])
+		case settleMode:
+			s.Settle(data[1:])
+		default:
+			s.logger.Error("Unknown mode", zap.Int("mode", int(data[0])))
+		}
+	}
 }
-
-// @todo lets see, how the both below methods work
 
 // send data received from peer to the client relayer
 func (s *ServerLess) SendToClient(relayerID int, data []byte) error {
@@ -75,31 +97,30 @@ func (s *ServerLess) SendToClient(relayerID int, data []byte) error {
 }
 
 // send data to all the validators
-func (s *ServerLess) SendToPeers(w http.ResponseWriter, r *http.Request) {
+func (s *ServerLess) SendToPeers(data []byte) error {
 	var rawData SendToPeersData
-	err := json.NewDecoder(r.Body).Decode(&rawData)
-	defer r.Body.Close()
-	if err != nil { //@todo send better error status code and messages
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	err := json.Unmarshal(data, &rawData)
+	if err != nil {
+		return err
 	}
-	// data unmarshalled successfully, send it to all the validators
+	// send data to validators
 	if err := s.SendRequestToAll(context.Background(), rawData.RelayerID, rawData.RawData); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return err
 	}
-	w.WriteHeader(http.StatusOK)
+	return nil
 }
 
 // send signature only to the validator, that satisfied the relay request
-func (s *ServerLess) Settle(w http.ResponseWriter, r *http.Request) {
-
+func (s *ServerLess) Settle(data []byte) error {
+	return nil
 }
 
 // start the websocker server for bi-directional communication between relayers and node.
 // it is on the relayers to validate the data they recieve from peers and to send valid data to peers.
 func (s *ServerLess) Serverless(relayManager RelayManager, port string) {
 	s.SendRequestToAll = relayManager.SendRequestToAll
+	s.SendRequestToIndividual = relayManager.SendRequestToIndividual
 	http.HandleFunc("/register-relayer", s.registerRelayer)
-	http.HandleFunc("/send", s.SendToPeers)
-	http.HandleFunc("/settle", s.Settle)
-	log.Fatal(http.ListenAndServe(port, nil))
+	http.ListenAndServe(port, nil)
+	s.logger.Debug("Server started", zap.String("port", port))
 }

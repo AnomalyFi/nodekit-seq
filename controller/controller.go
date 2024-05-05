@@ -17,6 +17,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/vm"
 	ametrics "github.com/ava-labs/avalanchego/api/metrics"
 	"github.com/ava-labs/avalanchego/database"
+	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/snow"
 	"go.uber.org/zap"
 
@@ -156,7 +157,7 @@ func (c *Controller) Initialize(
 		}
 	}
 	// initiate serverless
-	c.serverLess = serverless.NewServerLess(1024, 1024)
+	c.serverLess = serverless.NewServerLess(1024, 1024, snowCtx.Log)
 	// initiate relayManager & relayHandler
 	relayHandler, relaySender := networkManager.Register()
 	c.relayManager = NewRelayManager(c.inner, c.serverLess, snowCtx)
@@ -254,4 +255,8 @@ func (*Controller) Shutdown(context.Context) error {
 
 func (c *Controller) SendRequestToAll(ctx context.Context, data []byte, relayerID int) error {
 	return c.relayManager.SendRequestToAll(ctx, relayerID, data)
+}
+
+func (c *Controller) SendRequestToIndividual(ctx context.Context, data []byte, relayerID int, nodeID ids.NodeID) error {
+	return c.relayManager.SendRequestToIndividual(ctx, relayerID, nodeID, data)
 }
