@@ -163,7 +163,8 @@ cat <<EOF > "${TMPDIR}"/tokenvm.config
   "logLevel": "${LOGLEVEL}",
   "continuousProfilerDir":"${TMPDIR}/tokenvm-e2e-profiles/*",
   "stateSyncServerDelay": ${STATESYNC_DELAY},
-  "vkeyPath": "./vk.bin"
+  "vkeyPath": "./vk.bin",
+  "serverlessPort": ":9321"
 }
 EOF
 mkdir -p "${TMPDIR}"/tokenvm-e2e-profiles

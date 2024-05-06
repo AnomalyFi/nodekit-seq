@@ -78,15 +78,14 @@ func (s *ServerLess) registerRelayer(w http.ResponseWriter, r *http.Request) {
 }
 
 // send data received from peer to the client relayer
-func (s *ServerLess) SendToClient(relayerID int, data []byte) error {
+func (s *ServerLess) SendToClient(relayerID int, nodeID ids.NodeID, data []byte) error {
 	s.clientsL.Lock()
 	conn, ok := s.Clients[relayerID]
 	s.clientsL.Unlock()
 	if !ok {
 		return fmt.Errorf("relayer does not exist with Id: %d", relayerID)
 	}
-
-	err := conn.WriteMessage(websocket.BinaryMessage, data)
+	err := conn.WriteJSON(SendToClientData{nodeID, data})
 	if err != nil {
 		s.clientsL.Lock()
 		delete(s.Clients, relayerID)

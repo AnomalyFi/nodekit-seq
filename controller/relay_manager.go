@@ -110,7 +110,7 @@ func (r *RelayManager) AppRequest(
 	var msg []byte
 	reader.UnpackBytes(-1, false, &msg)
 	// send the request to relayer
-	if err := r.serverless.SendToClient(relayerID, msg); err != nil {
+	if err := r.serverless.SendToClient(relayerID, nodeID, msg); err != nil {
 		r.vm.Logger().Info("serverless error: %s", zap.Error(err))
 		// don't send back any response, if server did not exist.
 		return nil
