@@ -147,7 +147,6 @@ var testHeaderCmd = &cobra.Command{
 		end_time := end * 1000
 
 		res, err := tcli.GetBlockHeadersByStart(ctx, start_time, end_time)
-
 		if err != nil {
 			return err
 		}

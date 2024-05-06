@@ -33,11 +33,11 @@ import (
 type JSONRPCServer struct {
 	c       Controller
 	headers *types.ShardedMap[string, *chain.StatefulBlock]
-	//map[ids.ID]*chain.StatefulBlock // Map block ID to block header
+	// map[ids.ID]*chain.StatefulBlock // Map block ID to block header
 
 	blocksWithValidTxs *types.ShardedMap[string, *types.SequencerBlock]
 
-	//map[ids.ID]*types.SequencerBlock // Map block ID to block header
+	// map[ids.ID]*types.SequencerBlock // Map block ID to block header
 
 	idsByHeight btree.Map[uint64, ids.ID] // Map block ID to block height
 
@@ -346,7 +346,7 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 				return errors.New("Could not find Block")
 			}
 
-			//tmp := blk.Tmstmp / 1000
+			// tmp := blk.Tmstmp / 1000
 
 			Prev = BlockInfo{
 				BlockId:   prevBlkId.String(),
@@ -368,7 +368,7 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 			return false
 		}
 
-		//tmp := blk.Tmstmp / 1000
+		// tmp := blk.Tmstmp / 1000
 		if blk.Tmstmp >= args.End {
 			Next = BlockInfo{
 				BlockId:   id.String(),
@@ -401,7 +401,7 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 	// Parse query parameters
 
 	var firstBlock uint64
-	//var prevBlkId ids.ID
+	// var prevBlkId ids.ID
 
 	if args.ID != "" {
 		id, err := ids.FromString(args.ID)
@@ -422,11 +422,11 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 		// Handle error or default case
 		// TODO add error potentially
 		// http.Error(writer, "Invalid parameters", http.StatusBadRequest)
-		//TODO used to return nil but changed
-		//return nil
+		// TODO used to return nil but changed
+		// return nil
 	}
 
-	//prevBlkId, success := j.idsByHeight.Get(firstBlock - 1)
+	// prevBlkId, success := j.idsByHeight.Get(firstBlock - 1)
 
 	Prev := BlockInfo{}
 	if firstBlock > 1 {
@@ -466,7 +466,7 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 		}
 
 		if blk.Tmstmp >= args.End {
-			//tmp := blk.Tmstmp / 1000
+			// tmp := blk.Tmstmp / 1000
 
 			Next = BlockInfo{
 				BlockId:   id.String(),
@@ -478,7 +478,7 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 		}
 
 		if blk.Hght == heightKey {
-			//tmp := blk.Tmstmp / 1000
+			// tmp := blk.Tmstmp / 1000
 
 			blocks = append(blocks, BlockInfo{
 				BlockId:   id.String(),
@@ -509,10 +509,8 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 	var firstBlock uint64
 
 	j.blocks.Ascend(args.Start, func(tmstp int64, height uint64) bool {
-
 		firstBlock = height
 		return false
-
 	})
 
 	Prev := BlockInfo{}
@@ -525,7 +523,7 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 				return fmt.Errorf("Could not find Previous Block: %d ", firstBlock)
 			}
 
-			//tmp := blk.Tmstmp / 1000
+			// tmp := blk.Tmstmp / 1000
 			Prev = BlockInfo{
 				BlockId:   prevBlkId.String(),
 				Timestamp: blk.Tmstmp,
@@ -551,7 +549,7 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 
 		if blk.Tmstmp >= args.End {
 
-			//tmp := blk.Tmstmp / 1000
+			// tmp := blk.Tmstmp / 1000
 
 			Next = BlockInfo{
 				BlockId:   id.String(),
@@ -562,7 +560,7 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 			return false
 		}
 
-		//tmp := blk.Tmstmp / 1000
+		// tmp := blk.Tmstmp / 1000
 
 		blocks = append(blocks, BlockInfo{
 			BlockId:   id.String(),
@@ -655,7 +653,7 @@ func (j *JSONRPCServer) GetCommitmentBlocks(req *http.Request, args *GetBlockCom
 
 		comm := header.Commit()
 
-		//TODO swapped these 2 functions so now it exits earlier. Need to test
+		// TODO swapped these 2 functions so now it exits earlier. Need to test
 		if blockTemp.Hght >= args.CurrentHeight {
 			// root := types.NewU256().SetBytes(blockTemp.StateRoot)
 			// bigRoot := root.Int
@@ -727,7 +725,7 @@ func (j *JSONRPCServer) AcceptBlock(blk *chain.StatelessBlock) error {
 
 	block, results, _, id, err := rpc.UnpackBlockMessage(msg, parser)
 
-	//TODO I should experiment with TTL
+	// TODO I should experiment with TTL
 	j.headers.Put(id.String(), block)
 	// j.headers[id.String()] = block
 	j.idsByHeight.Set(block.Hght, *id)
