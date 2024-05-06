@@ -17,7 +17,7 @@ if ! [[ "$0" =~ scripts/run.sh ]]; then
   exit 255
 fi
 
-VERSION=v1.10.10
+VERSION=v1.10.10-beta.2
 MAX_UINT64=18446744073709551615
 MODE=${MODE:-run}
 LOGLEVEL=${LOGLEVEL:-info}
@@ -25,6 +25,9 @@ STATESYNC_DELAY=${STATESYNC_DELAY:-0}
 MIN_BLOCK_GAP=${MIN_BLOCK_GAP:-100}
 STORE_TXS=${STORE_TXS:-false}
 UNLIMITED_USAGE=${UNLIMITED_USAGE:-false}
+STORE_BLOCK_RESULTS_ON_DISK=${STORE_BLOCK_RESULTS_ON_DISK:-true}
+ETHL1RPC=${ETHL1RPC:-http://localhost:8545}
+ETHL1WS=${ETHL1WS:-ws://localhost:8546}
 if [[ ${MODE} != "run" && ${MODE} != "run-single" ]]; then
   LOGLEVEL=debug
   STATESYNC_DELAY=100000000 # 100ms
@@ -75,7 +78,7 @@ if [ ! -f "$AVALANCHEGO_PATH" ]; then
 
   # Download src
   cd ${TMPDIR}/avalanchego-src
-  git clone https://github.com/ava-labs/avalanchego.git
+  git clone https://github.com/AnomalyFi/avalanchego.git
   cd avalanchego
   git checkout ${VERSION}
 
@@ -158,7 +161,10 @@ cat <<EOF > ${TMPDIR}/tokenvm.config
   "trackedPairs":["*"],
   "logLevel": "${LOGLEVEL}",
   "continuousProfilerDir":"${TMPDIR}/tokenvm-e2e-profiles/*",
-  "stateSyncServerDelay": ${STATESYNC_DELAY}
+  "stateSyncServerDelay": ${STATESYNC_DELAY},
+  "storeBlockResultsOnDisk": ${STORE_BLOCK_RESULTS_ON_DISK},
+  "ethRPCAddr": "${ETHL1RPC}",
+  "ethWSAddr": "${ETHL1WS}"
 }
 EOF
 mkdir -p ${TMPDIR}/tokenvm-e2e-profiles

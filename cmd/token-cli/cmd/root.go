@@ -147,6 +147,7 @@ func init() {
 		setChainCmd,
 		chainInfoCmd,
 		watchChainCmd,
+		testHeaderCmd,
 	)
 
 	// actions
@@ -188,6 +189,7 @@ func init() {
 	)
 	spamCmd.AddCommand(
 		runSpamCmd,
+		runSpamSequencerMsgCmd,
 	)
 
 	// prometheus

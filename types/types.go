@@ -4,20 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+
 	// "github.com/AnomalyFi/hypersdk/chain"
 	"github.com/ava-labs/avalanchego/ids"
-	// "github.com/chainbound/shardmap"
 )
-
-// ! TODO I should use one or two shardmap across the jsonrpc_server and the commitmentmanager to simplify it
-// TODO I can always optimize this later but it just needs to work for now
-// type BlockDTO struct {
-// 	//The strings here are just ids.ID converted to strings to maintain compatiblity with this library
-// 	headers shardmap.ShardedMap[string, *chain.StatefulBlock] // Map block ID to block header
-
-// 	blocksWithValidTxs shardmap.ShardedMap[string, *SequencerBlock] // Map block ID to block header
-
-// }
 
 type SEQTransaction struct {
 	Namespace   string `json:"namespace"`
@@ -72,3 +62,86 @@ func (i *U256) UnmarshalJSON(in []byte) error {
 	}
 	return nil
 }
+
+type Header struct {
+	Height           uint64  `json:"height"`
+	Timestamp        uint64  `json:"timestamp"`
+	L1Head           uint64  `json:"l1_head"`
+	TransactionsRoot NmtRoot `json:"transactions_root"`
+}
+
+func (h *Header) UnmarshalJSON(b []byte) error {
+	type Dec struct {
+		Height           *uint64  `json:"height"`
+		Timestamp        *uint64  `json:"timestamp"`
+		L1Head           *uint64  `json:"l1_head"`
+		TransactionsRoot *NmtRoot `json:"transactions_root"`
+	}
+
+	var dec Dec
+	if err := json.Unmarshal(b, &dec); err != nil {
+		return err
+	}
+
+	if dec.Height == nil {
+		return fmt.Errorf("Field height of type Header is required")
+	}
+	h.Height = *dec.Height
+
+	if dec.Timestamp == nil {
+		return fmt.Errorf("Field timestamp of type Header is required")
+	}
+	h.Timestamp = *dec.Timestamp
+
+	if dec.L1Head == nil {
+		return fmt.Errorf("Field l1_head of type Header is required")
+	}
+	h.L1Head = *dec.L1Head
+
+	if dec.TransactionsRoot == nil {
+		return fmt.Errorf("Field transactions_root of type Header is required")
+	}
+	h.TransactionsRoot = *dec.TransactionsRoot
+
+	return nil
+}
+
+func (self *Header) Commit() Commitment {
+	return NewRawCommitmentBuilder("BLOCK").
+		Uint64Field("height", self.Height).
+		Uint64Field("timestamp", self.Timestamp).
+		Uint64Field("l1_head", self.L1Head).
+		Field("transactions_root", self.TransactionsRoot.Commit()).
+		Finalize()
+}
+
+type NmtRoot struct {
+	Root Bytes `json:"root"`
+}
+
+func (r *NmtRoot) UnmarshalJSON(b []byte) error {
+	// Parse using pointers so we can distinguish between missing and default fields.
+	type Dec struct {
+		Root *Bytes `json:"root"`
+	}
+
+	var dec Dec
+	if err := json.Unmarshal(b, &dec); err != nil {
+		return err
+	}
+
+	if dec.Root == nil {
+		return fmt.Errorf("Field root of type NmtRoot is required")
+	}
+	r.Root = *dec.Root
+
+	return nil
+}
+
+func (self *NmtRoot) Commit() Commitment {
+	return NewRawCommitmentBuilder("NMTROOT").
+		VarSizeField("root", self.Root).
+		Finalize()
+}
+
+type Bytes []byte

@@ -1,0 +1,14 @@
+validator01 ansible_connection=docker ansible_host=ash-avalanche-local-validator01
+validator02 ansible_connection=docker ansible_host=ash-avalanche-local-validator02
+validator03 ansible_connection=docker ansible_host=ash-avalanche-local-validator03
+validator04 ansible_connection=docker ansible_host=ash-avalanche-local-validator04
+validator05 ansible_connection=docker ansible_host=ash-avalanche-local-validator05
+
+[avalanche_nodes]
+validator0[1:5]
+
+[subnet_txs_host]
+validator01
+
+[subnet_validators]
+validator0[1:5]

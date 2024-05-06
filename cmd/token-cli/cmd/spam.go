@@ -5,6 +5,9 @@ package cmd
 
 import (
 	"context"
+	crand "crypto/rand"
+	"fmt"
+	"math/rand"
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
@@ -83,4 +86,70 @@ var runSpamCmd = &cobra.Command{
 			},
 		)
 	},
+}
+
+var runSpamSequencerMsgCmd = &cobra.Command{
+	Use: "smsg",
+	RunE: func(*cobra.Command, []string) error {
+		ctx := context.Background()
+
+		_, _, factory, cli, scli, tcli, err := handler.DefaultActor()
+		if err != nil {
+			return err
+		}
+
+		numAddress, err := handler.Root().PromptInt("how many addresses to generate?", 500)
+		if err != nil {
+			return err
+		}
+
+		numMsgs, err := handler.Root().PromptInt("how many msgs to send?", 10000)
+		if err != nil {
+			return err
+		}
+
+		for i := 0; i < numAddress; i++ {
+			handler.Root().GenerateKey()
+		}
+
+		keys, err := handler.Root().GetKeys()
+		if err != nil {
+			return err
+		}
+
+		for _, k := range keys {
+			for i := 0; i < numMsgs; i++ {
+				data, err := randomBytes()
+				fmt.Printf("data size(byte): %d\n", len(data))
+				if err != nil {
+					fmt.Println("error genrateing bytes, skipping")
+					continue
+				}
+				_, _, err = sendAndWait(ctx, nil, &actions.SequencerMsg{
+					Data:        data,
+					ChainId:     []byte("nkit"),
+					FromAddress: k.PublicKey(),
+				}, cli, scli, tcli, factory, true)
+				if err != nil {
+					fmt.Println("error submitting tx, skipping")
+				}
+			}
+		}
+
+		return err
+	},
+}
+
+func randomBytes() ([]byte, error) {
+	// 256 kb
+	numBytes := rand.Intn(256 * 1024)
+
+	b := make([]byte, numBytes)
+
+	_, err := crand.Read(b)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
 }

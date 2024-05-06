@@ -194,7 +194,7 @@ func (cli *JSONRPCClient) GetBlockHeadersByStart(
 	// TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,
-		"getblockheadersbystart",
+		"getBlockHeadersByStart",
 		&GetBlockHeadersByStartArgs{
 			Start: start,
 			End:   end,
@@ -238,6 +238,53 @@ func (cli *JSONRPCClient) GetBlockTransactionsByNamespace(
 		resp,
 	)
 	return resp, err
+}
+
+func (cli *JSONRPCClient) GetCommitmentBlocks(
+	ctx context.Context,
+	first uint64,
+	height uint64,
+	maxBlocks int,
+) (*SequencerWarpBlockResponse, error) {
+	resp := new(SequencerWarpBlockResponse)
+	err := cli.requester.SendRequest(
+		ctx,
+		"getCommitmentBlocks",
+		&GetBlockCommitmentArgs{
+			First:         first,
+			CurrentHeight: height,
+			MaxBlocks:     maxBlocks,
+		},
+		resp,
+	)
+	return resp, err
+}
+
+func (cli *JSONRPCClient) GetAcceptedBlockWindow(ctx context.Context) (int, error) {
+	resp := new(int)
+	err := cli.requester.SendRequest(
+		ctx,
+		"getAcceptedBlockWindow",
+		nil,
+		resp,
+	)
+	return *resp, err
+}
+
+func (cli *JSONRPCClient) SubmitMsgTx(ctx context.Context, chainID string, networkID uint32, secondaryChainID []byte, data []byte) (string, error) {
+	resp := new(SubmitMsgTxReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"submitMsgTx",
+		&SubmitMsgTxArgs{
+			ChainId:          chainID,
+			NetworkID:        networkID,
+			SecondaryChainId: secondaryChainID,
+			Data:             data,
+		},
+		resp,
+	)
+	return resp.TxID, err
 }
 
 // TODO add more methods

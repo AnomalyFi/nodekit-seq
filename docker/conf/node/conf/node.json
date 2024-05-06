@@ -1,0 +1,18 @@
+{
+  "bootstrap-ids": "NodeID-7Xhw2mDxuDS44j42TCB6U5579esbSt3Lg",
+  "bootstrap-ips": "177.17.0.11:9651",
+  "chain-aliases-file": "/etc/avalanche/avalanchego/conf/chains/aliases.json",
+  "db-dir": "/var/lib/avalanchego/db",
+  "http-allowed-hosts": "*",
+  "http-host": "0.0.0.0",
+  "http-port": 9650,
+  "http-tls-enabled": false,
+  "log-dir": "/var/log/avalanche/avalanchego",
+  "log-level": "info",
+  "network-id": "local",
+  "public-ip": "",
+  "staking-port": 9651,
+  "staking-tls-cert-file": "/etc/avalanche/avalanchego/staking/staker.crt",
+  "staking-tls-key-file": "/etc/avalanche/avalanchego/staking/staker.key",
+  "track-subnets": ""
+}

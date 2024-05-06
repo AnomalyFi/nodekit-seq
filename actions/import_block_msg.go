@@ -118,3 +118,7 @@ func (*ImportBlockMsg) ValidRange(chain.Rules) (int64, int64) {
 	// Returning -1, -1 means that the action is always valid.
 	return -1, -1
 }
+
+func (*ImportBlockMsg) NMTNamespace() []byte {
+	return DefaultNMTNamespace
+}

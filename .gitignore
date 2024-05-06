@@ -3,7 +3,7 @@
 *.log
 *~
 .DS_Store
-
+.token_cli/
 awscpu
 
 # Binaries for programs and plugins
@@ -68,3 +68,5 @@ osxcross/
 target/
 Cargo.lock
 **/*.rs.bk
+
+main.log

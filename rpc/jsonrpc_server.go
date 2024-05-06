@@ -6,7 +6,9 @@ package rpc
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"math/big"
 	"net/http"
 	"time"
 
@@ -25,16 +27,17 @@ import (
 
 	sequtils "github.com/AnomalyFi/nodekit-seq/utils"
 
-	ethhex "github.com/ethereum/go-ethereum/common/hexutil"
-
 	"github.com/tidwall/btree"
 )
 
 type JSONRPCServer struct {
 	c       Controller
-	headers map[ids.ID]*chain.StatefulBlock // Map block ID to block header
+	headers *types.ShardedMap[string, *chain.StatefulBlock]
+	// map[ids.ID]*chain.StatefulBlock // Map block ID to block header
 
-	blocksWithValidTxs map[ids.ID]*types.SequencerBlock // Map block ID to block header
+	blocksWithValidTxs *types.ShardedMap[string, *types.SequencerBlock]
+
+	// map[ids.ID]*types.SequencerBlock // Map block ID to block header
 
 	idsByHeight btree.Map[uint64, ids.ID] // Map block ID to block height
 
@@ -43,10 +46,13 @@ type JSONRPCServer struct {
 }
 
 func NewJSONRPCServer(c Controller) *JSONRPCServer {
+	headers := types.NewShardedMap[string, *chain.StatefulBlock](10000, 10, types.HashString)
+	blocksWithValidTxs := types.NewShardedMap[string, *types.SequencerBlock](10000, 10, types.HashString)
+
 	return &JSONRPCServer{
 		c:                  c,
-		headers:            map[ids.ID]*chain.StatefulBlock{},
-		blocksWithValidTxs: map[ids.ID]*types.SequencerBlock{},
+		headers:            headers,
+		blocksWithValidTxs: blocksWithValidTxs,
 		idsByHeight:        btree.Map[uint64, ids.ID]{},
 		blocks:             btree.Map[int64, uint64]{},
 	}
@@ -265,6 +271,7 @@ type BlockInfo struct {
 	BlockId   string `json:"id"`
 	Timestamp int64  `json:"timestamp"`
 	L1Head    uint64 `json:"l1_head"`
+	Height    uint64 `json:"height"`
 }
 
 type BlockHeadersResponse struct {
@@ -283,6 +290,19 @@ type TransactionResponse struct {
 type SEQTransactionResponse struct {
 	Txs     []*types.SEQTransaction `json:"txs"`
 	BlockId string                  `json:"id"`
+}
+
+type SequencerWarpBlockResponse struct {
+	Blocks []SequencerWarpBlock `json:"blocks"`
+}
+
+type SequencerWarpBlock struct {
+	BlockId    string   `json:"id"`
+	Timestamp  int64    `json:"timestamp"`
+	L1Head     uint64   `json:"l1_head"`
+	Height     *big.Int `json:"height"`
+	BlockRoot  *big.Int `json:"root"`
+	ParentRoot *big.Int `json:"parent"`
 }
 
 type GetBlockHeadersByHeightArgs struct {
@@ -304,25 +324,36 @@ type GetBlockTransactionsArgs struct {
 	ID string `json:"block_id"`
 }
 
+type GetBlockCommitmentArgs struct {
+	First         uint64 `json:"first"`
+	CurrentHeight uint64 `json:"current_height"`
+	MaxBlocks     int    `json:"max_blocks"`
+}
+
 type GetBlockTransactionsByNamespaceArgs struct {
 	Height    uint64 `json:"height"`
 	Namespace string `json:"namespace"`
 }
 
 func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBlockHeadersByHeightArgs, reply *BlockHeadersResponse) error {
-	prevBlkId, success := j.idsByHeight.Get(args.Height - 1)
-
 	Prev := BlockInfo{}
-	if success {
-		blk := j.headers[prevBlkId]
-		l1Head, err := ethhex.DecodeBig(blk.L1Head)
-		if err != nil {
-			return err
-		}
-		Prev = BlockInfo{
-			BlockId:   prevBlkId.String(),
-			Timestamp: blk.Tmstmp,
-			L1Head:    l1Head.Uint64(),
+
+	if args.Height > 1 {
+		prevBlkId, success := j.idsByHeight.Get(args.Height - 1)
+		if success {
+			blk, found := j.headers.Get(prevBlkId.String())
+			if !found {
+				return errors.New("Could not find Block")
+			}
+
+			// tmp := blk.Tmstmp / 1000
+
+			Prev = BlockInfo{
+				BlockId:   prevBlkId.String(),
+				Timestamp: blk.Tmstmp,
+				L1Head:    uint64(blk.L1Head),
+				Height:    blk.Hght,
+			}
 		}
 	}
 
@@ -332,43 +363,36 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 
 	j.idsByHeight.Ascend(args.Height, func(heightKey uint64, id ids.ID) bool {
 		// Does heightKey match the given block's height for the id
-		blk := j.headers[id]
-
-		l1Head, err := ethhex.DecodeBig(blk.L1Head)
-		if err != nil {
+		blk, found := j.headers.Get(id.String())
+		if !found {
 			return false
 		}
-		if blk.Hght == heightKey {
-			blocks = append(blocks, BlockInfo{
-				BlockId:   id.String(),
-				Timestamp: blk.Tmstmp,
-				L1Head:    l1Head.Uint64(),
-			})
-		}
 
-		// if blk.Hght == heightKey && blk.Tmstmp < endNumber {
-		// 	blocks = append(blocks, BlockInfo{
-		// 		BlockId: id,
-		// 	})
-		// }
-
-		// endNumber
-		// TODO do I want this as a timestamp
-
-		if blk.Tmstmp > args.End {
+		// tmp := blk.Tmstmp / 1000
+		if blk.Tmstmp >= args.End {
 			Next = BlockInfo{
 				BlockId:   id.String(),
 				Timestamp: blk.Tmstmp,
-				L1Head:    l1Head.Uint64(),
+				L1Head:    uint64(blk.L1Head),
+				Height:    blk.Hght,
 			}
 			return false
 		}
+
+		blocks = append(blocks, BlockInfo{
+			BlockId:   id.String(),
+			Timestamp: blk.Tmstmp,
+			L1Head:    uint64(blk.L1Head),
+			Height:    blk.Hght,
+		})
+
 		return true
 	})
 
-	res := BlockHeadersResponse{From: args.Height, Blocks: blocks, Prev: Prev, Next: Next}
-
-	reply = &res
+	reply.From = args.Height
+	reply.Blocks = blocks
+	reply.Prev = Prev
+	reply.Next = Next
 
 	return nil
 }
@@ -377,6 +401,7 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 	// Parse query parameters
 
 	var firstBlock uint64
+	// var prevBlkId ids.ID
 
 	if args.ID != "" {
 		id, err := ids.FromString(args.ID)
@@ -384,32 +409,48 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 			return err
 		}
 		// TODO make this into the response
-		block := j.headers[id]
+		block, found := j.headers.Get(id.String())
+		if !found {
+			return errors.New("Could not find Block")
+		}
 
 		firstBlock = block.Hght
 		// Handle hash parameter
 		// ...
 	} else {
-		firstBlock = 0
+		firstBlock = 1
 		// Handle error or default case
 		// TODO add error potentially
 		// http.Error(writer, "Invalid parameters", http.StatusBadRequest)
-		return nil
+		// TODO used to return nil but changed
+		// return nil
 	}
 
-	prevBlkId, success := j.idsByHeight.Get(firstBlock - 1)
+	// prevBlkId, success := j.idsByHeight.Get(firstBlock - 1)
 
 	Prev := BlockInfo{}
-	if success {
-		blk := j.headers[prevBlkId]
-		l1Head, err := ethhex.DecodeBig(blk.L1Head)
-		if err != nil {
-			return err
-		}
-		Prev = BlockInfo{
-			BlockId:   prevBlkId.String(),
-			Timestamp: blk.Tmstmp,
-			L1Head:    l1Head.Uint64(),
+	if firstBlock > 1 {
+		// j.idsByHeight.Descend(firstBlock, func(heightKey uint64, id ids.ID) bool {
+
+		// 	prevBlkId = id
+		// 	return false
+		// })
+		prevBlkId, success := j.idsByHeight.Get(firstBlock - 1)
+
+		if success {
+			blk, found := j.headers.Get(prevBlkId.String())
+			if !found {
+				return errors.New("Could not find Previous Block")
+			}
+
+			Prev = BlockInfo{
+				BlockId:   prevBlkId.String(),
+				Timestamp: blk.Tmstmp,
+				L1Head:    uint64(blk.L1Head),
+				Height:    blk.Hght,
+			}
+		} else {
+			return errors.New("Could not find Previous Block")
 		}
 	}
 
@@ -419,35 +460,43 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 
 	j.idsByHeight.Ascend(firstBlock, func(heightKey uint64, id ids.ID) bool {
 		// Does heightKey match the given block's height for the id
-		blk := j.headers[id]
-		l1Head, err := ethhex.DecodeBig(blk.L1Head)
-		if err != nil {
-			// TODO add error potentially
+		blk, found := j.headers.Get(id.String())
+		if !found {
+			return false
+		}
+
+		if blk.Tmstmp >= args.End {
+			// tmp := blk.Tmstmp / 1000
+
+			Next = BlockInfo{
+				BlockId:   id.String(),
+				Timestamp: blk.Tmstmp,
+				L1Head:    uint64(blk.L1Head),
+				Height:    blk.Hght,
+			}
 			return false
 		}
 
 		if blk.Hght == heightKey {
+			// tmp := blk.Tmstmp / 1000
+
 			blocks = append(blocks, BlockInfo{
 				BlockId:   id.String(),
 				Timestamp: blk.Tmstmp,
-				L1Head:    l1Head.Uint64(),
+				L1Head:    uint64(blk.L1Head),
+				Height:    blk.Hght,
 			})
-		}
-
-		if blk.Tmstmp > args.End {
-			Next = BlockInfo{
-				BlockId:   id.String(),
-				Timestamp: blk.Tmstmp,
-				L1Head:    l1Head.Uint64(),
-			}
-			return false
 		}
 		return true
 	})
 
-	res := BlockHeadersResponse{From: firstBlock, Blocks: blocks, Prev: Prev, Next: Next}
+	// res := BlockHeadersResponse{From: firstBlock, Blocks: blocks, Prev: Prev, Next: Next}
 
-	reply = &res
+	// reply = &res
+	reply.From = firstBlock
+	reply.Blocks = blocks
+	reply.Prev = Prev
+	reply.Next = Next
 	// TODO add blocks to the list of blocks contained in this time window
 	// Marshal res to JSON and send the response
 
@@ -459,26 +508,30 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 
 	var firstBlock uint64
 
-	// TODO either the firstBlock height is equal to height or use the hash to get it or if none of the above work then use the btree to get it
-	heightFound, success := j.blocks.Get(args.Start)
-
-	if success {
-		firstBlock = heightFound
-	}
-
-	prevBlkId, success := j.idsByHeight.Get(firstBlock - 1)
+	j.blocks.Ascend(args.Start, func(tmstp int64, height uint64) bool {
+		firstBlock = height
+		return false
+	})
 
 	Prev := BlockInfo{}
-	if success {
-		blk := j.headers[prevBlkId]
-		l1Head, err := ethhex.DecodeBig(blk.L1Head)
-		if err != nil {
-			return err
-		}
-		Prev = BlockInfo{
-			BlockId:   prevBlkId.String(),
-			Timestamp: blk.Tmstmp,
-			L1Head:    l1Head.Uint64(),
+	if firstBlock > 1 {
+		prevBlkId, success := j.idsByHeight.Get(firstBlock - 1)
+
+		if success {
+			blk, found := j.headers.Get(prevBlkId.String())
+			if !found {
+				return fmt.Errorf("Could not find Previous Block: %d ", firstBlock)
+			}
+
+			// tmp := blk.Tmstmp / 1000
+			Prev = BlockInfo{
+				BlockId:   prevBlkId.String(),
+				Timestamp: blk.Tmstmp,
+				L1Head:    uint64(blk.L1Head),
+				Height:    blk.Hght,
+			}
+		} else {
+			return fmt.Errorf("Could not find Previous Block: %d, idsByHeight height %d, blocks height %d ", firstBlock, j.idsByHeight.Len(), j.blocks.Len())
 		}
 	}
 
@@ -488,38 +541,57 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 
 	j.idsByHeight.Ascend(firstBlock, func(heightKey uint64, id ids.ID) bool {
 		// Does heightKey match the given block's height for the id
-		blk := j.headers[id]
-		l1Head, err := ethhex.DecodeBig(blk.L1Head)
-		if err != nil {
-			// TODO add error potentially
+		blk, found := j.headers.Get(id.String())
+
+		if !found {
 			return false
 		}
 
-		if blk.Hght == heightKey {
-			blocks = append(blocks, BlockInfo{
-				BlockId:   id.String(),
-				Timestamp: blk.Tmstmp,
-				L1Head:    l1Head.Uint64(),
-			})
-		}
+		if blk.Tmstmp >= args.End {
 
-		if blk.Tmstmp > args.End {
+			// tmp := blk.Tmstmp / 1000
+
 			Next = BlockInfo{
 				BlockId:   id.String(),
 				Timestamp: blk.Tmstmp,
-				L1Head:    l1Head.Uint64(),
+				L1Head:    uint64(blk.L1Head),
+				Height:    blk.Hght,
 			}
 			return false
 		}
+
+		// tmp := blk.Tmstmp / 1000
+
+		blocks = append(blocks, BlockInfo{
+			BlockId:   id.String(),
+			Timestamp: blk.Tmstmp,
+			L1Head:    uint64(blk.L1Head),
+			Height:    blk.Hght,
+		})
+
+		// if blk.Hght == heightKey {
+		// 	tmp := blk.Tmstmp / 1000
+
+		// 	blocks = append(blocks, BlockInfo{
+		// 		BlockId:   id.String(),
+		// 		Timestamp: tmp,
+		// 		L1Head:    l1Head.Uint64(),
+		// 		Height:    blk.Hght,
+		// 	})
+		// 	fmt.Println("Match Found")
+		// 	fmt.Println("Blocks Length After Append:", len(blocks))
+
+		// }
+
 		return true
 	})
 
-	res := BlockHeadersResponse{From: firstBlock, Blocks: blocks, Prev: Prev, Next: Next}
-
-	// TODO add blocks to the list of blocks contained in this time window
 	// Marshal res to JSON and send the response
 
-	reply = &res
+	reply.From = firstBlock
+	reply.Blocks = blocks
+	reply.Prev = Prev
+	reply.Next = Next
 
 	return nil
 }
@@ -532,16 +604,93 @@ func (j *JSONRPCServer) GetBlockTransactions(req *http.Request, args *GetBlockTr
 		return nil
 	}
 
-	id, err := ids.FromString(args.ID)
-	if err != nil {
-		return err
+	// id, err := ids.FromString(args.ID)
+	// if err != nil {
+	// 	return err
+	// }
+
+	block, success := j.headers.Get(args.ID)
+
+	if !success {
+		return errors.New("Txs Not Found")
 	}
 
-	block := j.headers[id]
+	reply.Txs = block.Txs
+	reply.BlockId = args.ID
 
-	res := TransactionResponse{Txs: block.Txs, BlockId: id.String()}
+	return nil
+}
 
-	reply = &res
+func (j *JSONRPCServer) GetCommitmentBlocks(req *http.Request, args *GetBlockCommitmentArgs, reply *SequencerWarpBlockResponse) error {
+	// Parse query parameters
+
+	// TODO either the firstBlock height is equal to height or use the hash to get it or if none of the above work then use the btree to get it
+	if args.First < 1 {
+		return nil
+	}
+
+	blocks := make([]SequencerWarpBlock, 0)
+
+	j.idsByHeight.Ascend(args.First, func(heightKey uint64, id ids.ID) bool {
+		// Does heightKey match the given block's height for the id
+		if len(blocks) >= args.MaxBlocks {
+			return false
+		}
+
+		blockTemp, success := j.headers.Get(id.String())
+		if !success {
+			return success
+		}
+
+		header := &types.Header{
+			Height:    blockTemp.Hght,
+			Timestamp: uint64(blockTemp.Tmstmp),
+			L1Head:    uint64(blockTemp.L1Head),
+			TransactionsRoot: types.NmtRoot{
+				Root: id[:],
+			},
+		}
+
+		comm := header.Commit()
+
+		// TODO swapped these 2 functions so now it exits earlier. Need to test
+		if blockTemp.Hght >= args.CurrentHeight {
+			// root := types.NewU256().SetBytes(blockTemp.StateRoot)
+			// bigRoot := root.Int
+			parentRoot := types.NewU256().SetBytes(blockTemp.Prnt)
+			bigParentRoot := parentRoot.Int
+
+			blocks = append(blocks, SequencerWarpBlock{
+				BlockId:    id.String(),
+				Timestamp:  blockTemp.Tmstmp,
+				L1Head:     uint64(blockTemp.L1Head),
+				Height:     big.NewInt(int64(blockTemp.Hght)),
+				BlockRoot:  &comm.Uint256().Int,
+				ParentRoot: &bigParentRoot,
+			})
+			return false
+		}
+
+		if blockTemp.Hght == heightKey {
+			// root := types.NewU256().SetBytes(blockTemp.StateRoot)
+			// bigRoot := root.Int
+			parentRoot := types.NewU256().SetBytes(blockTemp.Prnt)
+			bigParentRoot := parentRoot.Int
+
+			blocks = append(blocks, SequencerWarpBlock{
+				BlockId:    id.String(),
+				Timestamp:  blockTemp.Tmstmp,
+				L1Head:     uint64(blockTemp.L1Head),
+				Height:     big.NewInt(int64(blockTemp.Hght)),
+				BlockRoot:  &comm.Uint256().Int,
+				ParentRoot: &bigParentRoot,
+			})
+		}
+
+		return true
+	})
+
+	reply.Blocks = blocks
 
 	return nil
 }
@@ -549,16 +698,19 @@ func (j *JSONRPCServer) GetBlockTransactions(req *http.Request, args *GetBlockTr
 func (j *JSONRPCServer) GetBlockTransactionsByNamespace(req *http.Request, args *GetBlockTransactionsByNamespaceArgs, reply *SEQTransactionResponse) error {
 	BlkId, success := j.idsByHeight.Get(args.Height)
 
-	if success {
-		block := j.blocksWithValidTxs[BlkId]
-
-		txs := block.Txs[args.Namespace]
-		res := SEQTransactionResponse{Txs: txs, BlockId: BlkId.String()}
-
-		reply = &res
-	} else {
-		reply = &SEQTransactionResponse{}
+	if !success {
+		return errors.New("Txs Not Found For Namespace")
 	}
+
+	block, found := j.blocksWithValidTxs.Get(BlkId.String())
+	if !found {
+		return fmt.Errorf("Could not find Block: %s ", BlkId.String())
+	}
+
+	txs := block.Txs[args.Namespace]
+
+	reply.Txs = txs
+	reply.BlockId = BlkId.String()
 
 	return nil
 }
@@ -573,7 +725,9 @@ func (j *JSONRPCServer) AcceptBlock(blk *chain.StatelessBlock) error {
 
 	block, results, _, id, err := rpc.UnpackBlockMessage(msg, parser)
 
-	j.headers[*id] = block
+	// TODO I should experiment with TTL
+	j.headers.Put(id.String(), block)
+	// j.headers[id.String()] = block
 	j.idsByHeight.Set(block.Hght, *id)
 	j.blocks.Set(block.Tmstmp, block.Hght)
 
@@ -612,7 +766,7 @@ func (j *JSONRPCServer) AcceptBlock(blk *chain.StatelessBlock) error {
 	}
 
 	// TODO need to fix this
-	j.blocksWithValidTxs[*id] = sequencerBlock
+	j.blocksWithValidTxs.Put(id.String(), sequencerBlock)
 
 	return nil
 }
@@ -642,4 +796,9 @@ func (j *JSONRPCServer) ServerParser(ctx context.Context, networkId uint32, chai
 
 	// The only thing this is using is the ActionRegistry and AuthRegistry so this should be fine
 	return &Parser{networkId, chainId, g}
+}
+
+func (j *JSONRPCServer) GetAcceptedBlockWindow(req *http.Request, _ *struct{}, reply *int) error {
+	*reply = j.c.GetAcceptedBlockWindow()
+	return nil
 }
