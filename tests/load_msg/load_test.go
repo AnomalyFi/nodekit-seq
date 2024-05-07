@@ -1,6 +1,7 @@
 // Copyright (C) 2023, Ava Labs, Inc. All rights reserved.
 // See the file LICENSE for licensing terms.
 
+//nolint:stylecheck
 package load_msg
 
 import (
@@ -528,7 +529,7 @@ var _ = ginkgo.Describe("load tests vm", func() {
 func issueSimpleTx(
 	i *instance,
 	to ed25519.PublicKey,
-	amount uint64,
+	_ uint64,
 	factory chain.AuthFactory,
 ) (ids.ID, error) {
 	tx := chain.NewTx(

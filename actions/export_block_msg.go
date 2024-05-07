@@ -33,7 +33,7 @@ func (*ExportBlockMsg) GetTypeID() uint8 {
 	return exportBlockID
 }
 
-func (e *ExportBlockMsg) StateKeys(rauth chain.Auth, _ ids.ID) []string {
+func (e *ExportBlockMsg) StateKeys(_ chain.Auth, _ ids.ID) []string {
 	// TODO may need to be fixed
 	return []string{
 		string(storage.PrefixBlockKey(e.StateRoot, e.Destination)),
@@ -42,14 +42,16 @@ func (e *ExportBlockMsg) StateKeys(rauth chain.Auth, _ ids.ID) []string {
 }
 
 // TODO probably need to fix
+//
+//nolint:revive
 func (e *ExportBlockMsg) StateKeysMaxChunks() []uint16 {
 	return []uint16{storage.AssetChunks, storage.LoanChunks, storage.BalanceChunks}
 }
 
 func (e *ExportBlockMsg) executeLoan(
-	ctx context.Context,
-	mu state.Mutable,
-	actor ed25519.PublicKey,
+	_ context.Context,
+	_ state.Mutable,
+	_ ed25519.PublicKey,
 	txID ids.ID,
 ) (bool, uint64, []byte, *warp.UnsignedMessage, error) {
 	// TODO may need to add a destination chainID to this
