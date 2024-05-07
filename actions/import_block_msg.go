@@ -30,10 +30,10 @@ type ImportBlockMsg struct {
 	warpMessage *warp.Message
 }
 
-func (e *ImportBlockMsg) StateKeys(rauth chain.Auth, _ ids.ID) []string {
+func (i *ImportBlockMsg) StateKeys(_ chain.Auth, _ ids.ID) []string {
 	// TODO needs to be fixed
 	return []string{
-		string(storage.PrefixBlockKey(e.warpMsg.StateRoot, e.warpMsg.Prnt)),
+		string(storage.PrefixBlockKey(i.warpMsg.StateRoot, i.warpMsg.Prnt)),
 	}
 }
 
@@ -59,12 +59,13 @@ func (i *ImportBlockMsg) StateKeysMaxChunks() []uint16 {
 	return chunks
 }
 
+//nolint:revive
 func (i *ImportBlockMsg) Execute(
 	ctx context.Context,
-	r chain.Rules,
-	mu state.Mutable,
-	t int64,
-	rauth chain.Auth,
+	_ chain.Rules,
+	_ state.Mutable,
+	_ int64,
+	_ chain.Auth,
 	_ ids.ID,
 	warpVerified bool,
 ) (bool, uint64, []byte, *warp.UnsignedMessage, error) {
@@ -74,6 +75,7 @@ func (i *ImportBlockMsg) Execute(
 	return true, ImportBlockComputeUnits, nil, nil, nil
 }
 
+//nolint:revive
 func (i *ImportBlockMsg) MaxComputeUnits(chain.Rules) uint64 {
 	return ImportBlockComputeUnits
 }

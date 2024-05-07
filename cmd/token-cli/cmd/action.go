@@ -29,8 +29,10 @@ import (
 )
 
 const (
+	//nolint:unused
 	dummyBlockAgeThreshold = 25
-	dummyHeightThreshold   = 3
+	//nolint:unused
+	dummyHeightThreshold = 3
 )
 
 var actionCmd = &cobra.Command{

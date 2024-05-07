@@ -20,6 +20,7 @@ import (
 var _ chain.Action = (*SequencerMsg)(nil)
 
 type SequencerMsg struct {
+	//nolint:stylecheck
 	ChainId     []byte            `protobuf:"bytes,1,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
 	Data        []byte            `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
 	FromAddress ed25519.PublicKey `json:"from_address"`
@@ -30,6 +31,7 @@ func (*SequencerMsg) GetTypeID() uint8 {
 	return msgID
 }
 
+//nolint:revive
 func (t *SequencerMsg) StateKeys(rauth chain.Auth, _ ids.ID) []string {
 	// owner, err := utils.ParseAddress(t.FromAddress)
 	// if err != nil {
@@ -53,12 +55,13 @@ func (*SequencerMsg) OutputsWarpMessage() bool {
 	return false
 }
 
+//nolint:revive
 func (t *SequencerMsg) Execute(
 	ctx context.Context,
 	_ chain.Rules,
-	mu state.Mutable,
+	_ state.Mutable,
 	_ int64,
-	rauth chain.Auth,
+	_ chain.Auth,
 	_ ids.ID,
 	_ bool,
 ) (bool, uint64, []byte, *warp.UnsignedMessage, error) {

@@ -6,5 +6,6 @@ package rpc
 const (
 	JSONRPCEndpoint = "/tokenapi"
 
+	//nolint:unused
 	ordersToSend = 128
 )

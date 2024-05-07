@@ -26,6 +26,7 @@ import (
 	"sync"
 )
 
+//nolint:structcheck
 type ShardedMap[K comparable, V any] struct {
 	numShards int
 	shards    []*shard[K, V]
@@ -33,11 +34,13 @@ type ShardedMap[K comparable, V any] struct {
 	hashFn HashFn[K]
 }
 
+//nolint:structcheck
 type shard[K comparable, V any] struct {
 	sync.RWMutex
 	internalMap map[K]V
 }
 
+//nolint:unused
 type hashable interface {
 	~string | ~int | ~uint | ~int64 | ~uint64 | ~int32 | ~uint32 | ~int16 | ~uint16 | ~int8 | ~uint8
 }

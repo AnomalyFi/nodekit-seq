@@ -7,7 +7,7 @@ import (
 	"context"
 	crand "crypto/rand"
 	"fmt"
-	"math/rand"
+	"math/big"
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
@@ -109,7 +109,10 @@ var runSpamSequencerMsgCmd = &cobra.Command{
 		}
 
 		for i := 0; i < numAddress; i++ {
-			handler.Root().GenerateKey()
+			err := handler.Root().GenerateKey()
+			if err != nil {
+				return nil
+			}
 		}
 
 		keys, err := handler.Root().GetKeys()
@@ -141,12 +144,13 @@ var runSpamSequencerMsgCmd = &cobra.Command{
 }
 
 func randomBytes() ([]byte, error) {
-	// 256 kb
-	numBytes := rand.Intn(256 * 1024)
+	numBytes, err := crand.Int(crand.Reader, big.NewInt(256*1024))
+	if err != nil {
+		return nil, err
+	}
 
-	b := make([]byte, numBytes)
-
-	_, err := crand.Read(b)
+	b := make([]byte, numBytes.Int64())
+	_, err = crand.Read(b)
 	if err != nil {
 		return nil, err
 	}

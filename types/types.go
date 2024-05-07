@@ -11,7 +11,7 @@ import (
 
 type SEQTransaction struct {
 	Namespace   string `json:"namespace"`
-	Tx_id       string `json:"tx_id"`
+	Tx_id       string `json:"tx_id"` //nolint:stylecheck
 	Index       uint64 `json:"tx_index"`
 	Transaction []byte `json:"transaction"`
 }
@@ -106,12 +106,12 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (self *Header) Commit() Commitment {
+func (h *Header) Commit() Commitment {
 	return NewRawCommitmentBuilder("BLOCK").
-		Uint64Field("height", self.Height).
-		Uint64Field("timestamp", self.Timestamp).
-		Uint64Field("l1_head", self.L1Head).
-		Field("transactions_root", self.TransactionsRoot.Commit()).
+		Uint64Field("height", h.Height).
+		Uint64Field("timestamp", h.Timestamp).
+		Uint64Field("l1_head", h.L1Head).
+		Field("transactions_root", h.TransactionsRoot.Commit()).
 		Finalize()
 }
 
@@ -138,9 +138,9 @@ func (r *NmtRoot) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (self *NmtRoot) Commit() Commitment {
+func (r *NmtRoot) Commit() Commitment {
 	return NewRawCommitmentBuilder("NMTROOT").
-		VarSizeField("root", self.Root).
+		VarSizeField("root", r.Root).
 		Finalize()
 }
 

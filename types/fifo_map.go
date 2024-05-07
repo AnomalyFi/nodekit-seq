@@ -22,6 +22,7 @@ package types
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//nolint:structcheck
 type FIFOMap[K comparable, V any] struct {
 	internalMap *ShardedMap[K, V]
 	queue       chan K
