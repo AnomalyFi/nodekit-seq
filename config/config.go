@@ -112,12 +112,12 @@ func New(nodeID ids.NodeID, b []byte) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open verification key file: %w", err)
 	}
-	defer vkeyFile.Close()
 	vk := plonk.NewVerifyingKey(ecc.BN254)
 	_, err = vk.ReadFrom(vkeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read verification key: %w", err)
 	}
+	vkeyFile.Close()
 	c.VerificationKey = vk
 
 	// cache the precompile decoder ABI

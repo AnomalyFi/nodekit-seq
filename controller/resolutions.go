@@ -14,6 +14,7 @@ import (
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/trace"
 	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
 )
 
 func (c *Controller) Genesis() *genesis.Genesis {
@@ -76,4 +77,8 @@ func (c *Controller) GetLoanFromState(
 	destination ids.ID,
 ) (uint64, error) {
 	return storage.GetLoanFromState(ctx, c.inner.ReadState, asset, destination)
+}
+
+func (c *Controller) WarpSigner() warp.Signer {
+	return c.snowCtx.WarpSigner
 }

@@ -14,12 +14,13 @@ import (
 )
 
 type ServerLess struct {
-	Clients                 map[int]*websocket.Conn
-	Upgrader                websocket.Upgrader
-	clientsL                sync.Mutex
-	logger                  logging.Logger
-	SendRequestToAll        func(context.Context, int, []byte) error
-	SendRequestToIndividual func(context.Context, int, ids.NodeID, []byte) error
+	Clients                        map[int]*websocket.Conn
+	Upgrader                       websocket.Upgrader
+	clientsL                       sync.Mutex
+	logger                         logging.Logger
+	SendRequestToAll               func(context.Context, int, []byte) error
+	SendRequestToIndividual        func(context.Context, int, ids.NodeID, []byte) error
+	SignAndSendRequestToIndividual func(context.Context, int, []byte) error
 }
 
 func NewServerLess(readBufferSize, writeBufferSize int, logger logging.Logger) *ServerLess {
@@ -33,7 +34,7 @@ func NewServerLess(readBufferSize, writeBufferSize int, logger logging.Logger) *
 	}
 }
 
-// register a new relayer or update the existing relayer
+// register a new relayer or update the existing relayer.
 func (s *ServerLess) registerRelayer(w http.ResponseWriter, r *http.Request) {
 	// Upgrade the HTTP connection to a WebSocket connection
 	conn, err := s.Upgrader.Upgrade(w, r, nil)
@@ -66,10 +67,14 @@ func (s *ServerLess) registerRelayer(w http.ResponseWriter, r *http.Request) {
 			}
 			break
 		}
+		if len(data) > 100*1024 {
+			s.logger.Error("Data is too large", zap.Int("size", len(data)), zap.Int("max size", 100*1024))
+			continue
+		}
 		switch data[0] {
-		case sendToPeersMode:
+		case SendToPeersMode:
 			s.SendToPeers(data[1:])
-		case settleMode:
+		case SettleMode:
 			s.Settle(data[1:])
 		default:
 			s.logger.Error("Unknown mode", zap.Int("mode", int(data[0])))
@@ -109,8 +114,15 @@ func (s *ServerLess) SendToPeers(data []byte) error {
 	return nil
 }
 
-// send signature only to the validator, that satisfied the relay request
 func (s *ServerLess) Settle(data []byte) error {
+	var sasd SignAndSettleData
+	err := json.Unmarshal(data, &sasd)
+	if err != nil {
+		return err
+	}
+	if err := s.SignAndSendRequestToIndividual(context.Background(), sasd.RelayerID, sasd.MsgBytes); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -119,7 +131,8 @@ func (s *ServerLess) Settle(data []byte) error {
 func (s *ServerLess) Serverless(relayManager RelayManager, port string) {
 	s.SendRequestToAll = relayManager.SendRequestToAll
 	s.SendRequestToIndividual = relayManager.SendRequestToIndividual
+	s.SignAndSendRequestToIndividual = relayManager.SignAndSendRequestToIndividual
 	http.HandleFunc("/register-relayer", s.registerRelayer)
 	http.ListenAndServe(port, nil)
-	s.logger.Debug("Server started", zap.String("port", port))
+	s.logger.Info("Server started", zap.String("port", port))
 }
