@@ -1,3 +1,4 @@
+vkeyhex in config is derived from vk.bin in succinctlabs/blobstreamx artifacts.
 <p align="center">
   <img width="90%" alt="tokenvm" src="assets/logo.png">
 </p>

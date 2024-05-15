@@ -4,9 +4,9 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -20,6 +20,7 @@ import (
 	"github.com/ava-labs/avalanchego/utils/profiler"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/version"
@@ -34,7 +35,7 @@ const (
 	defaultContinuousProfilerMaxFiles  = 10
 	defaultStoreTransactions           = true
 	defaultMaxOrdersPerPair            = 1024
-	defaultServrLessPort               = ":8080"
+	defaultServerLessPort              = ":8080"
 )
 
 type Config struct {
@@ -94,7 +95,7 @@ type Config struct {
 	loaded               bool
 	nodeID               ids.NodeID
 	parsedExemptSponsors []codec.Address
-	VKeyPath             string `json:"vkeyPath"`
+	VKeyHex              string `json:"vKeyHex"`
 }
 
 func New(nodeID ids.NodeID, b []byte) (*Config, error) {
@@ -108,16 +109,13 @@ func New(nodeID ids.NodeID, b []byte) (*Config, error) {
 	}
 
 	// load verification key.
-	vkeyFile, err := os.Open(c.VKeyPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open verification key file: %w", err)
-	}
+	vkeyBytes := common.Hex2Bytes(c.VKeyHex)
+
 	vk := plonk.NewVerifyingKey(ecc.BN254)
-	_, err = vk.ReadFrom(vkeyFile)
+	_, err := vk.ReadFrom(bytes.NewBuffer(vkeyBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read verification key: %w", err)
 	}
-	vkeyFile.Close()
 	c.VerificationKey = vk
 
 	// cache the precompile decoder ABI
@@ -157,7 +155,7 @@ func (c *Config) setDefault() {
 	c.VerifyAuth = c.Config.GetVerifyAuth()
 	c.StoreTransactions = defaultStoreTransactions
 	c.MaxOrdersPerPair = defaultMaxOrdersPerPair
-	c.ServerlessPort = defaultServrLessPort
+	c.ServerlessPort = defaultServerLessPort
 }
 
 func (c *Config) GetLogLevel() logging.Level                { return c.LogLevel }
