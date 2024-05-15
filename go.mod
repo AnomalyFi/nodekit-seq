@@ -6,7 +6,7 @@ require (
 	github.com/AnomalyFi/hypersdk v0.0.0-20240504151126-9e41437312a2
 	github.com/ava-labs/avalanche-network-runner v1.7.4-rc.0
 	github.com/ava-labs/avalanchego v1.10.18
-	github.com/consensys/gnark-crypto v0.12.2-0.20240215234832-d72fcb379d3e
+	github.com/consensys/gnark-crypto v0.12.2-0.20231013160410-1f65e75b6dfb
 	github.com/ethereum/go-ethereum v1.12.0
 	github.com/fatih/color v1.13.0
 	github.com/gorilla/websocket v1.5.0
@@ -50,7 +50,7 @@ require (
 	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
 	github.com/cockroachdb/pebble v0.0.0-20230224221607-fccb83b60d5c // indirect
 	github.com/cockroachdb/redact v1.1.3 // indirect
-	github.com/consensys/gnark v0.10.0
+	github.com/consensys/gnark v0.9.1
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deckarep/golang-set/v2 v2.1.0 // indirect

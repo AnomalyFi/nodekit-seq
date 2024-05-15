@@ -4,9 +4,9 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -15,17 +15,17 @@ import (
 	"github.com/AnomalyFi/hypersdk/gossiper"
 	"github.com/AnomalyFi/hypersdk/trace"
 	"github.com/AnomalyFi/hypersdk/vm"
+	"github.com/AnomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/version"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/ava-labs/avalanchego/utils/profiler"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"golang.org/x/exp/rand"
-
-	"github.com/AnomalyFi/nodekit-seq/consts"
-	"github.com/AnomalyFi/nodekit-seq/version"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/plonk"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"golang.org/x/exp/rand"
 )
 
 var _ vm.Config = (*Config)(nil)
@@ -95,7 +95,7 @@ type Config struct {
 	loaded               bool
 	nodeID               ids.NodeID
 	parsedExemptSponsors []codec.Address
-	VKeyPath             string `json:"vkeyPath"`
+	VKeyHex              string `json:"vKeyHex"`
 }
 
 func New(nodeID ids.NodeID, b []byte) (*Config, error) {
@@ -109,16 +109,12 @@ func New(nodeID ids.NodeID, b []byte) (*Config, error) {
 	}
 
 	// load verification key.
-	vkeyFile, err := os.Open(c.VKeyPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open verification key file: %w", err)
-	}
+	vkeyBytes := common.Hex2Bytes(c.VKeyHex)
 	vk := plonk.NewVerifyingKey(ecc.BN254)
-	_, err = vk.ReadFrom(vkeyFile)
+	_, err := vk.ReadFrom(bytes.NewBuffer(vkeyBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read verification key: %w", err)
 	}
-	vkeyFile.Close()
 	c.VerificationKey = vk
 
 	// cache the precompile decoder ABI

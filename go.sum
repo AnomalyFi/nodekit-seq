@@ -150,8 +150,12 @@ github.com/cockroachdb/redact v1.1.3/go.mod h1:BVNblN9mBWFyMyqK1k3AAiSxhvhfK2oOZ
 github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0/go.mod h1:4Zcjuz89kmFXt9morQgcfYZAYZ5n8WHjt81YYWIwtTM=
 github.com/consensys/bavard v0.1.13 h1:oLhMLOFGTLdlda/kma4VOJazblc7IM5y5QPd2A/YjhQ=
 github.com/consensys/bavard v0.1.13/go.mod h1:9ItSMtA/dXMAiL7BG6bqW2m3NdSEObYWoH223nGHukI=
+github.com/consensys/gnark v0.9.1 h1:aTwBp5469MY/2jNrf4ABrqHRW3+JytfkADdw4ZBY7T0=
+github.com/consensys/gnark v0.9.1/go.mod h1:udWvWGXnfBE7mn7BsNoGAvZDnUhcONBEtNijvVjfY80=
 github.com/consensys/gnark v0.10.0 h1:yhi6ThoeFP7WrH8zQDaO56WVXe9iJEBSkfrZ9PZxabw=
 github.com/consensys/gnark v0.10.0/go.mod h1:VJU5JrrhZorbfDH+EUjcuFWr2c5z19tHPh8D6KVQksU=
+github.com/consensys/gnark-crypto v0.12.2-0.20231013160410-1f65e75b6dfb h1:f0BMgIjhZy4lSRHCXFbQst85f5agZAjtDMixQqBWNpc=
+github.com/consensys/gnark-crypto v0.12.2-0.20231013160410-1f65e75b6dfb/go.mod h1:v2Gy7L/4ZRosZ7Ivs+9SfUDr0f5UlG+EM5t7MPHiLuY=
 github.com/consensys/gnark-crypto v0.12.2-0.20240215234832-d72fcb379d3e h1:MKdOuCiy2DAX1tMp2YsmtNDaqdigpY6B5cZQDJ9BvEo=
 github.com/consensys/gnark-crypto v0.12.2-0.20240215234832-d72fcb379d3e/go.mod h1:wKqwsieaKPThcFkHe0d0zMsbHEUWFmZcG7KBCse210o=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
