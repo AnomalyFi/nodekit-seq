@@ -82,3 +82,7 @@ func (c *Controller) GetLoanFromState(
 func (c *Controller) WarpSigner() warp.Signer {
 	return c.snowCtx.WarpSigner
 }
+
+func (c *Controller) ServerlessPort() string {
+	return c.config.ServerlessPort
+}

@@ -20,6 +20,7 @@ import (
 	"github.com/ava-labs/avalanchego/utils/profiler"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"golang.org/x/exp/rand"
 
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/version"
@@ -34,7 +35,7 @@ const (
 	defaultContinuousProfilerMaxFiles  = 10
 	defaultStoreTransactions           = true
 	defaultMaxOrdersPerPair            = 1024
-	defaultServrLessPort               = ":8080"
+	defaultServerLessPort              = ":8080"
 )
 
 type Config struct {
@@ -136,6 +137,9 @@ func New(nodeID ids.NodeID, b []byte) (*Config, error) {
 		}
 		c.parsedExemptSponsors[i] = p
 	}
+	// generate random 4 digit number for starting serverless server.
+	rand := rand.Intn(8999) + 1000
+	c.ServerlessPort = fmt.Sprintf(":%d", rand)
 	return c, nil
 }
 
@@ -157,7 +161,7 @@ func (c *Config) setDefault() {
 	c.VerifyAuth = c.Config.GetVerifyAuth()
 	c.StoreTransactions = defaultStoreTransactions
 	c.MaxOrdersPerPair = defaultMaxOrdersPerPair
-	c.ServerlessPort = defaultServrLessPort
+	c.ServerlessPort = defaultServerLessPort
 }
 
 func (c *Config) GetLogLevel() logging.Level                { return c.LogLevel }
