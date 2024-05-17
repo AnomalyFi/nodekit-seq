@@ -39,10 +39,8 @@ dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7
 filippo.io/edwards25519 v1.0.0 h1:0wAIcmJUqRdI8IJ/3eGi5/HwXZWPujYXXlkrQogz0Ek=
 filippo.io/edwards25519 v1.0.0/go.mod h1:N1IkdkCkiLB6tki+MYJoSx2JTY9NUlxZE7eHn5EwJns=
 github.com/AndreasBriese/bbloom v0.0.0-20190306092124-e2d15f34fcf9/go.mod h1:bOvUY6CB00SOBii9/FifXqc0awNKxLFCL/+pkDPuyl8=
-github.com/AnomalyFi/hypersdk v0.0.0-20240504151126-9e41437312a2 h1:cVgmKIP/LCWK5GBl4IsXNrzwuxJ3spy1vIzJ8FzBQys=
-github.com/AnomalyFi/hypersdk v0.0.0-20240504151126-9e41437312a2/go.mod h1:Jz4uRdLR0ocApeZT3gI2H7BHbIXAYalAP8sNxb6kpNA=
-github.com/AnomalyFi/hypersdk v0.0.0-20240517170716-e0f8585e28c3 h1:tGUjv0h/YPlAw9QlaaO2TGmGYoCYA6vXWhAH8D4EP7Y=
-github.com/AnomalyFi/hypersdk v0.0.0-20240517170716-e0f8585e28c3/go.mod h1:Jz4uRdLR0ocApeZT3gI2H7BHbIXAYalAP8sNxb6kpNA=
+github.com/AnomalyFi/hypersdk v0.0.0-20240517192934-778c62d68513 h1:lm0pM47ojPjG4fNP4YhdSFePS5SQAwvB9U0R/qiu1BM=
+github.com/AnomalyFi/hypersdk v0.0.0-20240517192934-778c62d68513/go.mod h1:Jz4uRdLR0ocApeZT3gI2H7BHbIXAYalAP8sNxb6kpNA=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/toml v1.2.1 h1:9F2/+DoOYIOksmaJFPw1tGFy1eDnIJXg+UHjuD8lTak=
 github.com/BurntSushi/toml v1.2.1/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=

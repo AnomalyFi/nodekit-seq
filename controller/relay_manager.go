@@ -17,6 +17,7 @@ import (
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/snow"
 	"github.com/ava-labs/avalanchego/snow/engine/common"
+	"github.com/ava-labs/avalanchego/utils/crypto/bls"
 	"github.com/ava-labs/avalanchego/utils/set"
 	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
 	"go.uber.org/zap"
@@ -232,28 +233,29 @@ func (r *RelayManager) SignAndSendRequestToIndividual(
 	var msg serverless.Message
 	json.Unmarshal(data, &msg)
 	// sign message
-	uSigWarpMsg := warp.UnsignedMessage{
-		NetworkID:     r.snowCtx.NetworkID,
-		SourceChainID: r.snowCtx.ChainID,
-		Payload:       data,
+	uSigWarpMsg, err := warp.NewUnsignedMessage(r.snowCtx.NetworkID, r.snowCtx.ChainID, data)
+	if err != nil {
+		r.snowCtx.Log.Error("unable to create unsigned message", zap.Error(err))
+		return fmt.Errorf("unable to create unsigned message: %w", err)
 	}
-	signature, err := r.snowCtx.WarpSigner.Sign(&uSigWarpMsg)
+	signature, err := r.snowCtx.WarpSigner.Sign(uSigWarpMsg)
 	if err != nil {
 		r.snowCtx.Log.Error("unable to sign message", zap.Error(err))
 		return fmt.Errorf("unable to sign message: %w", err)
 	}
+	pubKeyBytes := bls.PublicKeyToBytes(r.snowCtx.PublicKey)
 	sigMsg := serverless.SignedMessage{
-		PublicKey:            *r.snowCtx.PublicKey,
+		PublicKeyBytes:       pubKeyBytes,
 		SignatureBytes:       signature,
 		UnsignedMessageBytes: data,
 	}
+
 	sigMsgBytes, err := json.Marshal(sigMsg)
 	if err != nil {
 		r.snowCtx.Log.Error("unable to marshal signed message", zap.Error(err))
 		return fmt.Errorf("unable to marshal signed message: %w", err)
 	}
 	// append settle mode byte, after signing the message.
-	sigMsgBytes = append([]byte{serverless.SettleMode}, sigMsgBytes...)
 	r.SendRequestToIndividual(ctx, relayerID, msg.NodeID, sigMsgBytes)
 	return nil
 }
