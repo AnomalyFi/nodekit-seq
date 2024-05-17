@@ -3,7 +3,7 @@ module github.com/AnomalyFi/nodekit-seq
 go 1.21
 
 require (
-	github.com/AnomalyFi/hypersdk v0.0.0-20240504151126-9e41437312a2
+	github.com/AnomalyFi/hypersdk v0.0.0-20240517170716-e0f8585e28c3
 	github.com/ava-labs/avalanche-network-runner v1.7.4-rc.0
 	github.com/ava-labs/avalanchego v1.10.18
 	github.com/consensys/gnark-crypto v0.12.2-0.20231013160410-1f65e75b6dfb
@@ -179,4 +179,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-// replace github.com/AnomalyFi/hypersdk => ../hypersdk
+// replace github.com/AnomalyFi/hypersdk => ../nodekit-hypersdk

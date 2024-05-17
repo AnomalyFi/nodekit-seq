@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -134,6 +135,8 @@ func New(nodeID ids.NodeID, b []byte) (*Config, error) {
 		c.parsedExemptSponsors[i] = p
 	}
 	// generate random 4 digit number for starting serverless server.
+	seed := time.Now().UnixNano() + int64(os.Getpid())
+	rand.Seed(uint64(seed))
 	rand := rand.Intn(8999) + 1000
 	c.ServerlessPort = fmt.Sprintf(":%d", rand)
 	return c, nil

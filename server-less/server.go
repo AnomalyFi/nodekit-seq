@@ -61,6 +61,7 @@ func (s *ServerLess) registerRelayer(w http.ResponseWriter, r *http.Request) {
 	// handle the messages from the client
 	for {
 		_, data, err := conn.ReadMessage()
+		s.logger.Info("Received message", zap.Int("size", len(data)))
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				s.logger.Error("Failed to read the message", zap.Error(err))
@@ -88,8 +89,10 @@ func (s *ServerLess) SendToClient(relayerID int, nodeID ids.NodeID, data []byte)
 	conn, ok := s.Clients[relayerID]
 	s.clientsL.Unlock()
 	if !ok {
+		s.logger.Info("clients", zap.Any("clients", s.Clients))
 		return fmt.Errorf("relayer does not exist with Id: %d", relayerID)
 	}
+	s.logger.Info("Sending data to client", zap.Int("size", len(data)))
 	err := conn.WriteJSON(SendToClientData{nodeID, data})
 	if err != nil {
 		s.clientsL.Lock()
