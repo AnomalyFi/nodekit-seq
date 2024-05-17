@@ -256,6 +256,7 @@ func (r *RelayManager) SignAndSendRequestToIndividual(
 		return fmt.Errorf("unable to marshal signed message: %w", err)
 	}
 	// append settle mode byte, after signing the message.
+	sigMsgBytes = append([]byte{serverless.SettleMode}, sigMsgBytes...)
 	r.SendRequestToIndividual(ctx, relayerID, msg.NodeID, sigMsgBytes)
 	return nil
 }
