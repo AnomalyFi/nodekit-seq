@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -111,6 +110,7 @@ func New(nodeID ids.NodeID, b []byte) (*Config, error) {
 
 	// load verification key.
 	vkeyBytes := common.Hex2Bytes(c.VKeyHex)
+
 	vk := plonk.NewVerifyingKey(ecc.BN254)
 	_, err := vk.ReadFrom(bytes.NewBuffer(vkeyBytes))
 	if err != nil {
