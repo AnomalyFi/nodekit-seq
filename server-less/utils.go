@@ -2,7 +2,6 @@ package serverless
 
 import (
 	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/utils/crypto/bls"
 )
 
 type SendToPeersData struct {
@@ -28,9 +27,9 @@ type UnsignedMessage struct {
 }
 
 type SignedMessage struct {
-	PublicKey            bls.PublicKey `json:"publicKey"`
-	SignatureBytes       []byte        `json:"signature"`
-	UnsignedMessageBytes []byte        `json:"unsignedMessage"`
+	PublicKeyBytes       []byte `json:"publicKeyBytes"`
+	SignatureBytes       []byte `json:"signature"`
+	UnsignedMessageBytes []byte `json:"unsignedMessage"`
 }
 
 type Message struct {

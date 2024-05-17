@@ -15,17 +15,17 @@ import (
 	"github.com/AnomalyFi/hypersdk/gossiper"
 	"github.com/AnomalyFi/hypersdk/trace"
 	"github.com/AnomalyFi/hypersdk/vm"
+	"github.com/AnomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/version"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/ava-labs/avalanchego/utils/profiler"
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/backend/plonk"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-
-	"github.com/AnomalyFi/nodekit-seq/consts"
-	"github.com/AnomalyFi/nodekit-seq/version"
-	"github.com/consensys/gnark-crypto/ecc"
-	"github.com/consensys/gnark/backend/plonk"
+	"golang.org/x/exp/rand"
 )
 
 var _ vm.Config = (*Config)(nil)
@@ -134,6 +134,11 @@ func New(nodeID ids.NodeID, b []byte) (*Config, error) {
 		}
 		c.parsedExemptSponsors[i] = p
 	}
+	// generate random 4 digit number for starting serverless server.
+	seed := time.Now().UnixNano() + int64(os.Getpid())
+	rand.Seed(uint64(seed))
+	rand := rand.Intn(8999) + 1000
+	c.ServerlessPort = fmt.Sprintf(":%d", rand)
 	return c, nil
 }
 

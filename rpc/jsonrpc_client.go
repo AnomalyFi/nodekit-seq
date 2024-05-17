@@ -226,6 +226,18 @@ func (cli *JSONRPCClient) WaitForTransaction(ctx context.Context, txID ids.ID) (
 	return success, fee, nil
 }
 
+func (cli *JSONRPCClient) ServerlessPort(ctx context.Context) (string, error) {
+	resp := new(ServerlessPortReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"serverlessPort",
+		nil,
+		resp,
+	)
+	return resp.Port, err
+
+}
+
 var _ chain.Parser = (*Parser)(nil)
 
 type Parser struct {

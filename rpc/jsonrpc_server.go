@@ -186,3 +186,12 @@ func (j *JSONRPCServer) Loan(req *http.Request, args *LoanArgs, reply *LoanReply
 	reply.Amount = amount
 	return nil
 }
+
+type ServerlessPortReply struct {
+	Port string `json:"port"`
+}
+
+func (j *JSONRPCServer) ServerlessPort(_ *http.Request, _ *struct{}, reply *ServerlessPortReply) (err error) {
+	reply.Port = j.c.ServerlessPort()
+	return nil
+}

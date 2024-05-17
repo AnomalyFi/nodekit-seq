@@ -29,7 +29,7 @@ func (*Deploy) GetTypeID() uint8 {
 
 func (d *Deploy) StateKeys(actor codec.Address, txID ids.ID) state.Keys {
 	return state.Keys{
-		string(storage.ContractKey(d.ContractID)): state.Read | state.Write,
+		string(storage.ContractKey(d.ContractID)): state.All,
 	}
 }
 

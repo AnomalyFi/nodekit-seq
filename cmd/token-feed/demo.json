@@ -1,7 +1,7 @@
 {
   "host": "",
   "port": 9092,
-  "tokenRPC": "http://127.0.0.1:62451/ext/bc/2mzRiBeC83RzGcanb5B35BXNSDMc59RxGoxF4g5REGAB5m5sPP",
+  "tokenRPC": "http://127.0.0.1:40865/ext/bc/sjsS7sTexmPx8dRKCLGuftwkmpLovc5N1Hka2nxbHAcL3WAzQ",
   "recipient": "token1rvzhmceq997zntgvravfagsks6w0ryud3rylh4cdvayry0dl97nsjzf3yp",
   "feedSize": 100,
   "minFee": 10000000,
