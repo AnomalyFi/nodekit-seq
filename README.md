@@ -1,4 +1,9 @@
 vkeyhex in config is derived from vk.bin in succinctlabs/blobstreamx artifacts.
+
+> [!WARNING]
+> Remove serverless port from json rpc, instead make it configurable after hardening of relayer methods.
+> Testing version for relayer tests is located at relay-decentralised-testing branch. 
+
 <p align="center">
   <img width="90%" alt="tokenvm" src="assets/logo.png">
 </p>

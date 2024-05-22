@@ -4,40 +4,44 @@ import (
 	"github.com/ava-labs/avalanchego/ids"
 )
 
-type SendToPeersData struct {
-	RawData   []byte `json:"raw_data"`
-	RelayerID int    `json:"relayer_id"`
-}
+var (
+	SendToPeersMode             = byte(0)
+	SendToValidatorMode         = byte(1)
+	SignAndSendToPeersMode      = byte(2)
+	SignAndSendToValidatorsMode = byte(3)
+)
 
 type SendToClientData struct {
 	NodeID ids.NodeID `json:"node_id"`
 	Data   []byte     `json:"data"`
 }
 
-var (
-	SendToPeersMode = byte(0)
-	SettleMode      = byte(1)
-)
+type SendToPeersData struct {
+	RelayerID int    `json:"relayer_id"`
+	RawData   []byte `json:"raw_data"`
+}
 
-// validators will use this signed message to claim their relay fees, from SEQ.
-type UnsignedMessage struct {
-	RelayerID  int    `json:"relayerID"`
-	StartBlock uint64 `json:"startBlock"`
-	EndBlock   uint64 `json:"endBlock"`
+type SendToValidatorsData struct {
+	RelayerID int        `json:"relayer_id"`
+	NodeID    ids.NodeID `json:"node_id"`
+	RawData   []byte     `json:"raw_data"`
+}
+
+type SignAndSendToPeersData struct {
+	RelayerID          int    `json:"relayer_id"`
+	IdentificationByte byte   `json:"identification_byte"`
+	MsgBytes           []byte `json:"msg_bytes"`
+}
+
+type SignAndSendToValidatorData struct {
+	RelayerID          int        `json:"relayer_id"`
+	NodeID             ids.NodeID `json:"node_id"`
+	IdentificationByte byte       `json:"identification_byte"`
+	MsgBytes           []byte     `json:"msg_bytes"`
 }
 
 type SignedMessage struct {
 	PublicKeyBytes       []byte `json:"publicKeyBytes"`
 	SignatureBytes       []byte `json:"signature"`
 	UnsignedMessageBytes []byte `json:"unsignedMessage"`
-}
-
-type Message struct {
-	NodeID          ids.NodeID      `json:"nodeID"`
-	UnSignedMessage UnsignedMessage `json:"UnSignedMessage"`
-}
-
-type SignAndSettleData struct {
-	RelayerID int    `json:"relayer_id"`
-	MsgBytes  []byte `json:"msg_bytes"`
 }

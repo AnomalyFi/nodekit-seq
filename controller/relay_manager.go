@@ -228,35 +228,62 @@ func (r *RelayManager) SendRequestToIndividual(
 func (r *RelayManager) SignAndSendRequestToIndividual(
 	ctx context.Context,
 	relayerID int,
+	nodeID ids.NodeID,
+	identificationByte byte,
 	data []byte,
 ) error {
-	var msg serverless.Message
-	json.Unmarshal(data, &msg)
-	// sign message
-	uSigWarpMsg, err := warp.NewUnsignedMessage(r.snowCtx.NetworkID, r.snowCtx.ChainID, data)
+	sigMsgBytes, err := SignRelayManagerMessage(identificationByte, data, r.snowCtx.NetworkID, r.snowCtx.ChainID, r.snowCtx.WarpSigner, bls.PublicKeyToBytes(r.snowCtx.PublicKey))
 	if err != nil {
-		r.snowCtx.Log.Error("unable to create unsigned message", zap.Error(err))
-		return fmt.Errorf("unable to create unsigned message: %w", err)
+		r.snowCtx.Log.Error("unable to sign and send request to all", zap.Error(err))
 	}
-	signature, err := r.snowCtx.WarpSigner.Sign(uSigWarpMsg)
+	r.SendRequestToIndividual(ctx, relayerID, nodeID, sigMsgBytes)
+	return nil
+}
+
+func (r *RelayManager) SignAndSendRequestToAll(
+	ctx context.Context,
+	relayerID int,
+	identificationByte byte,
+	data []byte,
+) error {
+	sigMsgBytes, err := SignRelayManagerMessage(identificationByte, data, r.snowCtx.NetworkID, r.snowCtx.ChainID, r.snowCtx.WarpSigner, bls.PublicKeyToBytes(r.snowCtx.PublicKey))
 	if err != nil {
-		r.snowCtx.Log.Error("unable to sign message", zap.Error(err))
-		return fmt.Errorf("unable to sign message: %w", err)
+		r.snowCtx.Log.Error("unable to sign and send request to all", zap.Error(err))
 	}
-	pubKeyBytes := bls.PublicKeyToBytes(r.snowCtx.PublicKey)
+	r.SendRequestToAll(ctx, relayerID, sigMsgBytes)
+	return nil
+}
+
+func SignRelayManagerMessage(
+	identificationByte byte,
+	data []byte,
+	networkID uint32,
+	chainID ids.ID,
+	signer warp.Signer,
+	publicKeyBytes []byte,
+) ([]byte, error) {
+	// prepare warp message & sign.
+	uSigWarpMsg, err := warp.NewUnsignedMessage(networkID, chainID, data)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create unsigned message: %w", err)
+	}
+
+	signature, err := signer.Sign(uSigWarpMsg)
+	if err != nil {
+		return nil, fmt.Errorf("unable to sign message: %w", err)
+	}
+
 	sigMsg := serverless.SignedMessage{
-		PublicKeyBytes:       pubKeyBytes,
+		PublicKeyBytes:       publicKeyBytes,
 		SignatureBytes:       signature,
 		UnsignedMessageBytes: data,
 	}
 
 	sigMsgBytes, err := json.Marshal(sigMsg)
 	if err != nil {
-		r.snowCtx.Log.Error("unable to marshal signed message", zap.Error(err))
-		return fmt.Errorf("unable to marshal signed message: %w", err)
+		return nil, fmt.Errorf("unable to marshal signed message: %w", err)
 	}
-	// append settle mode byte, after signing the message.
-	sigMsgBytes = append([]byte{serverless.SettleMode}, sigMsgBytes...)
-	r.SendRequestToIndividual(ctx, relayerID, msg.NodeID, sigMsgBytes)
-	return nil
+	// append client side identification byte.
+	sigMsgBytes = append([]byte{identificationByte}, sigMsgBytes...)
+	return sigMsgBytes, nil
 }
