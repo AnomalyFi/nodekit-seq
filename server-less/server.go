@@ -167,6 +167,7 @@ func (s *ServerLess) SignAndSendToValidator(data []byte) error {
 func (s *ServerLess) Serverless(relayManager RelayManager, port string) {
 	s.SendRequestToAll = relayManager.SendRequestToAll
 	s.SendRequestToIndividual = relayManager.SendRequestToIndividual
+	s.SignAndSendRequestToAll = relayManager.SignAndSendRequestToAll
 	s.SignAndSendRequestToIndividual = relayManager.SignAndSendRequestToIndividual
 	http.HandleFunc("/register-relayer", s.registerRelayer)
 	http.ListenAndServe(port, nil)
