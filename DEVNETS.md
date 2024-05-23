@@ -219,7 +219,7 @@ group to restrict the inbound rules to your IP.
 
 *NOTE*: In rare cases, you may encounter [aws-sdk-rust#611](https://github.com/awslabs/aws-sdk-rust/issues/611)
 where AWS SDK call hangs, which blocks node bootstraps. If a node takes too long to start, connect to that
-instance (e..g, use SSM sesson from your AWS console), and restart the agent with the command `sudo systemctl restart avalanched-aws`.
+instance (e.g. use SSM session from your AWS console), and restart the agent with the command `sudo systemctl restart avalanched-aws`.
 
 ### Step 7: Generate Configs
 
@@ -333,7 +333,7 @@ integrated block explorer. To do this, run the following command:
 /tmp/token-cli chain watch --hide-txs
 ```
 
-If you don't plan to load test the devnet, you may wush to just run the
+If you don't plan to load test the devnet, you may wish to just run the
 following command to get additional transaction details:
 ```bash
 /tmp/token-cli chain watch

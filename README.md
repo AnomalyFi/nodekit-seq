@@ -7,7 +7,7 @@ audited.
 ## Features
 ### Shared Sequencer
 The `SeqVM` is built from the ground up with the shared sequencer built directly into the chain 
-enabling decentralization from the start. This enable users to easily send messages from rollups like NodeKit chain to the shared sequencer. The contents of `SequencerMSG` is just `ChainId|Data|FromAddress` where the data is the transaction data 
+enabling decentralization from the start. This enables users to easily send messages from rollups like NodeKit chain to the shared sequencer. The contents of `SequencerMSG` is just `ChainId|Data|FromAddress` where the data is the transaction data 
 from the rollup translated into a byte[]. 
 
 
@@ -205,7 +205,7 @@ docker-compose -f trace/zipkin.yml down
 ## Deploying to a Devnet
 _In the world of Avalanche, we refer to short-lived, test Subnets as Devnets._
 
-To programaticaly deploy `SeqVM` to a distributed cluster of nodes running on
+To programmatically deploy `SeqVM` to a distributed cluster of nodes running on
 your own custom network or on Fuji, check out this [doc](DEVNETS.md).
 
 ## Future Work
