@@ -71,7 +71,8 @@ func (s *ServerLess) registerRelayer(w http.ResponseWriter, r *http.Request) {
 			}
 			break
 		}
-		if len(data) > 100*1024 {
+		// let the msg be under max_message_size to prevent network spam.
+		if len(data) > max_message_size {
 			s.logger.Error("Data is too large", zap.Int("size", len(data)), zap.Int("max size", 100*1024))
 			continue
 		}

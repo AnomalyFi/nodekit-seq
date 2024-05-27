@@ -4,6 +4,8 @@ import (
 	"github.com/ava-labs/avalanchego/ids"
 )
 
+const max_message_size = 100 * 1024 // 100 kiB
+
 var (
 	SendToPeersMode             = byte(0)
 	SendToValidatorMode         = byte(1)

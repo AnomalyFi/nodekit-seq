@@ -83,7 +83,17 @@ type U256 struct {
 	big.Int
 }
 
-// TODO need to fix this. Tech debt
+type BlockArgs struct {
+	// either of them need to be fed
+	ID     ids.ID `json:"id"`
+	Height uint64 `json:"height"`
+}
+
+type BlockReply struct {
+	Block []byte `json:"block"`
+}
+
+// TODO(Noah) need to fix this. Tech debt
 type TransactionResponse struct {
 	Txs     []*chain.Transaction `json:"txs"`
 	BlockId string               `json:"id"`
