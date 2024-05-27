@@ -45,8 +45,8 @@ func (s *ServerLess) registerRelayer(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 	// Read the identification number from the client
-	var realyerID int
-	err = conn.ReadJSON(&realyerID)
+	var relayerIDs []int
+	err = conn.ReadJSON(&relayerIDs)
 	if err != nil {
 		s.logger.Error("Failed to read the relayer ID", zap.Error(err))
 		return
@@ -57,7 +57,9 @@ func (s *ServerLess) registerRelayer(w http.ResponseWriter, r *http.Request) {
 	}
 	// add/update relayer
 	s.clientsL.Lock()
-	s.Clients[realyerID] = conn
+	for relayerID := range relayerIDs {
+		s.Clients[relayerID] = conn
+	}
 	s.clientsL.Unlock()
 	// handle the messages from the client
 	for {
@@ -98,7 +100,7 @@ func (s *ServerLess) SendToClient(relayerID int, nodeID ids.NodeID, data []byte)
 		return fmt.Errorf("relayer does not exist with Id: %d", relayerID)
 	}
 	s.logger.Info("Sending data to client", zap.Int("size", len(data)))
-	err := conn.WriteJSON(SendToClientData{nodeID, data})
+	err := conn.WriteJSON(SendToClientData{relayerID, nodeID, data})
 	if err != nil {
 		s.clientsL.Lock()
 		delete(s.Clients, relayerID)

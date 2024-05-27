@@ -12,8 +12,9 @@ var (
 )
 
 type SendToClientData struct {
-	NodeID ids.NodeID `json:"node_id"`
-	Data   []byte     `json:"data"`
+	RelayerID int        `json:"relayer_id"`
+	NodeID    ids.NodeID `json:"node_id"`
+	Data      []byte     `json:"data"`
 }
 
 type SendToPeersData struct {
