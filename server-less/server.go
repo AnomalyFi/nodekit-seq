@@ -47,6 +47,7 @@ func (s *ServerLess) registerRelayer(w http.ResponseWriter, r *http.Request) {
 	// Read the identification number from the client
 	var relayerIDs []int
 	err = conn.ReadJSON(&relayerIDs)
+	s.logger.Info("Received relayer IDs", zap.Any("relayerIDs", relayerIDs))
 	if err != nil {
 		s.logger.Error("Failed to read the relayer ID", zap.Error(err))
 		return
@@ -55,9 +56,9 @@ func (s *ServerLess) registerRelayer(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.logger.Error("Failed to send the connection confirmation", zap.Error(err))
 	}
-	// add/update relayer
 	s.clientsL.Lock()
-	for relayerID := range relayerIDs {
+	// add/update relayer
+	for _, relayerID := range relayerIDs {
 		s.Clients[relayerID] = conn
 	}
 	s.clientsL.Unlock()
