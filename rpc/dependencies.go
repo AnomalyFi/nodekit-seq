@@ -34,5 +34,5 @@ type Controller interface {
 	)
 	GetLoanFromState(context.Context, ids.ID, ids.ID) (uint64, error)
 	Logger() logging.Logger
-	ServerlessPort() string
+	MessageNetPort() string
 }

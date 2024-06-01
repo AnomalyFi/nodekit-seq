@@ -13,7 +13,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/heap"
 	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/hypersdk/vm"
-	serverless "github.com/AnomalyFi/nodekit-seq/server-less"
+	messagenet "github.com/AnomalyFi/nodekit-seq/messagenet"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/snow"
 	"github.com/ava-labs/avalanchego/snow/engine/common"
@@ -34,7 +34,7 @@ type RelayManager struct {
 	jobs        map[uint32]*relayJob
 	done        chan struct{}
 
-	serverless *serverless.ServerLess
+	messagenet *messagenet.MessageNet
 }
 
 type relayJob struct {
@@ -45,14 +45,14 @@ type relayJob struct {
 
 var maxOutStanding = 1000
 
-func NewRelayManager(vm *vm.VM, serverless *serverless.ServerLess, snowCtx *snow.Context) *RelayManager {
+func NewRelayManager(vm *vm.VM, messagenet *messagenet.MessageNet, snowCtx *snow.Context) *RelayManager {
 	return &RelayManager{
 		vm:          vm,
 		snowCtx:     snowCtx,
 		pendingJobs: heap.New[*relayJob, int64](64, true),
 		jobs:        make(map[uint32]*relayJob),
 		done:        make(chan struct{}),
-		serverless:  serverless,
+		messagenet:  messagenet,
 	}
 }
 
@@ -113,8 +113,8 @@ func (r *RelayManager) AppRequest(
 	var msg []byte
 	reader.UnpackBytes(-1, false, &msg)
 	// send the request to relayer
-	if err := r.serverless.SendToClient(relayerID, nodeID, msg); err != nil {
-		r.vm.Logger().Info("serverless error: %s", zap.Error(err))
+	if err := r.messagenet.SendToClient(relayerID, nodeID, msg); err != nil {
+		r.vm.Logger().Info("messagenet error: %s", zap.Error(err))
 		// don't send back any response, if server did not exist.
 		return nil
 	}
@@ -273,7 +273,7 @@ func SignRelayManagerMessage(
 		return nil, fmt.Errorf("unable to sign message: %w", err)
 	}
 
-	sigMsg := serverless.SignedMessage{
+	sigMsg := messagenet.SignedMessage{
 		PublicKeyBytes:       publicKeyBytes,
 		SignatureBytes:       signature,
 		UnsignedMessageBytes: data,

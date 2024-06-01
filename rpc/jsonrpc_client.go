@@ -226,11 +226,11 @@ func (cli *JSONRPCClient) WaitForTransaction(ctx context.Context, txID ids.ID) (
 	return success, fee, nil
 }
 
-func (cli *JSONRPCClient) ServerlessPort(ctx context.Context) (string, error) {
-	resp := new(ServerlessPortReply)
+func (cli *JSONRPCClient) MessageNetPort(ctx context.Context) (string, error) {
+	resp := new(MessageNetPortReply)
 	err := cli.requester.SendRequest(
 		ctx,
-		"serverlessPort",
+		"messagenetPort",
 		nil,
 		resp,
 	)

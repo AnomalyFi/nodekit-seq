@@ -1,4 +1,4 @@
-package serverless
+package messagenet
 
 import (
 	"github.com/ava-labs/avalanchego/ids"

@@ -187,11 +187,11 @@ func (j *JSONRPCServer) Loan(req *http.Request, args *LoanArgs, reply *LoanReply
 	return nil
 }
 
-type ServerlessPortReply struct {
+type MessageNetPortReply struct {
 	Port string `json:"port"`
 }
 
-func (j *JSONRPCServer) ServerlessPort(_ *http.Request, _ *struct{}, reply *ServerlessPortReply) (err error) {
-	reply.Port = j.c.ServerlessPort()
+func (j *JSONRPCServer) MessageNetPort(_ *http.Request, _ *struct{}, reply *MessageNetPortReply) (err error) {
+	reply.Port = j.c.MessageNetPort()
 	return nil
 }

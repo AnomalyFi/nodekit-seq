@@ -83,6 +83,6 @@ func (c *Controller) WarpSigner() warp.Signer {
 	return c.snowCtx.WarpSigner
 }
 
-func (c *Controller) ServerlessPort() string {
-	return c.config.ServerlessPort
+func (c *Controller) MessageNetPort() string {
+	return c.config.MessageNetPort
 }

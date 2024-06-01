@@ -36,7 +36,7 @@ const (
 	defaultContinuousProfilerMaxFiles  = 10
 	defaultStoreTransactions           = true
 	defaultMaxOrdersPerPair            = 1024
-	defaultServerLessPort              = ":8080"
+	defaultMessageNetPort              = ":8080"
 )
 
 type Config struct {
@@ -90,8 +90,8 @@ type Config struct {
 	// Plonk Precompile Decoder ABI
 	GnarkPrecompileDecoderABI *abi.ABI
 
-	// serverless port
-	ServerlessPort string `json:"serverlessPort"`
+	// messagenet port
+	MessageNetPort string `json:"messagenetPort"`
 
 	loaded               bool
 	nodeID               ids.NodeID
@@ -135,11 +135,11 @@ func New(nodeID ids.NodeID, b []byte) (*Config, error) {
 		}
 		c.parsedExemptSponsors[i] = p
 	}
-	// generate random 4 digit number for starting serverless server.
+	// generate random 4 digit number for starting messagenet server.
 	seed := time.Now().UnixNano() + int64(os.Getpid())
 	rand.Seed(uint64(seed))
 	rand := rand.Intn(8999) + 1000
-	c.ServerlessPort = fmt.Sprintf(":%d", rand)
+	c.MessageNetPort = fmt.Sprintf(":%d", rand)
 	return c, nil
 }
 
@@ -161,7 +161,7 @@ func (c *Config) setDefault() {
 	c.VerifyAuth = c.Config.GetVerifyAuth()
 	c.StoreTransactions = defaultStoreTransactions
 	c.MaxOrdersPerPair = defaultMaxOrdersPerPair
-	c.ServerlessPort = defaultServerLessPort
+	c.MessageNetPort = defaultMessageNetPort
 }
 
 func (c *Config) GetLogLevel() logging.Level                { return c.LogLevel }

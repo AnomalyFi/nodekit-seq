@@ -26,9 +26,9 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/config"
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
+	messagenet "github.com/AnomalyFi/nodekit-seq/messagenet"
 	"github.com/AnomalyFi/nodekit-seq/orderbook"
 	"github.com/AnomalyFi/nodekit-seq/rpc"
-	serverless "github.com/AnomalyFi/nodekit-seq/server-less"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/AnomalyFi/nodekit-seq/version"
 )
@@ -53,7 +53,7 @@ type Controller struct {
 
 	wsServer *rpc.WebSocketServer
 
-	serverLess *serverless.ServerLess
+	MessageNet *messagenet.MessageNet
 }
 
 func New() *vm.VM {
@@ -156,14 +156,14 @@ func (c *Controller) Initialize(
 			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 		}
 	}
-	// initiate serverless
-	c.serverLess = serverless.NewServerLess(1024, 1024, snowCtx.Log)
+	// initiate messagenet
+	c.MessageNet = messagenet.NewMessageNet(1024, 1024, snowCtx.Log)
 	// initiate relayManager & relayHandler
 	relayHandler, relaySender := networkManager.Register()
-	c.relayManager = NewRelayManager(c.inner, c.serverLess, snowCtx)
+	c.relayManager = NewRelayManager(c.inner, c.MessageNet, snowCtx)
 	networkManager.SetHandler(relayHandler, NewRelayHandler(c))
 
-	go c.serverLess.Serverless(c.relayManager, c.config.ServerlessPort)
+	go c.MessageNet.StartMessageNet(c.relayManager, c.config.MessageNetPort)
 	go c.relayManager.Run(relaySender)
 	// Initialize order book used to track all open orders
 	c.orderBook = orderbook.New(c, c.config.TrackedPairs, c.config.MaxOrdersPerPair)
