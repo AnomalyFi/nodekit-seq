@@ -106,23 +106,19 @@ func (c *Controller) Initialize(
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
-	// TODO: tune Pebble config based on each sub-db focus
+
 	c.metaDB = metaDB
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
-	}
 
 	// Create handlers
 	//
 	// hypersdk handler are initiatlized automatically, you just need to
 	// initialize custom handlers here.
-	apis := map[string]*common.HTTPHandler{}
+	apis := map[string]http.HTTPHandler{}
 	jsonRPCServer := rpc.NewJSONRPCServer(c)
 	c.jsonRPCServer = jsonRPCServer
 	jsonRPCHandler, err := hrpc.NewJSONRPCHandler(
 		consts.Name,
-		jsonRPCServer,
-		common.NoLock,
+		jsonRPCServer
 	)
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
@@ -164,17 +160,17 @@ func (c *Controller) StateManager() chain.StateManager {
 	return c.stateManager
 }
 
-func (c *Controller) UnitPrices(ctx context.Context) (chain.Dimensions, error) {
-	return c.inner.UnitPrices(ctx)
-}
+// func (c *Controller) UnitPrices(ctx context.Context) (chain.Dimensions, error) {
+// 	return c.inner.UnitPrices(ctx)
+// }
 
-func (c *Controller) Submit(
-	ctx context.Context,
-	verifySig bool,
-	txs []*chain.Transaction,
-) (errs []error) {
-	return c.inner.Submit(ctx, verifySig, txs)
-}
+// func (c *Controller) Submit(
+// 	ctx context.Context,
+// 	verifySig bool,
+// 	txs []*chain.Transaction,
+// ) (errs []error) {
+// 	return c.inner.Submit(ctx, verifySig, txs)
+// }
 
 // TODO I can add the blocks to the JSON RPC Server here instead of REST API
 func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) error {
@@ -195,7 +191,7 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 				tx.ID(),
 				blk.GetTimestamp(),
 				result.Success,
-				result.Consumed,
+				result.Units,
 				result.Fee,
 			)
 			if err != nil {
@@ -203,21 +199,19 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 			}
 		}
 		if result.Success {
-			switch tx.Action.(type) {
-			case *actions.CreateAsset:
-				c.metrics.createAsset.Inc()
-			case *actions.MintAsset:
-				c.metrics.mintAsset.Inc()
-			case *actions.BurnAsset:
-				c.metrics.burnAsset.Inc()
-			case *actions.Transfer:
-				c.metrics.transfer.Inc()
-			case *actions.SequencerMsg:
-				c.metrics.sequencerMsg.Inc()
-			case *actions.ImportAsset:
-				c.metrics.importAsset.Inc()
-			case *actions.ExportAsset:
-				c.metrics.exportAsset.Inc()
+			for i, act := range tx.Actions {
+				switch action := act.(type) {
+				case *actions.CreateAsset:
+					c.metrics.createAsset.Inc()
+				case *actions.MintAsset:
+					c.metrics.mintAsset.Inc()
+				case *actions.BurnAsset:
+					c.metrics.burnAsset.Inc()
+				case *actions.Transfer:
+					c.metrics.transfer.Inc()
+				case *actions.SequencerMsg:
+					c.metrics.sequencerMsg.Inc()
+				}
 			}
 		}
 	}

@@ -158,14 +158,8 @@ func init() {
 
 		createAssetCmd,
 		mintAssetCmd,
-		// burnAssetCmd,
-
-		importAssetCmd,
-		exportAssetCmd,
 
 		sequencerMsgCmd,
-
-		// exportBlockCmd,
 	)
 
 	// spam

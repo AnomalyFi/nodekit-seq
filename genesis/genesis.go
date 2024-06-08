@@ -12,6 +12,9 @@ import (
 	"github.com/ava-labs/avalanchego/trace"
 	smath "github.com/ava-labs/avalanchego/utils/math"
 
+	"github.com/AnomalyFi/hypersdk/codec"
+	"github.com/AnomalyFi/hypersdk/fees"
+
 	"github.com/AnomalyFi/hypersdk/chain"
 	hconsts "github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
@@ -30,37 +33,32 @@ type CustomAllocation struct {
 }
 
 type Genesis struct {
-	// Address prefix
-	HRP string `json:"hrp"`
+	// State Parameters
+	StateBranchFactor merkledb.BranchFactor `json:"stateBranchFactor"`
 
 	// Chain Parameters
 	MinBlockGap      int64 `json:"minBlockGap"`      // ms
 	MinEmptyBlockGap int64 `json:"minEmptyBlockGap"` // ms
 
 	// Chain Fee Parameters
-	MinUnitPrice               chain.Dimensions `json:"minUnitPrice"`
-	UnitPriceChangeDenominator chain.Dimensions `json:"unitPriceChangeDenominator"`
-	WindowTargetUnits          chain.Dimensions `json:"windowTargetUnits"` // 10s
-	MaxBlockUnits              chain.Dimensions `json:"maxBlockUnits"`     // must be possible to reach before block too large
+	MinUnitPrice               fees.Dimensions `json:"minUnitPrice"`
+	UnitPriceChangeDenominator fees.Dimensions `json:"unitPriceChangeDenominator"`
+	WindowTargetUnits          fees.Dimensions `json:"windowTargetUnits"` // 10s
+	MaxBlockUnits              fees.Dimensions `json:"maxBlockUnits"`     // must be possible to reach before block too large
 
 	// Tx Parameters
-	ValidityWindow int64 `json:"validityWindow"` // ms
+	ValidityWindow      int64 `json:"validityWindow"` // ms
+	MaxActionsPerTx     uint8 `json:"maxActionsPerTx"`
+	MaxOutputsPerAction uint8 `json:"maxOutputsPerAction"`
 
 	// Tx Fee Parameters
-	BaseComputeUnits                  uint64 `json:"baseUnits"`
-	BaseWarpComputeUnits              uint64 `json:"baseWarpUnits"`
-	WarpComputeUnitsPerSigner         uint64 `json:"warpUnitsPerSigner"`
-	OutgoingWarpComputeUnits          uint64 `json:"outgoingWarpComputeUnits"`
-	ColdStorageKeyReadUnits           uint64 `json:"coldStorageKeyReadUnits"`
-	ColdStorageValueReadUnits         uint64 `json:"coldStorageValueReadUnits"` // per chunk
-	WarmStorageKeyReadUnits           uint64 `json:"warmStorageKeyReadUnits"`
-	WarmStorageValueReadUnits         uint64 `json:"warmStorageValueReadUnits"` // per chunk
-	StorageKeyCreateUnits             uint64 `json:"storageKeyCreateUnits"`
-	StorageValueCreateUnits           uint64 `json:"storageKeyValueUnits"` // per chunk
-	ColdStorageKeyModificationUnits   uint64 `json:"coldStorageKeyModificationUnits"`
-	ColdStorageValueModificationUnits uint64 `json:"coldStorageValueModificationUnits"` // per chunk
-	WarmStorageKeyModificationUnits   uint64 `json:"warmStorageKeyModificationUnits"`
-	WarmStorageValueModificationUnits uint64 `json:"warmStorageValueModificationUnits"` // per chunk
+	BaseComputeUnits          uint64 `json:"baseUnits"`
+	StorageKeyReadUnits       uint64 `json:"storageKeyReadUnits"`
+	StorageValueReadUnits     uint64 `json:"storageValueReadUnits"` // per chunk
+	StorageKeyAllocateUnits   uint64 `json:"storageKeyAllocateUnits"`
+	StorageValueAllocateUnits uint64 `json:"storageValueAllocateUnits"` // per chunk
+	StorageKeyWriteUnits      uint64 `json:"storageKeyWriteUnits"`
+	StorageValueWriteUnits    uint64 `json:"storageValueWriteUnits"` // per chunk
 
 	// Allocations
 	CustomAllocation []*CustomAllocation `json:"customAllocation"`
@@ -68,7 +66,8 @@ type Genesis struct {
 
 func Default() *Genesis {
 	return &Genesis{
-		HRP: consts.HRP,
+		// State Parameters
+		StateBranchFactor: merkledb.BranchFactor16,
 
 		// Chain Parameters
 		MinBlockGap:      1_000,
@@ -76,33 +75,28 @@ func Default() *Genesis {
 		// MinEmptyBlockGap used to be 2_500
 
 		// Chain Fee Parameters
-		MinUnitPrice:               chain.Dimensions{100, 100, 100, 100, 100},
-		UnitPriceChangeDenominator: chain.Dimensions{48, 48, 48, 48, 48},
-		WindowTargetUnits:          chain.Dimensions{20_000_000, 1_000, 1_000, 1_000, 1_000},
-		MaxBlockUnits:              chain.Dimensions{1_800_000, 2_000, 2_000, 2_000, 2_000},
+		MinUnitPrice:               fees.Dimensions{100, 100, 100, 100, 100},
+		UnitPriceChangeDenominator: fees.Dimensions{48, 48, 48, 48, 48},
+		WindowTargetUnits:          fees.Dimensions{20_000_000, 1_000, 1_000, 1_000, 1_000},
+		MaxBlockUnits:              fees.Dimensions{1_800_000, 2_000, 2_000, 2_000, 2_000},
 
 		// Tx Parameters
-		ValidityWindow: 60 * hconsts.MillisecondsPerSecond, // ms
+		ValidityWindow:      60 * hconsts.MillisecondsPerSecond, // ms
+		MaxActionsPerTx:     16,
+		MaxOutputsPerAction: 1,
 
 		// Tx Fee Compute Parameters
-		BaseComputeUnits:          1,
-		BaseWarpComputeUnits:      1_024,
-		WarpComputeUnitsPerSigner: 128,
-		OutgoingWarpComputeUnits:  1_024,
+		BaseComputeUnits: 1,
 
 		// Tx Fee Storage Parameters
 		//
 		// TODO: tune this
-		ColdStorageKeyReadUnits:           5,
-		ColdStorageValueReadUnits:         2,
-		WarmStorageKeyReadUnits:           1,
-		WarmStorageValueReadUnits:         1,
-		StorageKeyCreateUnits:             20,
-		StorageValueCreateUnits:           5,
-		ColdStorageKeyModificationUnits:   10,
-		ColdStorageValueModificationUnits: 3,
-		WarmStorageKeyModificationUnits:   5,
-		WarmStorageValueModificationUnits: 3,
+		StorageKeyReadUnits:       5,
+		StorageValueReadUnits:     2,
+		StorageKeyAllocateUnits:   20,
+		StorageValueAllocateUnits: 5,
+		StorageKeyWriteUnits:      10,
+		StorageValueWriteUnits:    3,
 	}
 }
 
@@ -120,13 +114,13 @@ func (g *Genesis) Load(ctx context.Context, tracer trace.Tracer, mu state.Mutabl
 	ctx, span := tracer.Start(ctx, "Genesis.Load")
 	defer span.End()
 
-	if consts.HRP != g.HRP {
-		return ErrInvalidHRP
+	if err := g.StateBranchFactor.Valid(); err != nil {
+		return err
 	}
 
 	supply := uint64(0)
 	for _, alloc := range g.CustomAllocation {
-		pk, err := utils.ParseAddress(alloc.Address)
+		pk, err := codec.ParseAddressBech32(consts.HRP, alloc.Address)
 		if err != nil {
 			return err
 		}
@@ -146,7 +140,11 @@ func (g *Genesis) Load(ctx context.Context, tracer trace.Tracer, mu state.Mutabl
 		consts.Decimals,
 		[]byte(consts.Name),
 		supply,
-		ed25519.EmptyPublicKey,
+		codec.EmptyAddress,
 		false,
 	)
+}
+
+func (g *Genesis) GetStateBranchFactor() merkledb.BranchFactor {
+	return g.StateBranchFactor
 }

@@ -6,8 +6,9 @@ package controller
 import (
 	"context"
 
-	"github.com/AnomalyFi/hypersdk/chain"
-	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
+	"github.com/AnomalyFi/hypersdk/codec"
+	"github.com/AnomalyFi/hypersdk/fees"
+
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
@@ -30,31 +31,23 @@ func (c *Controller) Tracer() trace.Tracer {
 func (c *Controller) GetTransaction(
 	ctx context.Context,
 	txID ids.ID,
-) (bool, int64, bool, chain.Dimensions, uint64, error) {
+) (bool, int64, bool, fees.Dimensions, uint64, error) {
 	return storage.GetTransaction(ctx, c.metaDB, txID)
 }
 
 func (c *Controller) GetAssetFromState(
 	ctx context.Context,
 	asset ids.ID,
-) (bool, []byte, uint8, []byte, uint64, ed25519.PublicKey, bool, error) {
+) (bool, []byte, uint8, []byte, uint64, codec.Address, bool, error) {
 	return storage.GetAssetFromState(ctx, c.inner.ReadState, asset)
 }
 
 func (c *Controller) GetBalanceFromState(
 	ctx context.Context,
-	pk ed25519.PublicKey,
+	addr codec.Address,
 	asset ids.ID,
 ) (uint64, error) {
-	return storage.GetBalanceFromState(ctx, c.inner.ReadState, pk, asset)
-}
-
-func (c *Controller) GetLoanFromState(
-	ctx context.Context,
-	asset ids.ID,
-	destination ids.ID,
-) (uint64, error) {
-	return storage.GetLoanFromState(ctx, c.inner.ReadState, asset, destination)
+	return storage.GetBalanceFromState(ctx, c.inner.ReadState, addr, asset)
 }
 
 func (c *Controller) GetAcceptedBlockWindow() int {

@@ -78,6 +78,7 @@ type SubmitMsgTxReply struct {
 	TxID string `json:"txId"`
 }
 
+// TODO need to update this to be compatible with new signature standards for codec.address
 func (j *JSONRPCServer) SubmitMsgTx(
 	req *http.Request,
 	args *SubmitMsgTxArgs,
@@ -244,27 +245,6 @@ func (j *JSONRPCServer) Balance(req *http.Request, args *BalanceArgs, reply *Bal
 	}
 	reply.Amount = balance
 	return err
-}
-
-type LoanArgs struct {
-	Destination ids.ID `json:"destination"`
-	Asset       ids.ID `json:"asset"`
-}
-
-type LoanReply struct {
-	Amount uint64 `json:"amount"`
-}
-
-func (j *JSONRPCServer) Loan(req *http.Request, args *LoanArgs, reply *LoanReply) error {
-	ctx, span := j.c.Tracer().Start(req.Context(), "Server.Loan")
-	defer span.End()
-
-	amount, err := j.c.GetLoanFromState(ctx, args.Asset, args.Destination)
-	if err != nil {
-		return err
-	}
-	reply.Amount = amount
-	return nil
 }
 
 type BlockInfo struct {

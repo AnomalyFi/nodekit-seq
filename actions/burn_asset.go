@@ -14,8 +14,6 @@ import (
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/state"
-	"github.com/AnomalyFi/hypersdk/utils"
-	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 )
 
@@ -33,11 +31,10 @@ func (*BurnAsset) GetTypeID() uint8 {
 	return burnAssetID
 }
 
-func (b *BurnAsset) StateKeys(rauth chain.Auth, _ ids.ID) []string {
-	actor := auth.GetActor(rauth)
-	return []string{
-		string(storage.AssetKey(b.Asset)),
-		string(storage.BalanceKey(actor, b.Asset)),
+func (b *BurnAsset) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
+	return state.Keys{
+		string(storage.AssetKey(b.Asset)):          state.Read | state.Write,
+		string(storage.BalanceKey(actor, b.Asset)): state.Read | state.Write,
 	}
 }
 
@@ -54,35 +51,33 @@ func (b *BurnAsset) Execute(
 	_ chain.Rules,
 	mu state.Mutable,
 	_ int64,
-	rauth chain.Auth,
+	actor codec.Address,
 	_ ids.ID,
-	_ bool,
-) (bool, uint64, []byte, *warp.UnsignedMessage, error) {
-	actor := auth.GetActor(rauth)
+) ([][]byte, error) {
 	if b.Value == 0 {
-		return false, BurnComputeUnits, OutputValueZero, nil, nil
+		return false, ErrOutputValueZero
 	}
 	if err := storage.SubBalance(ctx, mu, actor, b.Asset, b.Value); err != nil {
-		return false, BurnComputeUnits, utils.ErrBytes(err), nil, nil
+		return nil, err
 	}
-	exists, symbol, decimals, metadata, supply, owner, warp, err := storage.GetAsset(ctx, mu, b.Asset)
+	exists, symbol, decimals, metadata, supply, owner, err := storage.GetAsset(ctx, mu, b.Asset)
 	if err != nil {
-		return false, BurnComputeUnits, utils.ErrBytes(err), nil, nil
+		return nil, err
 	}
 	if !exists {
-		return false, BurnComputeUnits, OutputAssetMissing, nil, nil
+		return false, ErrOutputAssetMissing
 	}
 	newSupply, err := smath.Sub(supply, b.Value)
 	if err != nil {
-		return false, BurnComputeUnits, utils.ErrBytes(err), nil, nil
+		return nil, err
 	}
-	if err := storage.SetAsset(ctx, mu, b.Asset, symbol, decimals, metadata, newSupply, owner, warp); err != nil {
-		return false, BurnComputeUnits, utils.ErrBytes(err), nil, nil
+	if err := storage.SetAsset(ctx, mu, b.Asset, symbol, decimals, metadata, newSupply, owner); err != nil {
+		return nil, err
 	}
-	return true, BurnComputeUnits, nil, nil, nil
+	return nil, nil
 }
 
-func (*BurnAsset) MaxComputeUnits(chain.Rules) uint64 {
+func (*BurnAsset) ComputeUnits(chain.Rules) uint64 {
 	return BurnComputeUnits
 }
 

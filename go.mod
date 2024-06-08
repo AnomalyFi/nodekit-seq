@@ -169,6 +169,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/ava-labs/avalanchego => github.com/AnomalyFi/avalanchego v1.10.10-beta.2
+// replace github.com/ava-labs/avalanchego => github.com/AnomalyFi/avalanchego v1.10.10-beta.2
 
-replace github.com/ava-labs/coreth => github.com/AnomalyFi/coreth v0.12.5-rc.6.1
+// replace github.com/ava-labs/coreth => github.com/AnomalyFi/coreth v0.12.5-rc.6.1
+
+replace github.com/AnomalyFi/hypersdk => /home/noah/code/hypersdk

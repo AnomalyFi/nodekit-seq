@@ -19,13 +19,36 @@ func (*StateManager) TimestampKey() []byte {
 }
 
 func (*StateManager) FeeKey() []byte {
-	return storage.HeightKey()
+	return storage.FeeKey()
 }
 
-func (*StateManager) IncomingWarpKeyPrefix(sourceChainID ids.ID, msgID ids.ID) []byte {
-	return storage.IncomingWarpKeyPrefix(sourceChainID, msgID)
+func (*StateManager) SponsorStateKeys(addr codec.Address) state.Keys {
+	return state.Keys{
+		string(storage.BalanceKey(addr, ids.Empty)): state.Read | state.Write,
+	}
 }
 
-func (*StateManager) OutgoingWarpKeyPrefix(txID ids.ID) []byte {
-	return storage.OutgoingWarpKeyPrefix(txID)
+func (*StateManager) CanDeduct(
+	ctx context.Context,
+	addr codec.Address,
+	im state.Immutable,
+	amount uint64,
+) error {
+	bal, err := storage.GetBalance(ctx, im, addr, ids.Empty)
+	if err != nil {
+		return err
+	}
+	if bal < amount {
+		return storage.ErrInvalidBalance
+	}
+	return nil
+}
+
+func (*StateManager) Deduct(
+	ctx context.Context,
+	addr codec.Address,
+	mu state.Mutable,
+	amount uint64,
+) error {
+	return storage.SubBalance(ctx, mu, addr, ids.Empty, amount)
 }

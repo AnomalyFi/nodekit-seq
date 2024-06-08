@@ -37,7 +37,7 @@ var importANRChainCmd = &cobra.Command{
 }
 
 var importAvalancheOpsChainCmd = &cobra.Command{
-	Use: "import-ops [chainID] [path]",
+	Use: "import-ops [path]",
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
 			return ErrInvalidArgs

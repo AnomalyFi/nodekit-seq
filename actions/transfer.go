@@ -11,8 +11,6 @@ import (
 	"github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/state"
-	"github.com/AnomalyFi/hypersdk/utils"
-	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
@@ -22,7 +20,7 @@ var _ chain.Action = (*Transfer)(nil)
 
 type Transfer struct {
 	// To is the recipient of the [Value].
-	To ed25519.PublicKey `json:"to"`
+	To codec.Address `json:"to"`
 
 	// Asset to transfer to [To].
 	Asset ids.ID `json:"asset"`
@@ -38,10 +36,10 @@ func (*Transfer) GetTypeID() uint8 {
 	return transferID
 }
 
-func (t *Transfer) StateKeys(rauth chain.Auth, _ ids.ID) []string {
-	return []string{
-		string(storage.BalanceKey(auth.GetActor(rauth), t.Asset)),
-		string(storage.BalanceKey(t.To, t.Asset)),
+func (t *Transfer) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
+	return state.Keys{
+		string(storage.BalanceKey(actor, t.Asset)): state.Read | state.Write,
+		string(storage.BalanceKey(t.To, t.Asset)):  state.All,
 	}
 }
 
@@ -58,28 +56,26 @@ func (t *Transfer) Execute(
 	_ chain.Rules,
 	mu state.Mutable,
 	_ int64,
-	rauth chain.Auth,
+	actor codec.Address,
 	_ ids.ID,
-	_ bool,
-) (bool, uint64, []byte, *warp.UnsignedMessage, error) {
-	actor := auth.GetActor(rauth)
+) ([][]byte, error) {
 	if t.Value == 0 {
-		return false, TransferComputeUnits, OutputValueZero, nil, nil
+		return nil, ErrOutputValueZero
 	}
 	if len(t.Memo) > MaxMemoSize {
-		return false, CreateAssetComputeUnits, OutputMemoTooLarge, nil, nil
+		return nil, ErrOutputMemoTooLarge
 	}
 	if err := storage.SubBalance(ctx, mu, actor, t.Asset, t.Value); err != nil {
-		return false, TransferComputeUnits, utils.ErrBytes(err), nil, nil
+		return nil, err
 	}
 	// TODO: allow sender to configure whether they will pay to create
 	if err := storage.AddBalance(ctx, mu, t.To, t.Asset, t.Value, true); err != nil {
-		return false, TransferComputeUnits, utils.ErrBytes(err), nil, nil
+		return nil, err
 	}
-	return true, TransferComputeUnits, nil, nil, nil
+	return nil, nil
 }
 
-func (*Transfer) MaxComputeUnits(chain.Rules) uint64 {
+func (*Transfer) ComputeUnits(chain.Rules) uint64 {
 	return TransferComputeUnits
 }
 

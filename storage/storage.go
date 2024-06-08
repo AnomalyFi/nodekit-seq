@@ -10,7 +10,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/codec"
+	"github.com/AnomalyFi/hypersdk/fees"
+
 	"github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/state"
@@ -75,14 +77,14 @@ var (
 
 	balanceKeyPool = sync.Pool{
 		New: func() any {
-			return make([]byte, 1+ed25519.PublicKeyLen+consts.IDLen+consts.Uint16Len)
+			return make([]byte, 1+codec.AddressLen+consts.IDLen+consts.Uint16Len)
 		},
 	}
 )
 
 // [txPrefix] + [txID]
 func TxKey(id ids.ID) (k []byte) {
-	k = make([]byte, 1+consts.IDLen)
+	k = make([]byte, 1+ids.IDLen)
 	k[0] = txPrefix
 	copy(k[1:], id[:])
 	return
@@ -94,11 +96,11 @@ func StoreTransaction(
 	id ids.ID,
 	t int64,
 	success bool,
-	units chain.Dimensions,
+	units fees.Dimensions,
 	fee uint64,
 ) error {
 	k := TxKey(id)
-	v := make([]byte, consts.Uint64Len+1+chain.DimensionsLen+consts.Uint64Len)
+	v := make([]byte, consts.Uint64Len+1+fees.DimensionsLen+consts.Uint64Len)
 	binary.BigEndian.PutUint64(v, uint64(t))
 	if success {
 		v[consts.Uint64Len] = successByte
@@ -106,7 +108,7 @@ func StoreTransaction(
 		v[consts.Uint64Len] = failureByte
 	}
 	copy(v[consts.Uint64Len+1:], units.Bytes())
-	binary.BigEndian.PutUint64(v[consts.Uint64Len+1+chain.DimensionsLen:], fee)
+	binary.BigEndian.PutUint64(v[consts.Uint64Len+1+fees.DimensionsLen:], fee)
 	return db.Put(k, v)
 }
 
@@ -114,35 +116,35 @@ func GetTransaction(
 	_ context.Context,
 	db database.KeyValueReader,
 	id ids.ID,
-) (bool, int64, bool, chain.Dimensions, uint64, error) {
+) (bool, int64, bool, fees.Dimensions, uint64, error) {
 	k := TxKey(id)
 	v, err := db.Get(k)
 	if errors.Is(err, database.ErrNotFound) {
-		return false, 0, false, chain.Dimensions{}, 0, nil
+		return false, 0, false, fees.Dimensions{}, 0, nil
 	}
 	if err != nil {
-		return false, 0, false, chain.Dimensions{}, 0, err
+		return false, 0, false, fees.Dimensions{}, 0, err
 	}
 	t := int64(binary.BigEndian.Uint64(v))
 	success := true
 	if v[consts.Uint64Len] == failureByte {
 		success = false
 	}
-	d, err := chain.UnpackDimensions(v[consts.Uint64Len+1 : consts.Uint64Len+1+chain.DimensionsLen])
+	d, err := fees.UnpackDimensions(v[consts.Uint64Len+1 : consts.Uint64Len+1+fees.DimensionsLen])
 	if err != nil {
-		return false, 0, false, chain.Dimensions{}, 0, err
+		return false, 0, false, fees.Dimensions{}, 0, err
 	}
-	fee := binary.BigEndian.Uint64(v[consts.Uint64Len+1+chain.DimensionsLen:])
+	fee := binary.BigEndian.Uint64(v[consts.Uint64Len+1+fees.DimensionsLen:])
 	return true, t, success, d, fee, nil
 }
 
 // [accountPrefix] + [address] + [asset]
-func BalanceKey(pk ed25519.PublicKey, asset ids.ID) (k []byte) {
+func BalanceKey(pk codec.Address, asset ids.ID) (k []byte) {
 	k = balanceKeyPool.Get().([]byte)
 	k[0] = balancePrefix
 	copy(k[1:], pk[:])
-	copy(k[1+ed25519.PublicKeyLen:], asset[:])
-	binary.BigEndian.PutUint16(k[1+ed25519.PublicKeyLen+consts.IDLen:], BalanceChunks)
+	copy(k[1+codec.AddressLen:], asset[:])
+	binary.BigEndian.PutUint16(k[1+codec.AddressLen+consts.IDLen:], BalanceChunks)
 	return
 }
 
@@ -150,10 +152,10 @@ func BalanceKey(pk ed25519.PublicKey, asset ids.ID) (k []byte) {
 func GetBalance(
 	ctx context.Context,
 	im state.Immutable,
-	pk ed25519.PublicKey,
+	addr codec.Address,
 	asset ids.ID,
 ) (uint64, error) {
-	key, bal, _, err := getBalance(ctx, im, pk, asset)
+	key, bal, _, err := getBalance(ctx, im, addr, asset)
 	balanceKeyPool.Put(key)
 	return bal, err
 }
@@ -161,10 +163,10 @@ func GetBalance(
 func getBalance(
 	ctx context.Context,
 	im state.Immutable,
-	pk ed25519.PublicKey,
+	addr codec.Address,
 	asset ids.ID,
 ) ([]byte, uint64, bool, error) {
-	k := BalanceKey(pk, asset)
+	k := BalanceKey(addr, asset)
 	bal, exists, err := innerGetBalance(im.GetValue(ctx, k))
 	return k, bal, exists, err
 }
@@ -173,10 +175,10 @@ func getBalance(
 func GetBalanceFromState(
 	ctx context.Context,
 	f ReadState,
-	pk ed25519.PublicKey,
+	addr codec.Address,
 	asset ids.ID,
 ) (uint64, error) {
-	k := BalanceKey(pk, asset)
+	k := BalanceKey(addr, asset)
 	values, errs := f(ctx, [][]byte{k})
 	bal, _, err := innerGetBalance(values[0], errs[0])
 	balanceKeyPool.Put(k)
@@ -199,11 +201,11 @@ func innerGetBalance(
 func SetBalance(
 	ctx context.Context,
 	mu state.Mutable,
-	pk ed25519.PublicKey,
+	addr codec.Address,
 	asset ids.ID,
 	balance uint64,
 ) error {
-	k := BalanceKey(pk, asset)
+	k := BalanceKey(addr, asset)
 	return setBalance(ctx, mu, k, balance)
 }
 
@@ -219,21 +221,21 @@ func setBalance(
 func DeleteBalance(
 	ctx context.Context,
 	mu state.Mutable,
-	pk ed25519.PublicKey,
+	addr codec.Address,
 	asset ids.ID,
 ) error {
-	return mu.Remove(ctx, BalanceKey(pk, asset))
+	return mu.Remove(ctx, BalanceKey(addr, asset))
 }
 
 func AddBalance(
 	ctx context.Context,
 	mu state.Mutable,
-	pk ed25519.PublicKey,
+	addr codec.Address,
 	asset ids.ID,
 	amount uint64,
 	create bool,
 ) error {
-	key, bal, exists, err := getBalance(ctx, mu, pk, asset)
+	key, bal, exists, err := getBalance(ctx, mu, addr, asset)
 	if err != nil {
 		return err
 	}
@@ -249,7 +251,7 @@ func AddBalance(
 			ErrInvalidBalance,
 			asset,
 			bal,
-			utils.Address(pk),
+			codec.MustAddressBech32(tconsts.HRP, addr),
 			amount,
 		)
 	}
@@ -259,11 +261,11 @@ func AddBalance(
 func SubBalance(
 	ctx context.Context,
 	mu state.Mutable,
-	pk ed25519.PublicKey,
+	addr codec.Address,
 	asset ids.ID,
 	amount uint64,
 ) error {
-	key, bal, _, err := getBalance(ctx, mu, pk, asset)
+	key, bal, _, err := getBalance(ctx, mu, addr, asset)
 	if err != nil {
 		return err
 	}
@@ -274,7 +276,7 @@ func SubBalance(
 			ErrInvalidBalance,
 			asset,
 			bal,
-			utils.Address(pk),
+			codec.MustAddressBech32(tconsts.HRP, addr),
 			amount,
 		)
 	}
@@ -288,10 +290,10 @@ func SubBalance(
 
 // [assetPrefix] + [address]
 func AssetKey(asset ids.ID) (k []byte) {
-	k = make([]byte, 1+consts.IDLen+consts.Uint16Len)
+	k = make([]byte, 1+ids.IDLen+consts.Uint16Len)
 	k[0] = assetPrefix
 	copy(k[1:], asset[:])
-	binary.BigEndian.PutUint16(k[1+consts.IDLen:], AssetChunks)
+	binary.BigEndian.PutUint16(k[1+ids.IDLen:], AssetChunks)
 	return
 }
 
@@ -300,7 +302,7 @@ func GetAssetFromState(
 	ctx context.Context,
 	f ReadState,
 	asset ids.ID,
-) (bool, []byte, uint8, []byte, uint64, ed25519.PublicKey, bool, error) {
+) (bool, []byte, uint8, []byte, uint64, codec.Address, bool, error) {
 	values, errs := f(ctx, [][]byte{AssetKey(asset)})
 	return innerGetAsset(values[0], errs[0])
 }
@@ -309,7 +311,7 @@ func GetAsset(
 	ctx context.Context,
 	im state.Immutable,
 	asset ids.ID,
-) (bool, []byte, uint8, []byte, uint64, ed25519.PublicKey, bool, error) {
+) (bool, []byte, uint8, []byte, uint64, codec.Address, bool, error) {
 	k := AssetKey(asset)
 	return innerGetAsset(im.GetValue(ctx, k))
 }
@@ -317,12 +319,12 @@ func GetAsset(
 func innerGetAsset(
 	v []byte,
 	err error,
-) (bool, []byte, uint8, []byte, uint64, ed25519.PublicKey, bool, error) {
+) (bool, []byte, uint8, []byte, uint64, codec.Address, bool, error) {
 	if errors.Is(err, database.ErrNotFound) {
-		return false, nil, 0, nil, 0, ed25519.EmptyPublicKey, false, nil
+		return false, nil, 0, nil, 0, codec.EmptyAddress, false, nil
 	}
 	if err != nil {
-		return false, nil, 0, nil, 0, ed25519.EmptyPublicKey, false, err
+		return false, nil, 0, nil, 0, codec.EmptyAddress, false, err
 	}
 	symbolLen := binary.BigEndian.Uint16(v)
 	symbol := v[consts.Uint16Len : consts.Uint16Len+symbolLen]
@@ -330,10 +332,9 @@ func innerGetAsset(
 	metadataLen := binary.BigEndian.Uint16(v[consts.Uint16Len+symbolLen+consts.Uint8Len:])
 	metadata := v[consts.Uint16Len+symbolLen+consts.Uint8Len+consts.Uint16Len : consts.Uint16Len+symbolLen+consts.Uint8Len+consts.Uint16Len+metadataLen]
 	supply := binary.BigEndian.Uint64(v[consts.Uint16Len+symbolLen+consts.Uint8Len+consts.Uint16Len+metadataLen:])
-	var pk ed25519.PublicKey
-	copy(pk[:], v[consts.Uint16Len+symbolLen+consts.Uint8Len+consts.Uint16Len+metadataLen+consts.Uint64Len:])
-	warp := v[consts.Uint16Len+symbolLen+consts.Uint8Len+consts.Uint16Len+metadataLen+consts.Uint64Len+ed25519.PublicKeyLen] == 0x1
-	return true, symbol, decimals, metadata, supply, pk, warp, nil
+	var addr codec.Address
+	copy(addr[:], v[consts.Uint16Len+symbolLen+consts.Uint8Len+consts.Uint16Len+metadataLen+consts.Uint64Len:])
+	return true, symbol, decimals, metadata, supply, pk, nil
 }
 
 func SetAsset(
@@ -344,13 +345,13 @@ func SetAsset(
 	decimals uint8,
 	metadata []byte,
 	supply uint64,
-	owner ed25519.PublicKey,
+	owner codec.Address,
 	warp bool,
 ) error {
 	k := AssetKey(asset)
 	symbolLen := len(symbol)
 	metadataLen := len(metadata)
-	v := make([]byte, consts.Uint16Len+symbolLen+consts.Uint8Len+consts.Uint16Len+metadataLen+consts.Uint64Len+ed25519.PublicKeyLen+1)
+	v := make([]byte, consts.Uint16Len+symbolLen+consts.Uint8Len+consts.Uint16Len+metadataLen+consts.Uint64Len+codec.AddressLen+1)
 	binary.BigEndian.PutUint16(v, uint16(symbolLen))
 	copy(v[consts.Uint16Len:], symbol)
 	v[consts.Uint16Len+symbolLen] = decimals
@@ -358,11 +359,6 @@ func SetAsset(
 	copy(v[consts.Uint16Len+symbolLen+consts.Uint8Len+consts.Uint16Len:], metadata)
 	binary.BigEndian.PutUint64(v[consts.Uint16Len+symbolLen+consts.Uint8Len+consts.Uint16Len+metadataLen:], supply)
 	copy(v[consts.Uint16Len+symbolLen+consts.Uint8Len+consts.Uint16Len+metadataLen+consts.Uint64Len:], owner[:])
-	b := byte(0x0)
-	if warp {
-		b = 0x1
-	}
-	v[consts.Uint16Len+symbolLen+consts.Uint8Len+consts.Uint16Len+metadataLen+consts.Uint64Len+ed25519.PublicKeyLen] = b
 	return mu.Insert(ctx, k, v)
 }
 
@@ -376,7 +372,7 @@ func OrderKey(txID ids.ID) (k []byte) {
 	k = make([]byte, 1+consts.IDLen+consts.Uint16Len)
 	k[0] = orderPrefix
 	copy(k[1:], txID[:])
-	binary.BigEndian.PutUint16(k[1+consts.IDLen:], OrderChunks)
+	binary.BigEndian.PutUint16(k[1+ids.IDLen:], OrderChunks)
 	return
 }
 
@@ -492,102 +488,6 @@ func PrefixBlockKey(block ids.ID, parent ids.ID) (k []byte) {
 	return
 }
 
-// Used to serve RPC queries
-func GetLoanFromState(
-	ctx context.Context,
-	f ReadState,
-	asset ids.ID,
-	destination ids.ID,
-) (uint64, error) {
-	values, errs := f(ctx, [][]byte{LoanKey(asset, destination)})
-	return innerGetLoan(values[0], errs[0])
-}
-
-func innerGetLoan(v []byte, err error) (uint64, error) {
-	if errors.Is(err, database.ErrNotFound) {
-		return 0, nil
-	}
-	if err != nil {
-		return 0, err
-	}
-	return binary.BigEndian.Uint64(v), nil
-}
-
-func GetLoan(
-	ctx context.Context,
-	im state.Immutable,
-	asset ids.ID,
-	destination ids.ID,
-) (uint64, error) {
-	k := LoanKey(asset, destination)
-	v, err := im.GetValue(ctx, k)
-	return innerGetLoan(v, err)
-}
-
-func SetLoan(
-	ctx context.Context,
-	mu state.Mutable,
-	asset ids.ID,
-	destination ids.ID,
-	amount uint64,
-) error {
-	k := LoanKey(asset, destination)
-	return mu.Insert(ctx, k, binary.BigEndian.AppendUint64(nil, amount))
-}
-
-func AddLoan(
-	ctx context.Context,
-	mu state.Mutable,
-	asset ids.ID,
-	destination ids.ID,
-	amount uint64,
-) error {
-	loan, err := GetLoan(ctx, mu, asset, destination)
-	if err != nil {
-		return err
-	}
-	nloan, err := smath.Add64(loan, amount)
-	if err != nil {
-		return fmt.Errorf(
-			"%w: could not add loan (asset=%s, destination=%s, amount=%d)",
-			ErrInvalidBalance,
-			asset,
-			destination,
-			amount,
-		)
-	}
-	return SetLoan(ctx, mu, asset, destination, nloan)
-}
-
-func SubLoan(
-	ctx context.Context,
-	mu state.Mutable,
-	asset ids.ID,
-	destination ids.ID,
-	amount uint64,
-) error {
-	loan, err := GetLoan(ctx, mu, asset, destination)
-	if err != nil {
-		return err
-	}
-	nloan, err := smath.Sub(loan, amount)
-	if err != nil {
-		return fmt.Errorf(
-			"%w: could not subtract loan (asset=%s, destination=%s, amount=%d)",
-			ErrInvalidBalance,
-			asset,
-			destination,
-			amount,
-		)
-	}
-	if nloan == 0 {
-		// If there is no balance left, we should delete the record instead of
-		// setting it to 0.
-		return mu.Remove(ctx, LoanKey(asset, destination))
-	}
-	return SetLoan(ctx, mu, asset, destination, nloan)
-}
-
 func HeightKey() (k []byte) {
 	return heightKey
 }
@@ -598,19 +498,4 @@ func TimestampKey() (k []byte) {
 
 func FeeKey() (k []byte) {
 	return feeKey
-}
-
-func IncomingWarpKeyPrefix(sourceChainID ids.ID, msgID ids.ID) (k []byte) {
-	k = make([]byte, 1+consts.IDLen*2)
-	k[0] = incomingWarpPrefix
-	copy(k[1:], sourceChainID[:])
-	copy(k[1+consts.IDLen:], msgID[:])
-	return k
-}
-
-func OutgoingWarpKeyPrefix(txID ids.ID) (k []byte) {
-	k = make([]byte, 1+consts.IDLen)
-	k[0] = outgoingWarpPrefix
-	copy(k[1:], txID[:])
-	return k
 }

@@ -34,6 +34,12 @@ const (
 type Config struct {
 	*config.Config
 
+	// Concurrency
+	AuthVerificationCores     int `json:"authVerificationCores"`
+	RootGenerationCores       int `json:"rootGenerationCores"`
+	TransactionExecutionCores int `json:"transactionExecutionCores"`
+	StateFetchConcurrency     int `json:"stateFetchConcurrency"`
+
 	// Gossip
 	GossipMaxSize       int   `json:"gossipMaxSize"`
 	GossipProposerDiff  int   `json:"gossipProposerDiff"`
@@ -52,9 +58,9 @@ type Config struct {
 	StreamingBacklogSize int `json:"streamingBacklogSize"`
 
 	// Mempool
-	MempoolSize         int      `json:"mempoolSize"`
-	MempoolPayerSize    int      `json:"mempoolPayerSize"`
-	MempoolExemptPayers []string `json:"mempoolExemptPayers"`
+	MempoolSize           int      `json:"mempoolSize"`
+	MempoolSponsorSize    int      `json:"mempoolSponsorSize"`
+	MempoolExemptSponsors []string `json:"mempoolExemptSponsors"`
 
 	// Order Book
 	//
@@ -63,11 +69,10 @@ type Config struct {
 	TrackedPairs     []string `json:"trackedPairs"` // which asset ID pairs we care about
 
 	// Misc
-	VerifySignatures  bool          `json:"verifySignatures"`
+	VerifyAuth        bool          `json:"verifyAuth"`
 	StoreTransactions bool          `json:"storeTransactions"`
 	TestMode          bool          `json:"testMode"` // makes gossip/building manual
 	LogLevel          logging.Level `json:"logLevel"`
-	Parallelism       int           `json:"parallelism"`
 
 	// State Sync
 	StateSyncServerDelay time.Duration `json:"stateSyncServerDelay"` // for testing
@@ -76,9 +81,9 @@ type Config struct {
 	ETHRPCAddr string `json:"ethRPCAddr"`
 	ETHWSAddr  string `json:"ethWSAddr"`
 
-	loaded             bool
-	nodeID             ids.NodeID
-	parsedExemptPayers [][]byte
+	loaded               bool
+	nodeID               ids.NodeID
+	parsedExemptSponsors []codec.Address
 }
 
 func New(nodeID ids.NodeID, b []byte) (*Config, error) {
@@ -91,15 +96,15 @@ func New(nodeID ids.NodeID, b []byte) (*Config, error) {
 		c.loaded = true
 	}
 
-	// Parse any exempt payers (usually used when a single account is
+	// Parse any exempt sponsors (usually used when a single account is
 	// broadcasting many txs at once)
-	c.parsedExemptPayers = make([][]byte, len(c.MempoolExemptPayers))
-	for i, payer := range c.MempoolExemptPayers {
-		p, err := utils.ParseAddress(payer)
+	c.parsedExemptPayers = make([]codec.Address, len(c.MempoolExemptSponsors))
+	for i, payer := range c.MempoolExemptSponsors {
+		p, err := codec.ParseAddressBech32(consts.HRP, sponsor)
 		if err != nil {
 			return nil, err
 		}
-		c.parsedExemptPayers[i] = p[:]
+		c.parsedExemptSponsors[i] = p
 	}
 	return c, nil
 }
@@ -112,24 +117,30 @@ func (c *Config) setDefault() {
 	c.GossipProposerDepth = gcfg.GossipProposerDepth
 	c.NoGossipBuilderDiff = gcfg.NoGossipBuilderDiff
 	c.VerifyTimeout = gcfg.VerifyTimeout
-	c.Parallelism = c.Config.GetParallelism()
+	c.AuthVerificationCores = c.Config.GetAuthVerificationCores()
+	c.RootGenerationCores = c.Config.GetRootGenerationCores()
+	c.TransactionExecutionCores = c.Config.GetTransactionExecutionCores()
+	c.StateFetchConcurrency = c.Config.GetStateFetchConcurrency()
 	c.MempoolSize = c.Config.GetMempoolSize()
-	c.MempoolPayerSize = c.Config.GetMempoolPayerSize()
+	c.MempoolSponsorSize = c.Config.GetMempoolSponsorSize()
 	c.StateSyncServerDelay = c.Config.GetStateSyncServerDelay()
 	c.StreamingBacklogSize = c.Config.GetStreamingBacklogSize()
-	c.VerifySignatures = c.Config.GetVerifySignatures()
+	c.VerifyAuth = c.Config.GetVerifyAuth()
 	c.StoreTransactions = defaultStoreTransactions
 	c.MaxOrdersPerPair = defaultMaxOrdersPerPair
 	c.ETHRPCAddr = c.Config.GetETHL1RPC()
 	c.ETHWSAddr = c.Config.GetETHL1WS()
 }
 
-func (c *Config) GetLogLevel() logging.Level       { return c.LogLevel }
-func (c *Config) GetTestMode() bool                { return c.TestMode }
-func (c *Config) GetParallelism() int              { return c.Parallelism }
-func (c *Config) GetMempoolSize() int              { return c.MempoolSize }
-func (c *Config) GetMempoolPayerSize() int         { return c.MempoolPayerSize }
-func (c *Config) GetMempoolExemptPayers() [][]byte { return c.parsedExemptPayers }
+func (c *Config) GetLogLevel() logging.Level                { return c.LogLevel }
+func (c *Config) GetTestMode() bool                         { return c.TestMode }
+func (c *Config) GetAuthVerificationCores() int             { return c.AuthVerificationCores }
+func (c *Config) GetRootGenerationCores() int               { return c.RootGenerationCores }
+func (c *Config) GetTransactionExecutionCores() int         { return c.TransactionExecutionCores }
+func (c *Config) GetStateFetchConcurrency() int             { return c.StateFetchConcurrency }
+func (c *Config) GetMempoolSize() int                       { return c.MempoolSize }
+func (c *Config) GetMempoolSponsorSize() int                { return c.MempoolSponsorSize }
+func (c *Config) GetMempoolExemptSponsors() []codec.Address { return c.parsedExemptSponsors }
 func (c *Config) GetTraceConfig() *trace.Config {
 	return &trace.Config{
 		Enabled:         c.TraceEnabled,
@@ -155,7 +166,7 @@ func (c *Config) GetContinuousProfilerConfig() *profiler.Config {
 		MaxNumFiles: defaultContinuousProfilerMaxFiles,
 	}
 }
-func (c *Config) GetVerifySignatures() bool  { return c.VerifySignatures }
+func (c *Config) GetVerifyAuth() bool        { return c.VerifyAuth }
 func (c *Config) GetStoreTransactions() bool { return c.StoreTransactions }
 func (c *Config) Loaded() bool               { return c.loaded }
 func (c *Config) GetETHL1RPC() string        { return c.ETHRPCAddr }

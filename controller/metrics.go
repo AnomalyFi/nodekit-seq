@@ -17,10 +17,6 @@ type metrics struct {
 
 	transfer prometheus.Counter
 
-	importAsset  prometheus.Counter
-	exportAsset  prometheus.Counter
-	importBlock  prometheus.Counter
-	exportBlock  prometheus.Counter
 	sequencerMsg prometheus.Counter
 }
 
@@ -46,26 +42,7 @@ func newMetrics(gatherer ametrics.MultiGatherer) (*metrics, error) {
 			Name:      "transfer",
 			Help:      "number of transfer actions",
 		}),
-		importAsset: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: "actions",
-			Name:      "import_asset",
-			Help:      "number of import asset actions",
-		}),
-		exportAsset: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: "actions",
-			Name:      "export_asset",
-			Help:      "number of export asset actions",
-		}),
-		importBlock: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: "actions",
-			Name:      "import_block",
-			Help:      "number of import block actions",
-		}),
-		exportBlock: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: "actions",
-			Name:      "export_block",
-			Help:      "number of export block actions",
-		}),
+
 		sequencerMsg: prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: "actions",
 			Name:      "sequencer_msg",
@@ -81,10 +58,6 @@ func newMetrics(gatherer ametrics.MultiGatherer) (*metrics, error) {
 
 		r.Register(m.transfer),
 
-		r.Register(m.importBlock),
-		r.Register(m.exportBlock),
-		r.Register(m.importAsset),
-		r.Register(m.exportAsset),
 		r.Register(m.sequencerMsg),
 		gatherer.Register(consts.Name, r),
 	)

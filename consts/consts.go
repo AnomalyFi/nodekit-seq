@@ -6,9 +6,7 @@ package consts
 import (
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
-	"github.com/AnomalyFi/hypersdk/consts"
 	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
 )
 
 const (
@@ -21,7 +19,7 @@ const (
 var ID ids.ID
 
 func init() {
-	b := make([]byte, consts.IDLen)
+	b := make([]byte, ids.IDLen)
 	copy(b, []byte(Name))
 	vmID, err := ids.ToID(b)
 	if err != nil {
@@ -33,6 +31,6 @@ func init() {
 // Instantiate registry here so it can be imported by any package. We set these
 // values in [controller/registry].
 var (
-	ActionRegistry *codec.TypeParser[chain.Action, *warp.Message, bool]
-	AuthRegistry   *codec.TypeParser[chain.Auth, *warp.Message, bool]
+	ActionRegistry *codec.TypeParser[chain.Action, bool]
+	AuthRegistry   *codec.TypeParser[chain.Auth, bool]
 )

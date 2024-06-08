@@ -19,7 +19,6 @@ type Controller interface {
 	GetTransaction(context.Context, ids.ID) (bool, int64, bool, chain.Dimensions, uint64, error)
 	GetAssetFromState(context.Context, ids.ID) (bool, []byte, uint8, []byte, uint64, ed25519.PublicKey, bool, error)
 	GetBalanceFromState(context.Context, ed25519.PublicKey, ids.ID) (uint64, error)
-	GetLoanFromState(context.Context, ids.ID, ids.ID) (uint64, error)
 	UnitPrices(ctx context.Context) (chain.Dimensions, error)
 	GetAcceptedBlockWindow() int
 	Submit(

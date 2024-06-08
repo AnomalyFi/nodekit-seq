@@ -36,7 +36,7 @@ func (h *Handler) Root() *cli.Handler {
 func (*Handler) GetAssetInfo(
 	ctx context.Context,
 	cli *trpc.JSONRPCClient,
-	publicKey ed25519.PublicKey,
+	addr codec.Address,
 	assetID ids.ID,
 	checkBalance bool,
 ) ([]byte, uint8, uint64, ids.ID, error) {
@@ -51,30 +51,22 @@ func (*Handler) GetAssetInfo(
 			hutils.Outf("{{red}}exiting...{{/}}\n")
 			return nil, 0, 0, ids.Empty, nil
 		}
-		if warp {
-			sourceChainID = ids.ID(metadata[hconsts.IDLen:])
-			sourceAssetID := ids.ID(metadata[:hconsts.IDLen])
-			hutils.Outf(
-				"{{yellow}}sourceChainID:{{/}} %s {{yellow}}sourceAssetID:{{/}} %s {{yellow}}supply:{{/}} %d\n",
-				sourceChainID,
-				sourceAssetID,
-				supply,
-			)
-		} else {
-			hutils.Outf(
-				"{{yellow}}symbol:{{/}} %s {{yellow}}decimals:{{/}} %d {{yellow}}metadata:{{/}} %s {{yellow}}supply:{{/}} %d {{yellow}}warp:{{/}} %t\n",
-				symbol,
-				decimals,
-				metadata,
-				supply,
-				warp,
-			)
-		}
+		hutils.Outf(
+			"{{yellow}}symbol:{{/}} %s {{yellow}}decimals:{{/}} %d {{yellow}}metadata:{{/}} %s {{yellow}}supply:{{/}} %d {{yellow}}warp:{{/}} %t\n",
+			symbol,
+			decimals,
+			metadata,
+			supply,
+			warp,
+		)
 	}
 	if !checkBalance {
 		return symbol, decimals, 0, sourceChainID, nil
 	}
-	addr := utils.Address(publicKey)
+	saddr, err := codec.AddressBech32(consts.HRP, addr)
+	if err != nil {
+		return nil, 0, 0, ids.Empty, err
+	}
 	balance, err := cli.Balance(ctx, addr, assetID)
 	if err != nil {
 		return nil, 0, 0, ids.Empty, err
@@ -94,22 +86,22 @@ func (*Handler) GetAssetInfo(
 }
 
 func (h *Handler) DefaultActor() (
-	ids.ID, ed25519.PrivateKey, *auth.ED25519Factory,
+	ids.ID, *cli.PrivateKey, chain.AuthFactory,
 	*rpc.JSONRPCClient, *rpc.WebSocketClient, *trpc.JSONRPCClient, error,
 ) {
-	priv, err := h.h.GetDefaultKey(true)
+	addr, priv, err := h.h.GetDefaultKey(true)
 	if err != nil {
-		return ids.Empty, ed25519.EmptyPrivateKey, nil, nil, nil, nil, err
+		return ids.Empty, nil, nil, nil, nil, nil, err
 	}
 	chainID, uris, err := h.h.GetDefaultChain(true)
 	if err != nil {
-		return ids.Empty, ed25519.EmptyPrivateKey, nil, nil, nil, nil, err
+		return ids.Empty, nil, nil, nil, nil, nil, err
 	}
 	// For [defaultActor], we always send requests to the first returned URI.
-	cli := rpc.NewJSONRPCClient(uris[0])
-	networkID, _, _, err := cli.Network(context.TODO())
+	jcli := rpc.NewJSONRPCClient(uris[0])
+	networkID, _, _, err := jcli.Network(context.TODO())
 	if err != nil {
-		return ids.Empty, ed25519.EmptyPrivateKey, nil, nil, nil, nil, err
+		return ids.Empty, nil, nil, nil, nil, nil, err
 	}
 	scli, err := rpc.NewWebSocketClient(
 		uris[0],
@@ -118,9 +110,9 @@ func (h *Handler) DefaultActor() (
 		pubsub.MaxReadMessageSize,
 	)
 	if err != nil {
-		return ids.Empty, ed25519.EmptyPrivateKey, nil, nil, nil, nil, err
+		return ids.Empty, nil, nil, nil, nil, nil, err
 	}
-	return chainID, priv, auth.NewED25519Factory(priv), cli, scli,
+	return chainID, &cli.PrivateKey{Address: addr, Bytes: priv}, auth.NewED25519Factory(ed25519.PrivateKey(priv)), jcli, scli,
 		trpc.NewJSONRPCClient(
 			uris[0],
 			networkID,
@@ -148,10 +140,10 @@ func (*Controller) Decimals() uint8 {
 	return consts.Decimals
 }
 
-func (*Controller) Address(pk ed25519.PublicKey) string {
-	return utils.Address(pk)
+func (*Controller) Address(addr codec.Address) string {
+	return codec.MustAddressBech32(consts.HRP, addr)
 }
 
-func (*Controller) ParseAddress(address string) (ed25519.PublicKey, error) {
-	return utils.ParseAddress(address)
+func (*Controller) ParseAddress(address string) (codec.Address, error) {
+	return codec.ParseAddressBech32(consts.HRP, address)
 }
