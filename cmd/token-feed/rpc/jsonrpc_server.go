@@ -6,8 +6,9 @@ package rpc
 import (
 	"net/http"
 
+	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/nodekit-seq/cmd/token-feed/manager"
-	"github.com/AnomalyFi/nodekit-seq/utils"
+	"github.com/AnomalyFi/nodekit-seq/consts"
 )
 
 type JSONRPCServer struct {
@@ -28,7 +29,7 @@ func (j *JSONRPCServer) FeedInfo(req *http.Request, _ *struct{}, reply *FeedInfo
 	if err != nil {
 		return err
 	}
-	reply.Address = utils.Address(addr)
+	reply.Address = codec.MustAddressBech32(consts.HRP, addr)
 	reply.Fee = fee
 	return nil
 }

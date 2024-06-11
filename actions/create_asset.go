@@ -12,7 +12,6 @@ import (
 	"github.com/AnomalyFi/hypersdk/state"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
 )
 
 var _ chain.Action = (*CreateAsset)(nil)
@@ -66,7 +65,7 @@ func (c *CreateAsset) Execute(
 	}
 	// It should only be possible to overwrite an existing asset if there is
 	// a hash collision.
-	if err := storage.SetAsset(ctx, mu, txID, c.Symbol, c.Decimals, c.Metadata, 0, actor); err != nil {
+	if err := storage.SetAsset(ctx, mu, actionID, c.Symbol, c.Decimals, c.Metadata, 0, actor); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -87,7 +86,7 @@ func (c *CreateAsset) Marshal(p *codec.Packer) {
 	p.PackBytes(c.Metadata)
 }
 
-func UnmarshalCreateAsset(p *codec.Packer, _ *warp.Message) (chain.Action, error) {
+func UnmarshalCreateAsset(p *codec.Packer) (chain.Action, error) {
 	var create CreateAsset
 	p.UnpackBytes(MaxSymbolSize, true, &create.Symbol)
 	create.Decimals = p.UnpackByte()

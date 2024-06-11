@@ -10,20 +10,19 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
+
+	"github.com/ava-labs/avalanchego/utils/logging"
+	"go.uber.org/zap"
 
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/server"
 	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/cmd/token-faucet/config"
 	"github.com/AnomalyFi/nodekit-seq/cmd/token-faucet/manager"
+
 	frpc "github.com/AnomalyFi/nodekit-seq/cmd/token-faucet/rpc"
-	tutils "github.com/AnomalyFi/nodekit-seq/utils"
-	"github.com/ava-labs/avalanchego/snow/engine/common"
-	"github.com/ava-labs/avalanchego/utils/logging"
-	"go.uber.org/zap"
 )
 
 var (
@@ -86,9 +85,9 @@ func main() {
 		if err := os.WriteFile(configPath, b, fi.Mode().Perm()); err != nil {
 			fatal(log, "cannot write new config", zap.Error(err))
 		}
-		log.Info("created new faucet address", zap.String("address", tutils.Address(priv.PublicKey())))
+		log.Info("created new faucet address", zap.String("address", c.AddressBech32()))
 	} else {
-		log.Info("loaded faucet address", zap.String("address", tutils.Address(c.PrivateKey().PublicKey())))
+		log.Info("loaded faucet address", zap.String("address", c.AddressBech32()))
 	}
 
 	// Create server
@@ -119,10 +118,7 @@ func main() {
 	if err != nil {
 		fatal(log, "cannot create handler", zap.Error(err))
 	}
-	if err := srv.AddRoute(&common.HTTPHandler{
-		LockOptions: common.NoLock,
-		Handler:     handler,
-	}, &sync.RWMutex{}, "faucet", ""); err != nil {
+	if err := srv.AddRoute(handler, "faucet", ""); err != nil {
 		fatal(log, "cannot add facuet route", zap.Error(err))
 	}
 

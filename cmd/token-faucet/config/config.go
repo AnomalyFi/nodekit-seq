@@ -3,7 +3,12 @@
 
 package config
 
-import "github.com/AnomalyFi/hypersdk/crypto/ed25519"
+import (
+	"github.com/AnomalyFi/hypersdk/codec"
+	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
+	"github.com/AnomalyFi/nodekit-seq/auth"
+	"github.com/AnomalyFi/nodekit-seq/consts"
+)
 
 type Config struct {
 	HTTPHost string `json:"host"`
@@ -20,4 +25,12 @@ type Config struct {
 
 func (c *Config) PrivateKey() ed25519.PrivateKey {
 	return ed25519.PrivateKey(c.PrivateKeyBytes)
+}
+
+func (c *Config) Address() codec.Address {
+	return auth.NewED25519Address(c.PrivateKey().PublicKey())
+}
+
+func (c *Config) AddressBech32() string {
+	return codec.MustAddressBech32(consts.HRP, c.Address())
 }

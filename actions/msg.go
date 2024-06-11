@@ -12,7 +12,6 @@ import (
 	"github.com/AnomalyFi/hypersdk/state"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
 )
 
 var _ chain.Action = (*SequencerMsg)(nil)
@@ -70,9 +69,9 @@ func (t *SequencerMsg) Marshal(p *codec.Packer) {
 	p.PackBytes(t.ChainId)
 }
 
-func UnmarshalSequencerMsg(p *codec.Packer, _ *warp.Message) (chain.Action, error) {
+func UnmarshalSequencerMsg(p *codec.Packer) (chain.Action, error) {
 	var sequencermsg SequencerMsg
-	p.UnpackAddress(false, &sequencermsg.FromAddress)
+	p.UnpackAddress(&sequencermsg.FromAddress)
 	// TODO need to correct this and check byte count
 	p.UnpackBytes(-1, true, &sequencermsg.Data)
 	p.UnpackBytes(-1, true, &sequencermsg.ChainId)

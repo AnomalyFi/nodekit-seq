@@ -6,9 +6,11 @@ package controller
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/AnomalyFi/hypersdk/builder"
 	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/fees"
 	"github.com/AnomalyFi/hypersdk/gossiper"
 	hrpc "github.com/AnomalyFi/hypersdk/rpc"
 	hstorage "github.com/AnomalyFi/hypersdk/storage"
@@ -16,7 +18,6 @@ import (
 	ametrics "github.com/ava-labs/avalanchego/api/metrics"
 	"github.com/ava-labs/avalanchego/database"
 	"github.com/ava-labs/avalanchego/snow"
-	"github.com/ava-labs/avalanchego/snow/engine/common"
 	"go.uber.org/zap"
 
 	"github.com/AnomalyFi/nodekit-seq/actions"
@@ -113,12 +114,12 @@ func (c *Controller) Initialize(
 	//
 	// hypersdk handler are initiatlized automatically, you just need to
 	// initialize custom handlers here.
-	apis := map[string]http.HTTPHandler{}
+	apis := map[string]http.Handler{}
 	jsonRPCServer := rpc.NewJSONRPCServer(c)
 	c.jsonRPCServer = jsonRPCServer
 	jsonRPCHandler, err := hrpc.NewJSONRPCHandler(
 		consts.Name,
-		jsonRPCServer
+		jsonRPCServer,
 	)
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
@@ -160,17 +161,17 @@ func (c *Controller) StateManager() chain.StateManager {
 	return c.stateManager
 }
 
-// func (c *Controller) UnitPrices(ctx context.Context) (chain.Dimensions, error) {
-// 	return c.inner.UnitPrices(ctx)
-// }
+func (c *Controller) UnitPrices(ctx context.Context) (fees.Dimensions, error) {
+	return c.inner.UnitPrices(ctx)
+}
 
-// func (c *Controller) Submit(
-// 	ctx context.Context,
-// 	verifySig bool,
-// 	txs []*chain.Transaction,
-// ) (errs []error) {
-// 	return c.inner.Submit(ctx, verifySig, txs)
-// }
+func (c *Controller) Submit(
+	ctx context.Context,
+	verifySig bool,
+	txs []*chain.Transaction,
+) (errs []error) {
+	return c.inner.Submit(ctx, verifySig, txs)
+}
 
 // TODO I can add the blocks to the JSON RPC Server here instead of REST API
 func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) error {
@@ -199,8 +200,8 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 			}
 		}
 		if result.Success {
-			for i, act := range tx.Actions {
-				switch action := act.(type) {
+			for _, act := range tx.Actions {
+				switch act.(type) {
 				case *actions.CreateAsset:
 					c.metrics.createAsset.Inc()
 				case *actions.MintAsset:

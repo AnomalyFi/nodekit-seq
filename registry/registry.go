@@ -7,7 +7,6 @@ import (
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/ava-labs/avalanchego/utils/wrappers"
-	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
 
 	"github.com/AnomalyFi/nodekit-seq/actions"
 	"github.com/AnomalyFi/nodekit-seq/auth"
@@ -16,8 +15,8 @@ import (
 
 // Setup types
 func init() {
-	consts.ActionRegistry = codec.NewTypeParser[chain.Action, *warp.Message]()
-	consts.AuthRegistry = codec.NewTypeParser[chain.Auth, *warp.Message]()
+	consts.ActionRegistry = codec.NewTypeParser[chain.Action]()
+	consts.AuthRegistry = codec.NewTypeParser[chain.Auth]()
 
 	errs := &wrappers.Errs{}
 	errs.Add(

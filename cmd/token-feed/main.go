@@ -10,7 +10,6 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
@@ -19,7 +18,6 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/cmd/token-feed/config"
 	"github.com/AnomalyFi/nodekit-seq/cmd/token-feed/manager"
 	frpc "github.com/AnomalyFi/nodekit-seq/cmd/token-feed/rpc"
-	"github.com/ava-labs/avalanchego/snow/engine/common"
 	"github.com/ava-labs/avalanchego/utils/logging"
 	"go.uber.org/zap"
 )
@@ -67,7 +65,7 @@ func main() {
 	}
 
 	// Load recipient
-	if _, err := c.RecipientPublicKey(); err != nil {
+	if _, err := c.RecipientAddress(); err != nil {
 		fatal(log, "cannot parse recipient address", zap.Error(err))
 	}
 	log.Info("loaded feed recipient", zap.String("address", c.Recipient))
@@ -100,13 +98,9 @@ func main() {
 	if err != nil {
 		fatal(log, "cannot create handler", zap.Error(err))
 	}
-	if err := srv.AddRoute(&common.HTTPHandler{
-		LockOptions: common.NoLock,
-		Handler:     handler,
-	}, &sync.RWMutex{}, "feed", ""); err != nil {
+	if err := srv.AddRoute(handler, "feed", ""); err != nil {
 		fatal(log, "cannot add facuet route", zap.Error(err))
 	}
-
 	// Start server
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)

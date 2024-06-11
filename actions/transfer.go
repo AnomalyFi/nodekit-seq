@@ -9,11 +9,9 @@ import (
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/consts"
-	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/state"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
 )
 
 var _ chain.Action = (*Transfer)(nil)
@@ -80,20 +78,20 @@ func (*Transfer) ComputeUnits(chain.Rules) uint64 {
 }
 
 func (t *Transfer) Size() int {
-	return ed25519.PublicKeyLen + consts.IDLen + consts.Uint64Len + codec.BytesLen(t.Memo)
+	return codec.AddressLen + ids.IDLen + consts.Uint64Len + codec.BytesLen(t.Memo)
 }
 
 func (t *Transfer) Marshal(p *codec.Packer) {
-	p.PackPublicKey(t.To)
+	p.PackAddress(t.To)
 	p.PackID(t.Asset)
 	p.PackUint64(t.Value)
 	p.PackBytes(t.Memo)
 }
 
-func UnmarshalTransfer(p *codec.Packer, _ *warp.Message) (chain.Action, error) {
+func UnmarshalTransfer(p *codec.Packer) (chain.Action, error) {
 	var transfer Transfer
-	p.UnpackPublicKey(false, &transfer.To) // can transfer to blackhole
-	p.UnpackID(false, &transfer.Asset)     // empty ID is the native asset
+	p.UnpackAddress(&transfer.To)
+	p.UnpackID(false, &transfer.Asset) // empty ID is the native asset
 	transfer.Value = p.UnpackUint64(true)
 	p.UnpackBytes(MaxMemoSize, false, &transfer.Memo)
 	return &transfer, p.Err()

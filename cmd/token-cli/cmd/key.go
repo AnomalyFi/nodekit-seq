@@ -7,18 +7,20 @@ import (
 	"context"
 	"time"
 
+	"github.com/ava-labs/avalanchego/ids"
+	"github.com/spf13/cobra"
+
+	"github.com/AnomalyFi/hypersdk/cli"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/utils"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/spf13/cobra"
-
+	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/challenge"
+
 	frpc "github.com/AnomalyFi/nodekit-seq/cmd/token-faucet/rpc"
 	tconsts "github.com/AnomalyFi/nodekit-seq/consts"
 	trpc "github.com/AnomalyFi/nodekit-seq/rpc"
-	tutils "github.com/AnomalyFi/nodekit-seq/utils"
 )
 
 var keyCmd = &cobra.Command{

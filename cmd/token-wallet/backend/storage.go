@@ -10,14 +10,16 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ava-labs/avalanchego/database"
+	"github.com/ava-labs/avalanchego/ids"
+
+	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/pebble"
+
 	hutils "github.com/AnomalyFi/hypersdk/utils"
 	tconsts "github.com/AnomalyFi/nodekit-seq/consts"
-	"github.com/AnomalyFi/nodekit-seq/utils"
-	"github.com/ava-labs/avalanchego/database"
-	"github.com/ava-labs/avalanchego/ids"
 )
 
 const (
@@ -127,13 +129,13 @@ func (s *Storage) GetTransactions() ([]*TransactionInfo, error) {
 }
 
 func (s *Storage) StoreAddress(address string, nickname string) error {
-	pk, err := utils.ParseAddress(address)
+	addr, err := codec.ParseAddressBech32(tconsts.HRP, address)
 	if err != nil {
 		return err
 	}
-	k := make([]byte, 1+ed25519.PublicKeyLen)
+	k := make([]byte, 1+codec.AddressLen)
 	k[0] = addressPrefix
-	copy(k[1:], pk[:])
+	copy(k[1:], addr[:])
 	return s.db.Put(k, []byte(nickname))
 }
 
@@ -143,10 +145,9 @@ func (s *Storage) GetAddresses() ([]*AddressInfo, error) {
 
 	addresses := []*AddressInfo{}
 	for iter.Next() {
-		pk := ed25519.PublicKey(iter.Key()[1:])
-		address := utils.Address(pk)
+		address := codec.Address(iter.Key()[1:])
 		nickname := string(iter.Value())
-		addresses = append(addresses, &AddressInfo{nickname, address, fmt.Sprintf("%s [%s..%s]", nickname, address[:len(tconsts.HRP)+3], address[len(address)-3:])})
+		addresses = append(addresses, &AddressInfo{nickname, codec.MustAddressBech32(tconsts.HRP, address), fmt.Sprintf("%s [%s..%s]", nickname, address[:len(tconsts.HRP)+3], address[len(address)-3:])})
 	}
 	return addresses, iter.Error()
 }
@@ -180,28 +181,28 @@ func (s *Storage) GetSolutions() ([]*FaucetSearchInfo, error) {
 	return fs, iter.Error()
 }
 
-// func (s *Storage) StoreOrder(orderID ids.ID) error {
-// 	inverseTime := consts.MaxUint64 - uint64(time.Now().UnixMilli())
-// 	k := make([]byte, 1+consts.Uint64Len+ids.IDLen)
-// 	k[0] = orderPrefix
-// 	binary.BigEndian.PutUint64(k[1:], inverseTime)
-// 	copy(k[1+consts.Uint64Len:], orderID[:])
-// 	return s.db.Put(k, nil)
-// }
+func (s *Storage) StoreOrder(orderID ids.ID) error {
+	inverseTime := consts.MaxUint64 - uint64(time.Now().UnixMilli())
+	k := make([]byte, 1+consts.Uint64Len+ids.IDLen)
+	k[0] = orderPrefix
+	binary.BigEndian.PutUint64(k[1:], inverseTime)
+	copy(k[1+consts.Uint64Len:], orderID[:])
+	return s.db.Put(k, nil)
+}
 
-// func (s *Storage) GetOrders() ([]ids.ID, [][]byte, error) {
-// 	iter := s.db.NewIteratorWithPrefix([]byte{orderPrefix})
-// 	defer iter.Release()
+func (s *Storage) GetOrders() ([]ids.ID, [][]byte, error) {
+	iter := s.db.NewIteratorWithPrefix([]byte{orderPrefix})
+	defer iter.Release()
 
-// 	orders := []ids.ID{}
-// 	keys := [][]byte{}
-// 	for iter.Next() {
-// 		k := iter.Key()
-// 		orders = append(orders, ids.ID(k[1+consts.Uint64Len:]))
-// 		keys = append(keys, k)
-// 	}
-// 	return orders, keys, iter.Error()
-// }
+	orders := []ids.ID{}
+	keys := [][]byte{}
+	for iter.Next() {
+		k := iter.Key()
+		orders = append(orders, ids.ID(k[1+consts.Uint64Len:]))
+		keys = append(keys, k)
+	}
+	return orders, keys, iter.Error()
+}
 
 func (s *Storage) DeleteDBKey(k []byte) error {
 	return s.db.Delete(k)

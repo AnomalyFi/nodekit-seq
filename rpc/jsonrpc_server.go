@@ -15,17 +15,18 @@ import (
 	"github.com/ava-labs/avalanchego/ids"
 
 	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/fees"
 	seqconsts "github.com/AnomalyFi/nodekit-seq/consts"
 
+	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
+
 	"github.com/AnomalyFi/hypersdk/rpc"
 	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/actions"
 	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	"github.com/AnomalyFi/nodekit-seq/types"
-
-	sequtils "github.com/AnomalyFi/nodekit-seq/utils"
 
 	"github.com/tidwall/btree"
 )
@@ -98,9 +99,12 @@ func (j *JSONRPCServer) SubmitMsgTx(
 
 	parser := j.ServerParser(ctx, args.NetworkID, chainId)
 
-	priv, err := ed25519.HexToKey(
+	privBytes, err := codec.LoadHex(
 		"323b1d8f4eed5f0da9da93071b034f2dce9d2d22692c172f3cb252a64ddfafd01b057de320297c29ad0c1f589ea216869cf1938d88c9fbd70d6748323dbf2fa7", //nolint:lll
+		ed25519.PrivateKeyLen,
 	)
+
+	priv := ed25519.PrivateKey(privBytes)
 	factory := auth.NewED25519Factory(priv)
 
 	tpriv, err := ed25519.GeneratePrivateKey()
@@ -108,18 +112,19 @@ func (j *JSONRPCServer) SubmitMsgTx(
 		return err
 	}
 
-	trsender := tpriv.PublicKey()
-	action := &actions.SequencerMsg{
-		FromAddress: trsender,
+	rsender := auth.NewED25519Address(tpriv.PublicKey())
+
+	actions := []chain.Action{&actions.SequencerMsg{
+		FromAddress: rsender,
 		Data:        args.Data,
 		ChainId:     args.SecondaryChainId,
-	}
+	}}
 	// TODO need to define action, authFactory
-	maxUnits, err := chain.EstimateMaxUnits(parser.Rules(time.Now().UnixMilli()), action, factory, nil)
+	maxUnits, err := chain.EstimateUnits(parser.Rules(time.Now().UnixMilli()), actions, factory)
 	if err != nil {
 		return err
 	}
-	maxFee, err := chain.MulSum(unitPrices, maxUnits)
+	maxFee, err := fees.MulSum(unitPrices, maxUnits)
 	if err != nil {
 		return err
 	}
@@ -137,7 +142,7 @@ func (j *JSONRPCServer) SubmitMsgTx(
 
 	// Build transaction
 	actionRegistry, authRegistry := parser.Registry()
-	tx := chain.NewTx(base, nil, action, false)
+	tx := chain.NewTx(base, actions)
 	tx, err = tx.Sign(factory, actionRegistry, authRegistry)
 	if err != nil {
 		return fmt.Errorf("%w: failed to sign transaction", err)
@@ -145,7 +150,12 @@ func (j *JSONRPCServer) SubmitMsgTx(
 
 	// TODO above is new!
 
-	if err := tx.AuthAsyncVerify()(); err != nil {
+	msg, err := tx.Digest()
+	if err != nil {
+		// Should never occur because populated during unmarshal
+		return err
+	}
+	if err := tx.Auth.Verify(ctx, msg); err != nil {
 		return err
 	}
 	txID := tx.ID()
@@ -165,10 +175,10 @@ type TxArgs struct {
 }
 
 type TxReply struct {
-	Timestamp int64            `json:"timestamp"`
-	Success   bool             `json:"success"`
-	Units     chain.Dimensions `json:"units"`
-	Fee       uint64           `json:"fee"`
+	Timestamp int64           `json:"timestamp"`
+	Success   bool            `json:"success"`
+	Units     fees.Dimensions `json:"units"`
+	Fee       uint64          `json:"fee"`
 }
 
 func (j *JSONRPCServer) Tx(req *http.Request, args *TxArgs, reply *TxReply) error {
@@ -199,14 +209,13 @@ type AssetReply struct {
 	Metadata []byte `json:"metadata"`
 	Supply   uint64 `json:"supply"`
 	Owner    string `json:"owner"`
-	Warp     bool   `json:"warp"`
 }
 
 func (j *JSONRPCServer) Asset(req *http.Request, args *AssetArgs, reply *AssetReply) error {
 	ctx, span := j.c.Tracer().Start(req.Context(), "Server.Asset")
 	defer span.End()
 
-	exists, symbol, decimals, metadata, supply, owner, warp, err := j.c.GetAssetFromState(ctx, args.Asset)
+	exists, symbol, decimals, metadata, supply, owner, err := j.c.GetAssetFromState(ctx, args.Asset)
 	if err != nil {
 		return err
 	}
@@ -217,8 +226,7 @@ func (j *JSONRPCServer) Asset(req *http.Request, args *AssetArgs, reply *AssetRe
 	reply.Decimals = decimals
 	reply.Metadata = metadata
 	reply.Supply = supply
-	reply.Owner = sequtils.Address(owner)
-	reply.Warp = warp
+	reply.Owner = codec.MustAddressBech32(seqconsts.HRP, owner)
 	return err
 }
 
@@ -235,7 +243,7 @@ func (j *JSONRPCServer) Balance(req *http.Request, args *BalanceArgs, reply *Bal
 	ctx, span := j.c.Tracer().Start(req.Context(), "Server.Balance")
 	defer span.End()
 
-	addr, err := sequtils.ParseAddress(args.Address)
+	addr, err := codec.ParseAddressBech32(seqconsts.HRP, args.Address)
 	if err != nil {
 		return err
 	}
@@ -718,8 +726,12 @@ func (j *JSONRPCServer) AcceptBlock(blk *chain.StatelessBlock) error {
 	for i, tx := range blk.Txs {
 		result := results[i]
 
-		if result.Success {
-			switch action := tx.Action.(type) {
+		if !result.Success {
+			return ErrTxFailed
+		}
+
+		for i, act := range tx.Actions {
+			switch action := act.(type) {
 			case *actions.SequencerMsg:
 				hx := hex.EncodeToString(action.ChainId)
 				if seq_txs[hx] == nil {
@@ -734,7 +746,6 @@ func (j *JSONRPCServer) AcceptBlock(blk *chain.StatelessBlock) error {
 				seq_txs[hx] = append(seq_txs[hx], &new_tx)
 			}
 		}
-
 	}
 
 	sequencerBlock := &types.SequencerBlock{

@@ -5,11 +5,13 @@ package cmd
 
 import (
 	"context"
-	crand "crypto/rand"
-	"fmt"
-	"math/rand"
+
+	"github.com/ava-labs/avalanchego/ids"
+	"github.com/spf13/cobra"
 
 	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/cli"
+	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/pubsub"
 	"github.com/AnomalyFi/hypersdk/rpc"
@@ -17,9 +19,8 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/actions"
 	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/consts"
+
 	trpc "github.com/AnomalyFi/nodekit-seq/rpc"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/spf13/cobra"
 )
 
 var spamCmd = &cobra.Command{
@@ -40,18 +41,29 @@ var runSpamCmd = &cobra.Command{
 			maxFeeParsed = &v
 		}
 		return handler.Root().Spam(maxTxBacklog, maxFeeParsed, randomRecipient,
-			func(uri string, networkID uint32, chainID ids.ID) {
+			func(uri string, networkID uint32, chainID ids.ID) error { // createClient
 				tclient = trpc.NewJSONRPCClient(uri, networkID, chainID)
 				sc, err := rpc.NewWebSocketClient(uri, rpc.DefaultHandshakeTimeout, pubsub.MaxPendingMessages, pubsub.MaxReadMessageSize)
 				if err != nil {
-					panic(err)
+					return err
 				}
 				sclient = sc
+				return nil
 			},
-			func(pk ed25519.PrivateKey) chain.AuthFactory {
-				return auth.NewED25519Factory(pk)
+			func(priv *cli.PrivateKey) (chain.AuthFactory, error) { // getFactory
+				return auth.NewED25519Factory(ed25519.PrivateKey(priv.Bytes)), nil
 			},
-			func(choice int, address string) (uint64, error) {
+			func() (*cli.PrivateKey, error) { // createAccount
+				p, err := ed25519.GeneratePrivateKey()
+				if err != nil {
+					return nil, err
+				}
+				return &cli.PrivateKey{
+					Address: auth.NewED25519Address(p.PublicKey()),
+					Bytes:   p[:],
+				}, nil
+			},
+			func(choice int, address string) (uint64, error) { // lookupBalance
 				balance, err := tclient.Balance(context.TODO(), address, ids.Empty)
 				if err != nil {
 					return 0, err
@@ -65,91 +77,25 @@ var runSpamCmd = &cobra.Command{
 				)
 				return balance, err
 			},
-			func(ctx context.Context, chainID ids.ID) (chain.Parser, error) {
+			func(ctx context.Context, chainID ids.ID) (chain.Parser, error) { // getParser
 				return tclient.Parser(ctx)
 			},
-			func(pk ed25519.PublicKey, amount uint64) chain.Action {
-				return &actions.Transfer{
-					To:    pk,
+			func(addr codec.Address, amount uint64) []chain.Action { // getTransfer
+				return []chain.Action{&actions.Transfer{
+					To:    addr,
 					Asset: ids.Empty,
 					Value: amount,
-				}
+				}}
 			},
-			func(cli *rpc.JSONRPCClient, pk ed25519.PrivateKey) func(context.Context, uint64) error {
+			func(cli *rpc.JSONRPCClient, priv *cli.PrivateKey) func(context.Context, uint64) error { // submitDummy
 				return func(ictx context.Context, count uint64) error {
-					_, _, err := sendAndWait(ictx, nil, &actions.Transfer{
-						To:    pk.PublicKey(),
+					_, err := sendAndWait(ictx, []chain.Action{&actions.Transfer{
+						To:    priv.Address,
 						Value: count, // prevent duplicate txs
-					}, cli, sclient, tclient, auth.NewED25519Factory(pk), false)
+					}}, cli, sclient, tclient, auth.NewED25519Factory(ed25519.PrivateKey(priv.Bytes)), false)
 					return err
 				}
 			},
 		)
 	},
-}
-
-var runSpamSequencerMsgCmd = &cobra.Command{
-	Use: "smsg",
-	RunE: func(*cobra.Command, []string) error {
-		ctx := context.Background()
-
-		_, _, factory, cli, scli, tcli, err := handler.DefaultActor()
-		if err != nil {
-			return err
-		}
-
-		numAddress, err := handler.Root().PromptInt("how many addresses to generate?", 500)
-		if err != nil {
-			return err
-		}
-
-		numMsgs, err := handler.Root().PromptInt("how many msgs to send?", 10000)
-		if err != nil {
-			return err
-		}
-
-		for i := 0; i < numAddress; i++ {
-			handler.Root().GenerateKey()
-		}
-
-		keys, err := handler.Root().GetKeys()
-		if err != nil {
-			return err
-		}
-
-		for _, k := range keys {
-			for i := 0; i < numMsgs; i++ {
-				data, err := randomBytes()
-				fmt.Printf("data size(byte): %d\n", len(data))
-				if err != nil {
-					fmt.Println("error genrateing bytes, skipping")
-					continue
-				}
-				_, _, err = sendAndWait(ctx, nil, &actions.SequencerMsg{
-					Data:        data,
-					ChainId:     []byte("nkit"),
-					FromAddress: k.PublicKey(),
-				}, cli, scli, tcli, factory, true)
-				if err != nil {
-					fmt.Println("error submitting tx, skipping")
-				}
-			}
-		}
-
-		return err
-	},
-}
-
-func randomBytes() ([]byte, error) {
-	// 256 kb
-	numBytes := rand.Intn(256 * 1024)
-
-	b := make([]byte, numBytes)
-
-	_, err := crand.Read(b)
-	if err != nil {
-		return nil, err
-	}
-
-	return b, nil
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/fees"
+	tconsts "github.com/AnomalyFi/nodekit-seq/consts"
 
 	"github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
@@ -19,8 +20,6 @@ import (
 	"github.com/ava-labs/avalanchego/database"
 	"github.com/ava-labs/avalanchego/ids"
 	smath "github.com/ava-labs/avalanchego/utils/math"
-
-	"github.com/AnomalyFi/nodekit-seq/utils"
 )
 
 type ReadState func(context.Context, [][]byte) ([][]byte, []error)
@@ -33,7 +32,7 @@ type ReadState func(context.Context, [][]byte) ([][]byte, []error)
 // 0x0/ (balance)
 //   -> [owner|asset] => balance
 // 0x1/ (assets)
-//   -> [asset] => metadataLen|metadata|supply|owner|warp
+//   -> [asset] => metadataLen|metadata|supply|owner
 // 0x2/ (orders)
 //   -> [txID] => in|out|rate|remaining|owner
 // 0x3/ (loans)
@@ -77,7 +76,7 @@ var (
 
 	balanceKeyPool = sync.Pool{
 		New: func() any {
-			return make([]byte, 1+codec.AddressLen+consts.IDLen+consts.Uint16Len)
+			return make([]byte, 1+codec.AddressLen+ids.IDLen+consts.Uint16Len)
 		},
 	}
 )
@@ -144,7 +143,7 @@ func BalanceKey(pk codec.Address, asset ids.ID) (k []byte) {
 	k[0] = balancePrefix
 	copy(k[1:], pk[:])
 	copy(k[1+codec.AddressLen:], asset[:])
-	binary.BigEndian.PutUint16(k[1+codec.AddressLen+consts.IDLen:], BalanceChunks)
+	binary.BigEndian.PutUint16(k[1+codec.AddressLen+ids.IDLen:], BalanceChunks)
 	return
 }
 
@@ -302,7 +301,7 @@ func GetAssetFromState(
 	ctx context.Context,
 	f ReadState,
 	asset ids.ID,
-) (bool, []byte, uint8, []byte, uint64, codec.Address, bool, error) {
+) (bool, []byte, uint8, []byte, uint64, codec.Address, error) {
 	values, errs := f(ctx, [][]byte{AssetKey(asset)})
 	return innerGetAsset(values[0], errs[0])
 }
@@ -311,7 +310,7 @@ func GetAsset(
 	ctx context.Context,
 	im state.Immutable,
 	asset ids.ID,
-) (bool, []byte, uint8, []byte, uint64, codec.Address, bool, error) {
+) (bool, []byte, uint8, []byte, uint64, codec.Address, error) {
 	k := AssetKey(asset)
 	return innerGetAsset(im.GetValue(ctx, k))
 }
@@ -319,12 +318,12 @@ func GetAsset(
 func innerGetAsset(
 	v []byte,
 	err error,
-) (bool, []byte, uint8, []byte, uint64, codec.Address, bool, error) {
+) (bool, []byte, uint8, []byte, uint64, codec.Address, error) {
 	if errors.Is(err, database.ErrNotFound) {
-		return false, nil, 0, nil, 0, codec.EmptyAddress, false, nil
+		return false, nil, 0, nil, 0, codec.EmptyAddress, nil
 	}
 	if err != nil {
-		return false, nil, 0, nil, 0, codec.EmptyAddress, false, err
+		return false, nil, 0, nil, 0, codec.EmptyAddress, err
 	}
 	symbolLen := binary.BigEndian.Uint16(v)
 	symbol := v[consts.Uint16Len : consts.Uint16Len+symbolLen]
@@ -334,7 +333,7 @@ func innerGetAsset(
 	supply := binary.BigEndian.Uint64(v[consts.Uint16Len+symbolLen+consts.Uint8Len+consts.Uint16Len+metadataLen:])
 	var addr codec.Address
 	copy(addr[:], v[consts.Uint16Len+symbolLen+consts.Uint8Len+consts.Uint16Len+metadataLen+consts.Uint64Len:])
-	return true, symbol, decimals, metadata, supply, pk, nil
+	return true, symbol, decimals, metadata, supply, addr, nil
 }
 
 func SetAsset(
@@ -346,7 +345,6 @@ func SetAsset(
 	metadata []byte,
 	supply uint64,
 	owner codec.Address,
-	warp bool,
 ) error {
 	k := AssetKey(asset)
 	symbolLen := len(symbol)
@@ -369,7 +367,7 @@ func DeleteAsset(ctx context.Context, mu state.Mutable, asset ids.ID) error {
 
 // [orderPrefix] + [txID]
 func OrderKey(txID ids.ID) (k []byte) {
-	k = make([]byte, 1+consts.IDLen+consts.Uint16Len)
+	k = make([]byte, 1+ids.IDLen+consts.Uint16Len)
 	k[0] = orderPrefix
 	copy(k[1:], txID[:])
 	binary.BigEndian.PutUint16(k[1+ids.IDLen:], OrderChunks)
@@ -388,13 +386,13 @@ func SetOrder(
 	owner ed25519.PublicKey,
 ) error {
 	k := OrderKey(txID)
-	v := make([]byte, consts.IDLen*2+consts.Uint64Len*3+ed25519.PublicKeyLen)
+	v := make([]byte, ids.IDLen*2+consts.Uint64Len*3+ed25519.PublicKeyLen)
 	copy(v, in[:])
-	binary.BigEndian.PutUint64(v[consts.IDLen:], inTick)
-	copy(v[consts.IDLen+consts.Uint64Len:], out[:])
-	binary.BigEndian.PutUint64(v[consts.IDLen*2+consts.Uint64Len:], outTick)
-	binary.BigEndian.PutUint64(v[consts.IDLen*2+consts.Uint64Len*2:], supply)
-	copy(v[consts.IDLen*2+consts.Uint64Len*3:], owner[:])
+	binary.BigEndian.PutUint64(v[ids.IDLen:], inTick)
+	copy(v[ids.IDLen+consts.Uint64Len:], out[:])
+	binary.BigEndian.PutUint64(v[ids.IDLen*2+consts.Uint64Len:], outTick)
+	binary.BigEndian.PutUint64(v[ids.IDLen*2+consts.Uint64Len*2:], supply)
+	copy(v[ids.IDLen*2+consts.Uint64Len*3:], owner[:])
 	return mu.Insert(ctx, k, v)
 }
 
@@ -453,14 +451,14 @@ func innerGetOrder(v []byte, err error) (
 		return false, ids.Empty, 0, ids.Empty, 0, 0, ed25519.EmptyPublicKey, err
 	}
 	var in ids.ID
-	copy(in[:], v[:consts.IDLen])
-	inTick := binary.BigEndian.Uint64(v[consts.IDLen:])
+	copy(in[:], v[:ids.IDLen])
+	inTick := binary.BigEndian.Uint64(v[ids.IDLen:])
 	var out ids.ID
-	copy(out[:], v[consts.IDLen+consts.Uint64Len:consts.IDLen*2+consts.Uint64Len])
-	outTick := binary.BigEndian.Uint64(v[consts.IDLen*2+consts.Uint64Len:])
-	supply := binary.BigEndian.Uint64(v[consts.IDLen*2+consts.Uint64Len*2:])
+	copy(out[:], v[ids.IDLen+consts.Uint64Len:ids.IDLen*2+consts.Uint64Len])
+	outTick := binary.BigEndian.Uint64(v[ids.IDLen*2+consts.Uint64Len:])
+	supply := binary.BigEndian.Uint64(v[ids.IDLen*2+consts.Uint64Len*2:])
 	var owner ed25519.PublicKey
-	copy(owner[:], v[consts.IDLen*2+consts.Uint64Len*3:])
+	copy(owner[:], v[ids.IDLen*2+consts.Uint64Len*3:])
 	return true, in, inTick, out, outTick, supply, owner, nil
 }
 
@@ -471,20 +469,20 @@ func DeleteOrder(ctx context.Context, mu state.Mutable, order ids.ID) error {
 
 // [loanPrefix] + [asset] + [destination]
 func LoanKey(asset ids.ID, destination ids.ID) (k []byte) {
-	k = make([]byte, 1+consts.IDLen*2+consts.Uint16Len)
+	k = make([]byte, 1+ids.IDLen*2+consts.Uint16Len)
 	k[0] = loanPrefix
 	copy(k[1:], asset[:])
-	copy(k[1+consts.IDLen:], destination[:])
-	binary.BigEndian.PutUint16(k[1+consts.IDLen*2:], LoanChunks)
+	copy(k[1+ids.IDLen:], destination[:])
+	binary.BigEndian.PutUint16(k[1+ids.IDLen*2:], LoanChunks)
 	return
 }
 
 func PrefixBlockKey(block ids.ID, parent ids.ID) (k []byte) {
-	k = make([]byte, 1+consts.IDLen*2)
+	k = make([]byte, 1+ids.IDLen*2)
 	k[0] = blockPrefix
 	copy(k[1:], block[:])
-	binary.BigEndian.PutUint16(k[1+consts.IDLen*2:], LoanChunks)
-	copy(k[1+consts.IDLen:], parent[:])
+	binary.BigEndian.PutUint16(k[1+ids.IDLen*2:], LoanChunks)
+	copy(k[1+ids.IDLen:], parent[:])
 	return
 }
 

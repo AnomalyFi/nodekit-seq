@@ -6,8 +6,9 @@ package cmd
 import (
 	"context"
 
+	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/cli"
-	hconsts "github.com/AnomalyFi/hypersdk/consts"
+	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/pubsub"
 	"github.com/AnomalyFi/hypersdk/rpc"
@@ -15,7 +16,7 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	trpc "github.com/AnomalyFi/nodekit-seq/rpc"
-	"github.com/AnomalyFi/nodekit-seq/utils"
+
 	"github.com/ava-labs/avalanchego/ids"
 )
 
@@ -41,7 +42,7 @@ func (*Handler) GetAssetInfo(
 	checkBalance bool,
 ) ([]byte, uint8, uint64, ids.ID, error) {
 	var sourceChainID ids.ID
-	exists, symbol, decimals, metadata, supply, _, warp, err := cli.Asset(ctx, assetID, false)
+	exists, symbol, decimals, metadata, supply, _, err := cli.Asset(ctx, assetID, false)
 	if err != nil {
 		return nil, 0, 0, ids.Empty, err
 	}
@@ -52,12 +53,11 @@ func (*Handler) GetAssetInfo(
 			return nil, 0, 0, ids.Empty, nil
 		}
 		hutils.Outf(
-			"{{yellow}}symbol:{{/}} %s {{yellow}}decimals:{{/}} %d {{yellow}}metadata:{{/}} %s {{yellow}}supply:{{/}} %d {{yellow}}warp:{{/}} %t\n",
+			"{{yellow}}symbol:{{/}} %s {{yellow}}decimals:{{/}} %d {{yellow}}metadata:{{/}} %s {{yellow}}supply:{{/}} %d\n",
 			symbol,
 			decimals,
 			metadata,
 			supply,
-			warp,
 		)
 	}
 	if !checkBalance {
@@ -67,7 +67,7 @@ func (*Handler) GetAssetInfo(
 	if err != nil {
 		return nil, 0, 0, ids.Empty, err
 	}
-	balance, err := cli.Balance(ctx, addr, assetID)
+	balance, err := cli.Balance(ctx, saddr, assetID)
 	if err != nil {
 		return nil, 0, 0, ids.Empty, err
 	}

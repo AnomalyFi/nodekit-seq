@@ -10,19 +10,18 @@ import (
 
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/trace"
+	"github.com/ava-labs/avalanchego/x/merkledb"
+
 	smath "github.com/ava-labs/avalanchego/utils/math"
 
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/fees"
 
-	"github.com/AnomalyFi/hypersdk/chain"
 	hconsts "github.com/AnomalyFi/hypersdk/consts"
-	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/state"
 	"github.com/AnomalyFi/hypersdk/vm"
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/storage"
-	"github.com/AnomalyFi/nodekit-seq/utils"
 )
 
 var _ vm.Genesis = (*Genesis)(nil)
@@ -141,7 +140,6 @@ func (g *Genesis) Load(ctx context.Context, tracer trace.Tracer, mu state.Mutabl
 		[]byte(consts.Name),
 		supply,
 		codec.EmptyAddress,
-		false,
 	)
 }
 

@@ -29,7 +29,7 @@ func sendAndWait(
 	if err != nil {
 		return ids.Empty, err
 	}
-	_, tx, _, err := cli.GenerateTransaction(ctx, parser, actions, factory)
+	_, tx, _, err := cli.GenerateTransaction(ctx, parser, action, factory)
 	if err != nil {
 		return ids.Empty, err
 	}
@@ -41,10 +41,10 @@ func sendAndWait(
 	for {
 		txID, dErr, result, err := scli.ListenTx(ctx)
 		if dErr != nil {
-			return false, ids.Empty, dErr
+			return ids.Empty, dErr
 		}
 		if err != nil {
-			return false, ids.Empty, err
+			return ids.Empty, err
 		}
 		if txID == tx.ID() {
 			res = result
@@ -56,7 +56,7 @@ func sendAndWait(
 	if printStatus {
 		handler.Root().PrintStatus(tx.ID(), res.Success)
 	}
-	return res.Success, tx.ID(), nil
+	return tx.ID(), nil
 }
 
 func handleTx(c *trpc.JSONRPCClient, tx *chain.Transaction, result *chain.Result) {

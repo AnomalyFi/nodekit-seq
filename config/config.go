@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/config"
 	"github.com/AnomalyFi/hypersdk/gossiper"
 	"github.com/AnomalyFi/hypersdk/trace"
@@ -18,7 +19,6 @@ import (
 	"github.com/ava-labs/avalanchego/utils/profiler"
 
 	"github.com/AnomalyFi/nodekit-seq/consts"
-	"github.com/AnomalyFi/nodekit-seq/utils"
 	"github.com/AnomalyFi/nodekit-seq/version"
 )
 
@@ -98,8 +98,8 @@ func New(nodeID ids.NodeID, b []byte) (*Config, error) {
 
 	// Parse any exempt sponsors (usually used when a single account is
 	// broadcasting many txs at once)
-	c.parsedExemptPayers = make([]codec.Address, len(c.MempoolExemptSponsors))
-	for i, payer := range c.MempoolExemptSponsors {
+	c.parsedExemptSponsors = make([]codec.Address, len(c.MempoolExemptSponsors))
+	for i, sponsor := range c.MempoolExemptSponsors {
 		p, err := codec.ParseAddressBech32(consts.HRP, sponsor)
 		if err != nil {
 			return nil, err

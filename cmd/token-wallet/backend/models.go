@@ -4,7 +4,7 @@
 package backend
 
 import (
-	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/fees"
 	"github.com/ava-labs/avalanchego/utils/set"
 )
 
@@ -36,7 +36,7 @@ type TimeStat struct {
 	Timestamp    int64
 	Transactions int
 	Accounts     set.Set[string]
-	Prices       chain.Dimensions
+	Prices       fees.Dimensions
 }
 
 type BlockInfo struct {

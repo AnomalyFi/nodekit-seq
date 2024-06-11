@@ -10,7 +10,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
+	"github.com/ava-labs/avalanchego/ids"
+	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/ava-labs/avalanchego/utils/set"
+	"github.com/ava-labs/avalanchego/utils/timer"
+	"go.uber.org/zap"
+
+	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/rpc"
 	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/actions"
@@ -18,13 +25,8 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/challenge"
 	"github.com/AnomalyFi/nodekit-seq/cmd/token-faucet/config"
 	"github.com/AnomalyFi/nodekit-seq/consts"
+
 	trpc "github.com/AnomalyFi/nodekit-seq/rpc"
-	tutils "github.com/AnomalyFi/nodekit-seq/utils"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/utils/logging"
-	"github.com/ava-labs/avalanchego/utils/set"
-	"github.com/ava-labs/avalanchego/utils/timer"
-	"go.uber.org/zap"
 )
 
 type Manager struct {
@@ -60,13 +62,12 @@ func New(logger logging.Logger, config *config.Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	addr := tutils.Address(m.config.PrivateKey().PublicKey())
-	bal, err := tcli.Balance(ctx, addr, ids.Empty)
+	bal, err := tcli.Balance(ctx, m.config.AddressBech32(), ids.Empty)
 	if err != nil {
 		return nil, err
 	}
 	m.log.Info("faucet initialized",
-		zap.String("address", addr),
+		zap.String("address", m.config.AddressBech32()),
 		zap.Uint16("difficulty", m.difficulty),
 		zap.String("balance", utils.FormatBalance(bal, consts.Decimals)),
 	)
@@ -108,8 +109,8 @@ func (m *Manager) updateDifficulty() {
 	m.t.SetTimeoutIn(time.Duration(m.config.TargetDurationPerSalt) * time.Second)
 }
 
-func (m *Manager) GetFaucetAddress(_ context.Context) (ed25519.PublicKey, error) {
-	return m.config.PrivateKey().PublicKey(), nil
+func (m *Manager) GetFaucetAddress(_ context.Context) (codec.Address, error) {
+	return m.config.Address(), nil
 }
 
 func (m *Manager) GetChallenge(_ context.Context) ([]byte, uint16, error) {
@@ -119,16 +120,16 @@ func (m *Manager) GetChallenge(_ context.Context) ([]byte, uint16, error) {
 	return m.salt, m.difficulty, nil
 }
 
-func (m *Manager) sendFunds(ctx context.Context, destination ed25519.PublicKey, amount uint64) (ids.ID, uint64, error) {
+func (m *Manager) sendFunds(ctx context.Context, destination codec.Address, amount uint64) (ids.ID, uint64, error) {
 	parser, err := m.tcli.Parser(ctx)
 	if err != nil {
 		return ids.Empty, 0, err
 	}
-	submit, tx, maxFee, err := m.cli.GenerateTransaction(ctx, parser, nil, &actions.Transfer{
+	submit, tx, maxFee, err := m.cli.GenerateTransaction(ctx, parser, []chain.Action{&actions.Transfer{
 		To:    destination,
 		Asset: ids.Empty,
 		Value: amount,
-	}, m.factory)
+	}}, m.factory)
 	if err != nil {
 		return ids.Empty, 0, err
 	}
@@ -136,8 +137,7 @@ func (m *Manager) sendFunds(ctx context.Context, destination ed25519.PublicKey, 
 		m.log.Warn("abandoning airdrop because network fee is greater than amount", zap.String("maxFee", utils.FormatBalance(maxFee, consts.Decimals)))
 		return ids.Empty, 0, errors.New("network fee too high")
 	}
-	addr := tutils.Address(m.config.PrivateKey().PublicKey())
-	bal, err := m.tcli.Balance(ctx, addr, ids.Empty)
+	bal, err := m.tcli.Balance(ctx, m.config.AddressBech32(), ids.Empty)
 	if err != nil {
 		return ids.Empty, 0, err
 	}
@@ -149,7 +149,7 @@ func (m *Manager) sendFunds(ctx context.Context, destination ed25519.PublicKey, 
 	return tx.ID(), maxFee, submit(ctx)
 }
 
-func (m *Manager) SolveChallenge(ctx context.Context, solver ed25519.PublicKey, salt []byte, solution []byte) (ids.ID, uint64, error) {
+func (m *Manager) SolveChallenge(ctx context.Context, solver codec.Address, salt []byte, solution []byte) (ids.ID, uint64, error) {
 	m.l.Lock()
 	defer m.l.Unlock()
 
@@ -173,7 +173,7 @@ func (m *Manager) SolveChallenge(ctx context.Context, solver ed25519.PublicKey, 
 	m.log.Info("fauceted funds",
 		zap.Stringer("txID", txID),
 		zap.String("max fee", utils.FormatBalance(maxFee, consts.Decimals)),
-		zap.String("destination", tutils.Address(solver)),
+		zap.String("destination", codec.MustAddressBech32(consts.HRP, solver)),
 		zap.String("amount", utils.FormatBalance(m.config.Amount, consts.Decimals)),
 	)
 	m.solutions.Add(solutionID)

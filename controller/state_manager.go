@@ -4,9 +4,17 @@
 package controller
 
 import (
+	"context"
+
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
+
+	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/codec"
+	"github.com/AnomalyFi/hypersdk/state"
 )
+
+var _ (chain.StateManager) = (*StateManager)(nil)
 
 type StateManager struct{}
 

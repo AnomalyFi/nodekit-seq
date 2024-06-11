@@ -8,7 +8,6 @@ import (
 
 	"github.com/ava-labs/avalanchego/ids"
 	smath "github.com/ava-labs/avalanchego/utils/math"
-	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
@@ -55,7 +54,7 @@ func (b *BurnAsset) Execute(
 	_ ids.ID,
 ) ([][]byte, error) {
 	if b.Value == 0 {
-		return false, ErrOutputValueZero
+		return nil, ErrOutputValueZero
 	}
 	if err := storage.SubBalance(ctx, mu, actor, b.Asset, b.Value); err != nil {
 		return nil, err
@@ -65,7 +64,7 @@ func (b *BurnAsset) Execute(
 		return nil, err
 	}
 	if !exists {
-		return false, ErrOutputAssetMissing
+		return nil, ErrOutputAssetMissing
 	}
 	newSupply, err := smath.Sub(supply, b.Value)
 	if err != nil {
@@ -82,7 +81,7 @@ func (*BurnAsset) ComputeUnits(chain.Rules) uint64 {
 }
 
 func (*BurnAsset) Size() int {
-	return consts.IDLen + consts.Uint64Len
+	return ids.IDLen + consts.Uint64Len
 }
 
 func (b *BurnAsset) Marshal(p *codec.Packer) {
@@ -90,7 +89,7 @@ func (b *BurnAsset) Marshal(p *codec.Packer) {
 	p.PackUint64(b.Value)
 }
 
-func UnmarshalBurnAsset(p *codec.Packer, _ *warp.Message) (chain.Action, error) {
+func UnmarshalBurnAsset(p *codec.Packer) (chain.Action, error) {
 	var burn BurnAsset
 	p.UnpackID(false, &burn.Asset) // can burn native asset
 	burn.Value = p.UnpackUint64(true)

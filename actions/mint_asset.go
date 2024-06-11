@@ -8,7 +8,6 @@ import (
 
 	"github.com/ava-labs/avalanchego/ids"
 	smath "github.com/ava-labs/avalanchego/utils/math"
-	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
@@ -96,10 +95,10 @@ func (m *MintAsset) Marshal(p *codec.Packer) {
 	p.PackUint64(m.Value)
 }
 
-func UnmarshalMintAsset(p *codec.Packer, _ *warp.Message) (chain.Action, error) {
+func UnmarshalMintAsset(p *codec.Packer) (chain.Action, error) {
 	var mint MintAsset
-	p.UnpackAddress(true, &mint.To) // cannot mint to blackhole
-	p.UnpackID(true, &mint.Asset)   // empty ID is the native asset
+	p.UnpackAddress(&mint.To)     // cannot mint to blackhole
+	p.UnpackID(true, &mint.Asset) // empty ID is the native asset
 	mint.Value = p.UnpackUint64(true)
 	return &mint, p.Err()
 }

@@ -7,15 +7,14 @@ package cmd
 import (
 	"context"
 
-	// "math/rand"
-	// "encoding/hex"
-
+	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/consts"
 	hutils "github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/actions"
 	frpc "github.com/AnomalyFi/nodekit-seq/cmd/token-faucet/rpc"
+	tconsts "github.com/AnomalyFi/nodekit-seq/consts"
 
-	"github.com/AnomalyFi/nodekit-seq/utils"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/spf13/cobra"
 )
@@ -55,7 +54,7 @@ var fundFaucetCmd = &cobra.Command{
 		}
 
 		// Get balance
-		_, decimals, balance, _, err := handler.GetAssetInfo(ctx, tcli, priv.Address(), ids.Empty, true)
+		_, decimals, balance, _, err := handler.GetAssetInfo(ctx, tcli, priv.Address, ids.Empty, true)
 		if balance == 0 || err != nil {
 			return err
 		}
@@ -73,7 +72,7 @@ var fundFaucetCmd = &cobra.Command{
 		}
 
 		// Generate transaction
-		addr, err := utils.ParseAddressBech32(tconsts.HRP, faucetAddress)
+		addr, err := codec.ParseAddressBech32(tconsts.HRP, faucetAddress)
 		if err != nil {
 			return err
 		}
@@ -84,7 +83,7 @@ var fundFaucetCmd = &cobra.Command{
 		}}, cli, scli, tcli, factory, true); err != nil {
 			return err
 		}
-		utils.Outf("{{green}}funded faucet:{{/}} %s\n", faucetAddress)
+		hutils.Outf("{{green}}funded faucet:{{/}} %s\n", faucetAddress)
 		return nil
 	},
 }
@@ -103,7 +102,7 @@ var transferCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, decimals, balance, _, err := handler.GetAssetInfo(ctx, tcli, priv.Address(), assetID, true)
+		_, decimals, balance, _, err := handler.GetAssetInfo(ctx, tcli, priv.Address, assetID, true)
 		if balance == 0 || err != nil {
 			return err
 		}
@@ -181,7 +180,7 @@ var createAssetCmd = &cobra.Command{
 
 		// Print assetID
 		assetID := chain.CreateActionID(txID, 0)
-		utils.Outf("{{green}}assetID:{{/}} %s\n", assetID)
+		hutils.Outf("{{green}}assetID:{{/}} %s\n", assetID)
 		return nil
 	},
 }
@@ -206,11 +205,13 @@ var sequencerMsgCmd = &cobra.Command{
 		}
 
 		// Generate transaction
-		_, err := sendAndWait(ctx, []chain.Action{&actions.SequencerMsg{
+		txId, err := sendAndWait(ctx, []chain.Action{&actions.SequencerMsg{
 			Data:        []byte{0x00, 0x01, 0x02},
 			ChainId:     []byte("nkit"),
 			FromAddress: recipient,
 		}}, cli, scli, tcli, factory, true)
+
+		hutils.Outf("{{green}}txId:{{/}} %s\n", txId)
 
 		return err
 	},
