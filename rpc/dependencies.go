@@ -9,10 +9,10 @@ import (
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/fees"
-
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/trace"
+	"github.com/ava-labs/avalanchego/utils/logging"
 )
 
 type Controller interface {
@@ -28,4 +28,5 @@ type Controller interface {
 		verifySig bool,
 		txs []*chain.Transaction,
 	) (errs []error)
+	Logger() logging.Logger
 }

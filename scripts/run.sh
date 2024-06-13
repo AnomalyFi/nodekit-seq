@@ -262,8 +262,8 @@ echo "running e2e tests"
 --network-runner-log-level verbo \
 --avalanchego-log-level "${AGO_LOG_LEVEL}" \
 --avalanchego-log-display-level "${AGO_LOG_DISPLAY_LEVEL}" \
---network-runner-grpc-endpoint="0.0.0.0:12352" \
---network-runner-grpc-gateway-endpoint="0.0.0.0:12353" \
+--network-runner-grpc-endpoint="127.0.0.1:12352" \
+--network-runner-grpc-gateway-endpoint="127.0.0.1:12353" \
 --avalanchego-path="${AVALANCHEGO_PATH}" \
 --avalanchego-plugin-dir="${AVALANCHEGO_PLUGIN_DIR}" \
 --vm-genesis-path="${TMPDIR}"/tokenvm.genesis \

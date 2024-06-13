@@ -177,4 +177,4 @@ require (
 
 // replace github.com/ava-labs/coreth => github.com/AnomalyFi/coreth v0.12.5-rc.6.1
 
-replace github.com/AnomalyFi/hypersdk => /home/noah/code/hypersdk
+replace github.com/AnomalyFi/hypersdk => ../hypersdk

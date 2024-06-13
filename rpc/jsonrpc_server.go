@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/ava-labs/avalanchego/ids"
+	"go.uber.org/zap"
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/fees"
@@ -704,6 +705,9 @@ func (j *JSONRPCServer) GetBlockTransactionsByNamespace(req *http.Request, args 
 }
 
 func (j *JSONRPCServer) AcceptBlock(blk *chain.StatelessBlock) error {
+	logger := j.c.Logger()
+	logger.Debug("nodekit-seq jsonrpc server is accepting block", zap.Uint64("Height", blk.Height()), zap.Int("len(bytes)", len(blk.Bytes())))
+
 	ctx := context.Background()
 	msg, err := rpc.PackBlockMessage(blk)
 	if err != nil {
@@ -712,6 +716,9 @@ func (j *JSONRPCServer) AcceptBlock(blk *chain.StatelessBlock) error {
 	parser := j.ServerParser(ctx, 1, ids.Empty)
 
 	block, results, _, id, err := rpc.UnpackBlockMessage(msg, parser)
+	if err != nil {
+		return err
+	}
 
 	// TODO I should experiment with TTL
 	j.headers.Put(id.String(), block)
