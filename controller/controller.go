@@ -21,6 +21,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/AnomalyFi/nodekit-seq/actions"
+	"github.com/AnomalyFi/nodekit-seq/archiver"
 	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/config"
 	"github.com/AnomalyFi/nodekit-seq/consts"
@@ -44,6 +45,7 @@ type Controller struct {
 	stateManager *StateManager
 
 	jsonRPCServer *rpc.JSONRPCServer
+	archiver      *archiver.ORMArchiver
 
 	metrics *metrics
 
@@ -124,6 +126,11 @@ func (c *Controller) Initialize(
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
+	c.archiver, err = archiver.NewORMArchiverFromConfig(&c.config.ArchiverConfig)
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+	}
+
 	apis[rpc.JSONRPCEndpoint] = jsonRPCHandler
 
 	// Create builder and gossiper
@@ -177,6 +184,8 @@ func (c *Controller) Submit(
 func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) error {
 	batch := c.metaDB.NewBatch()
 	defer batch.Reset()
+
+	go c.archiver.InsertBlock(blk)
 
 	if err := c.jsonRPCServer.AcceptBlock(blk); err != nil {
 		c.inner.Logger().Fatal("unable to accept block in json-rpc server", zap.Error(err))

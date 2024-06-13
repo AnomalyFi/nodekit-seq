@@ -171,7 +171,12 @@ cat <<EOF > "${TMPDIR}"/tokenvm.config
   "stateSyncServerDelay": ${STATESYNC_DELAY},
   "storeBlockResultsOnDisk": ${STORE_BLOCK_RESULTS_ON_DISK},
   "ethRPCAddr": "${ETHL1RPC}",
-  "ethWSAddr": "${ETHL1WS}"
+  "ethWSAddr": "${ETHL1WS}",
+  "archiverConfig": {
+    "enabled": true,
+    "archiverType": "sqlite",
+    "dsn": "/tmp/default.db"
+  }
 }
 EOF
 mkdir -p "${TMPDIR}"/tokenvm-e2e-profiles

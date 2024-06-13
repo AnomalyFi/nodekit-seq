@@ -106,12 +106,12 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (self *Header) Commit() Commitment {
+func (header *Header) Commit() Commitment {
 	return NewRawCommitmentBuilder("BLOCK").
-		Uint64Field("height", self.Height).
-		Uint64Field("timestamp", self.Timestamp).
-		Uint64Field("l1_head", self.L1Head).
-		Field("transactions_root", self.TransactionsRoot.Commit()).
+		Uint64Field("height", header.Height).
+		Uint64Field("timestamp", header.Timestamp).
+		Uint64Field("l1_head", header.L1Head).
+		Field("transactions_root", header.TransactionsRoot.Commit()).
 		Finalize()
 }
 
@@ -138,10 +138,53 @@ func (r *NmtRoot) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (self *NmtRoot) Commit() Commitment {
+func (root *NmtRoot) Commit() Commitment {
 	return NewRawCommitmentBuilder("NMTROOT").
-		VarSizeField("root", self.Root).
+		VarSizeField("root", root.Root).
 		Finalize()
 }
 
 type Bytes []byte
+
+type BlockInfo struct {
+	BlockId   string `json:"id"`
+	Timestamp int64  `json:"timestamp"`
+	L1Head    uint64 `json:"l1_head"`
+	Height    uint64 `json:"height"`
+}
+
+type BlockHeadersResponse struct {
+	From   uint64      `json:"from"`
+	Blocks []BlockInfo `json:"blocks"`
+	Prev   BlockInfo   `json:"prev"`
+	Next   BlockInfo   `json:"next"`
+}
+
+type GetBlockHeadersIDArgs struct {
+	ID  string `json:"id"`
+	End int64  `json:"end"`
+}
+
+type GetBlockHeadersByStartArgs struct {
+	Start int64 `json:"start"`
+	End   int64 `json:"end"`
+}
+
+type GetBlockCommitmentArgs struct {
+	First         uint64 `json:"first"`
+	CurrentHeight uint64 `json:"current_height"`
+	MaxBlocks     int    `json:"max_blocks"`
+}
+
+type SequencerWarpBlockResponse struct {
+	Blocks []SequencerWarpBlock `json:"blocks"`
+}
+
+type SequencerWarpBlock struct {
+	BlockId    string   `json:"id"`
+	Timestamp  int64    `json:"timestamp"`
+	L1Head     uint64   `json:"l1_head"`
+	Height     *big.Int `json:"height"`
+	BlockRoot  *big.Int `json:"root"`
+	ParentRoot *big.Int `json:"parent"`
+}

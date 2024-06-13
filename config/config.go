@@ -18,6 +18,7 @@ import (
 	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/ava-labs/avalanchego/utils/profiler"
 
+	"github.com/AnomalyFi/nodekit-seq/archiver"
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/version"
 )
@@ -80,6 +81,9 @@ type Config struct {
 	// ETH L1
 	ETHRPCAddr string `json:"ethRPCAddr"`
 	ETHWSAddr  string `json:"ethWSAddr"`
+
+	// Archiver
+	ArchiverConfig archiver.ORMArchiverConfig `json:"archiverConfig"`
 
 	loaded               bool
 	nodeID               ids.NodeID
