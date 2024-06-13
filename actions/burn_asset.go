@@ -41,10 +41,6 @@ func (*BurnAsset) StateKeysMaxChunks() []uint16 {
 	return []uint16{storage.AssetChunks, storage.BalanceChunks}
 }
 
-func (*BurnAsset) OutputsWarpMessage() bool {
-	return false
-}
-
 func (b *BurnAsset) Execute(
 	ctx context.Context,
 	_ chain.Rules,
@@ -76,7 +72,7 @@ func (b *BurnAsset) Execute(
 	return nil, nil
 }
 
-func (*BurnAsset) ComputeUnits(chain.Rules) uint64 {
+func (*BurnAsset) ComputeUnits(codec.Address, chain.Rules) uint64 {
 	return BurnComputeUnits
 }
 

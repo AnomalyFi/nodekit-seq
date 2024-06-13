@@ -10,6 +10,7 @@ const (
 	mintAssetID   uint8 = 2
 	transferID    uint8 = 3
 	msgID         uint8 = 4
+	oracleID      uint8 = 5
 )
 
 const (
@@ -20,6 +21,8 @@ const (
 	TransferComputeUnits    = 1
 
 	MsgComputeUnits = 15
+
+	OracleComputeUnits = 1000
 
 	MaxSymbolSize   = 8
 	MaxMemoSize     = 256

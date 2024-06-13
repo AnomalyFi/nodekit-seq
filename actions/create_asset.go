@@ -71,7 +71,7 @@ func (c *CreateAsset) Execute(
 	return nil, nil
 }
 
-func (*CreateAsset) ComputeUnits(chain.Rules) uint64 {
+func (*CreateAsset) ComputeUnits(codec.Address, chain.Rules) uint64 {
 	return CreateAssetComputeUnits
 }
 

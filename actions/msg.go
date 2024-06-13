@@ -46,7 +46,7 @@ func (t *SequencerMsg) Execute(
 	return nil, nil
 }
 
-func (*SequencerMsg) ComputeUnits(chain.Rules) uint64 {
+func (*SequencerMsg) ComputeUnits(codec.Address, chain.Rules) uint64 {
 	return MsgComputeUnits
 }
 

@@ -73,7 +73,7 @@ func (t *Transfer) Execute(
 	return nil, nil
 }
 
-func (*Transfer) ComputeUnits(chain.Rules) uint64 {
+func (*Transfer) ComputeUnits(codec.Address, chain.Rules) uint64 {
 	return TransferComputeUnits
 }
 

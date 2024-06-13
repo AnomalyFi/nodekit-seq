@@ -81,7 +81,7 @@ func (m *MintAsset) Execute(
 	return nil, nil
 }
 
-func (*MintAsset) ComputeUnits(chain.Rules) uint64 {
+func (*MintAsset) ComputeUnits(codec.Address, chain.Rules) uint64 {
 	return MintAssetComputeUnits
 }
 
