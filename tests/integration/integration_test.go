@@ -666,7 +666,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 		require.True(results[0].Success)
 
 		// Read item from connection
-		blk, lresults, prices, err := cli.ListenBlock(context.TODO(), parser)
+		blk, lresults, prices, _, err := cli.ListenBlock(context.TODO(), parser)
 		require.NoError(err)
 		require.Len(blk.Txs, 1)
 		tx := blk.Txs[0].Actions[0].(*actions.Transfer)
