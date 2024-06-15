@@ -48,6 +48,7 @@ func (o *Oracle) Execute(
 	_ codec.Address,
 	_ ids.ID,
 ) ([][]byte, error) {
+	// @todo changes in genesis and rules for getting config.
 	// @todo verify the actor is the whitelisted authority?
 	if len(o.RelayerIDs) != len(o.UnitGasPrices) {
 		return nil, ErrRelayerIDsUnitGasPricesMismatch
@@ -104,4 +105,8 @@ func (*Oracle) ValidRange(chain.Rules) (int64, int64) {
 
 func (*Oracle) NMTNamespace() []byte {
 	return DefaultNMTNamespace
+}
+
+func (*Oracle) UseFeeMarket() bool {
+	return false
 }

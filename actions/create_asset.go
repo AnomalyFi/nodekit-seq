@@ -102,3 +102,7 @@ func (*CreateAsset) ValidRange(chain.Rules) (int64, int64) {
 func (*CreateAsset) NMTNamespace() []byte {
 	return DefaultNMTNamespace
 }
+
+func (*CreateAsset) UseFeeMarket() bool {
+	return false
+}

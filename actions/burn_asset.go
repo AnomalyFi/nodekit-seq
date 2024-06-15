@@ -100,3 +100,7 @@ func (*BurnAsset) ValidRange(chain.Rules) (int64, int64) {
 func (*BurnAsset) NMTNamespace() []byte {
 	return DefaultNMTNamespace
 }
+
+func (*BurnAsset) UseFeeMarket() bool {
+	return false
+}

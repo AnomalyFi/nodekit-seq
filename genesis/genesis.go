@@ -45,6 +45,11 @@ type Genesis struct {
 	WindowTargetUnits          fees.Dimensions `json:"windowTargetUnits"` // 10s
 	MaxBlockUnits              fees.Dimensions `json:"maxBlockUnits"`     // must be possible to reach before block too large
 
+	// Fee Market Parameters
+	FeeMarketMinUnits               uint64 `json:"feeMarketMinUnits"`
+	FeeMarketWindowTargetUnits      uint64 `json:"feeMarketWindowTargetUnits"`
+	FeeMarketPriceChangeDenominator uint64 `json:"feeMarketPriceChangeDenominator"`
+
 	// Tx Parameters
 	ValidityWindow      int64 `json:"validityWindow"` // ms
 	MaxActionsPerTx     uint8 `json:"maxActionsPerTx"`
@@ -79,6 +84,10 @@ func Default() *Genesis {
 		WindowTargetUnits:          fees.Dimensions{20_000_000, 1_000, 1_000, 1_000, 1_000},
 		MaxBlockUnits:              fees.Dimensions{1_800_000, 2_000, 2_000, 2_000, 2_000},
 
+		// Fee Market Parameters
+		FeeMarketMinUnits:               10_000,
+		FeeMarketWindowTargetUnits:      600, // 600 KiB
+		FeeMarketPriceChangeDenominator: 48,
 		// Tx Parameters
 		ValidityWindow:      60 * hconsts.MillisecondsPerSecond, // ms
 		MaxActionsPerTx:     16,

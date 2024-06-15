@@ -105,3 +105,7 @@ func (*Transfer) ValidRange(chain.Rules) (int64, int64) {
 func (*Transfer) NMTNamespace() []byte {
 	return DefaultNMTNamespace
 }
+
+func (*Transfer) UseFeeMarket() bool {
+	return false
+}

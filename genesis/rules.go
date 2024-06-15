@@ -101,6 +101,18 @@ func (r *Rules) GetWindowTargetUnits() fees.Dimensions {
 	return r.g.WindowTargetUnits
 }
 
+func (r *Rules) GetFeeMarketPriceChangeDenominator() uint64 {
+	return r.g.FeeMarketPriceChangeDenominator
+}
+
+func (r *Rules) GetFeeMarketWindowTargetUnits() uint64 {
+	return r.g.FeeMarketWindowTargetUnits
+}
+
+func (r *Rules) GetFeeMarketMinUnitPrice() uint64 {
+	return r.g.FeeMarketMinUnits
+}
+
 func (*Rules) FetchCustom(string) (any, bool) {
 	return nil, false
 }

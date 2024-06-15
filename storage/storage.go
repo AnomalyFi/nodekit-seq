@@ -60,6 +60,7 @@ const (
 	blockPrefix               = 0x9
 	relayerGasPrefix          = 0x10
 	relayerGasTimeStampPrefix = 0x11
+	feeMarketPrefix           = 0x12
 )
 
 const (
@@ -72,12 +73,12 @@ const (
 )
 
 var (
-	failureByte  = byte(0x0)
-	successByte  = byte(0x1)
-	heightKey    = []byte{heightPrefix}
-	timestampKey = []byte{timestampPrefix}
-	feeKey       = []byte{feePrefix}
-
+	failureByte    = byte(0x0)
+	successByte    = byte(0x1)
+	heightKey      = []byte{heightPrefix}
+	timestampKey   = []byte{timestampPrefix}
+	feeKey         = []byte{feePrefix}
+	feeMarketKey   = []byte{feeMarketPrefix}
 	balanceKeyPool = sync.Pool{
 		New: func() any {
 			return make([]byte, 1+codec.AddressLen+ids.IDLen+consts.Uint16Len)
@@ -568,4 +569,8 @@ func TimestampKey() (k []byte) {
 
 func FeeKey() (k []byte) {
 	return feeKey
+}
+
+func FeeMarketKey() (k []byte) {
+	return feeMarketKey
 }

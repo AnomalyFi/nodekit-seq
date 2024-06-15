@@ -10,7 +10,10 @@ import (
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/state"
+	"github.com/AnomalyFi/nodekit-seq/storage"
+	"github.com/ava-labs/avalanchego/database"
 	"github.com/ava-labs/avalanchego/ids"
+	"github.com/ava-labs/avalanchego/utils/math"
 )
 
 var _ chain.Action = (*SequencerMsg)(nil)
@@ -26,16 +29,18 @@ func (*SequencerMsg) GetTypeID() uint8 {
 	return msgID
 }
 
-func (*SequencerMsg) StateKeys(_ codec.Address, actionID ids.ID) state.Keys {
-	return state.Keys{}
+func (s *SequencerMsg) StateKeys(_ codec.Address, actionID ids.ID) state.Keys {
+	return state.Keys{string(storage.RelayerGasPriceKey(s.RelayerID)): state.Read}
 }
 
 // TODO fix this
 func (*SequencerMsg) StateKeysMaxChunks() []uint16 {
-	return []uint16{}
+	return []uint16{storage.RelayerGasChunks}
 }
 
-func (t *SequencerMsg) Execute(
+// Execute outputs the DA cost for the sequencer msg.
+// output price is used to add to the total gas cost.
+func (s *SequencerMsg) Execute(
 	ctx context.Context,
 	_ chain.Rules,
 	mu state.Mutable,
@@ -43,6 +48,17 @@ func (t *SequencerMsg) Execute(
 	actor codec.Address,
 	_ ids.ID,
 ) ([][]byte, error) {
+	price, err := storage.GetRelayerGasPrice(ctx, mu, s.RelayerID)
+	if err != nil && err != database.ErrNotFound {
+		return nil, err
+	}
+	cost, err := math.Mul64(price, uint64(len(s.Data)))
+	if err != nil {
+		return nil, err
+	}
+	if err := storage.SubBalance(ctx, mu, actor, ids.Empty, cost); err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 
@@ -57,11 +73,11 @@ func (*SequencerMsg) Size() int {
 	return codec.AddressLen + ids.IDLen + consts.Uint64Len + consts.IntLen
 }
 
-func (t *SequencerMsg) Marshal(p *codec.Packer) {
-	p.PackAddress(t.FromAddress)
-	p.PackBytes(t.Data)
-	p.PackBytes(t.ChainId)
-	p.PackInt(t.RelayerID)
+func (s *SequencerMsg) Marshal(p *codec.Packer) {
+	p.PackAddress(s.FromAddress)
+	p.PackBytes(s.Data)
+	p.PackBytes(s.ChainId)
+	p.PackInt(s.RelayerID)
 }
 
 func UnmarshalSequencerMsg(p *codec.Packer) (chain.Action, error) {
@@ -79,6 +95,10 @@ func (*SequencerMsg) ValidRange(chain.Rules) (int64, int64) {
 	return -1, -1
 }
 
-func (t *SequencerMsg) NMTNamespace() []byte {
-	return t.ChainId
+func (s *SequencerMsg) NMTNamespace() []byte {
+	return s.ChainId
+}
+
+func (*SequencerMsg) UseFeeMarket() bool {
+	return true
 }
