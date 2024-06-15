@@ -164,13 +164,6 @@ func (j *JSONRPCServer) SubmitMsgTx(
 	return j.c.Submit(ctx, false, []*chain.Transaction{tx})[0]
 }
 
-type account struct {
-	priv    ed25519.PrivateKey
-	factory *auth.ED25519Factory
-	rsender ed25519.PublicKey
-	sender  string
-}
-
 type TxArgs struct {
 	TxID ids.ID `json:"txId"`
 }
@@ -249,6 +242,22 @@ func (j *JSONRPCServer) Balance(req *http.Request, args *BalanceArgs, reply *Bal
 		return err
 	}
 	balance, err := j.c.GetBalanceFromState(ctx, addr, args.Asset)
+	if err != nil {
+		return err
+	}
+	reply.Amount = balance
+	return err
+}
+
+type RelayerBalanceArgs struct {
+	RelayerID uint32 `json:"relayer_id"`
+}
+
+func (j *JSONRPCServer) RelayerBalance(req *http.Request, args *RelayerBalanceArgs, reply *BalanceReply) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.RelayerBalance")
+	defer span.End()
+
+	balance, err := j.c.GetRelayerBalanceFromState(ctx, args.RelayerID)
 	if err != nil {
 		return err
 	}

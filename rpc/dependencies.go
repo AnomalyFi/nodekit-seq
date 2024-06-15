@@ -21,6 +21,7 @@ type Controller interface {
 	GetTransaction(context.Context, ids.ID) (bool, int64, bool, fees.Dimensions, uint64, error)
 	GetAssetFromState(context.Context, ids.ID) (bool, []byte, uint8, []byte, uint64, codec.Address, error)
 	GetBalanceFromState(context.Context, codec.Address, ids.ID) (uint64, error)
+	GetRelayerBalanceFromState(ctx context.Context, relayerID uint32) (uint64, error)
 	UnitPrices(ctx context.Context) (fees.Dimensions, error)
 	GetAcceptedBlockWindow() int
 	Submit(

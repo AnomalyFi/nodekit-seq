@@ -22,20 +22,27 @@ type SequencerMsg struct {
 	ChainId     []byte        `json:"chain_id"`
 	Data        []byte        `json:"data"`
 	FromAddress codec.Address `json:"from_address"`
-	RelayerID   int           `json:"relayer_id"`
+	RelayerID   uint32        `json:"relayer_id"`
 }
 
 func (*SequencerMsg) GetTypeID() uint8 {
 	return msgID
 }
 
-func (s *SequencerMsg) StateKeys(_ codec.Address, actionID ids.ID) state.Keys {
-	return state.Keys{string(storage.RelayerGasPriceKey(s.RelayerID)): state.Read}
+func (s *SequencerMsg) StateKeys(actor codec.Address, actionID ids.ID) state.Keys {
+	return state.Keys{
+		string(storage.RelayerGasPriceKey(s.RelayerID)): state.Read,
+		string(storage.BalanceKey(actor, ids.Empty)):    state.All,
+		string(storage.RelayerBalanceKey(s.RelayerID)):  state.All,
+	}
 }
 
-// TODO fix this
 func (*SequencerMsg) StateKeysMaxChunks() []uint16 {
-	return []uint16{storage.RelayerGasChunks}
+	return []uint16{
+		storage.RelayerGasChunks,
+		storage.BalanceChunks,
+		storage.RelayerGasChunks,
+	}
 }
 
 // Execute outputs the DA cost for the sequencer msg.
@@ -56,7 +63,12 @@ func (s *SequencerMsg) Execute(
 	if err != nil {
 		return nil, err
 	}
+	// deduct DA costs from the actor's balance
 	if err := storage.SubBalance(ctx, mu, actor, ids.Empty, cost); err != nil {
+		return nil, err
+	}
+	// add DA costs to the relayer's balance
+	if err := storage.AddRelayerBalance(ctx, mu, s.RelayerID, cost); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -77,7 +89,7 @@ func (s *SequencerMsg) Marshal(p *codec.Packer) {
 	p.PackAddress(s.FromAddress)
 	p.PackBytes(s.Data)
 	p.PackBytes(s.ChainId)
-	p.PackInt(s.RelayerID)
+	p.PackUint64(uint64(s.RelayerID))
 }
 
 func UnmarshalSequencerMsg(p *codec.Packer) (chain.Action, error) {
@@ -86,7 +98,7 @@ func UnmarshalSequencerMsg(p *codec.Packer) (chain.Action, error) {
 	// TODO need to correct this and check byte count
 	p.UnpackBytes(-1, true, &sequencermsg.Data)
 	p.UnpackBytes(-1, true, &sequencermsg.ChainId)
-	sequencermsg.RelayerID = p.UnpackInt(true)
+	sequencermsg.RelayerID = uint32(p.UnpackUint64(true))
 	return &sequencermsg, p.Err()
 }
 

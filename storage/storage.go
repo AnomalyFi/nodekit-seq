@@ -60,7 +60,8 @@ const (
 	blockPrefix               = 0x9
 	relayerGasPrefix          = 0x10
 	relayerGasTimeStampPrefix = 0x11
-	feeMarketPrefix           = 0x12
+	relayerBalancePrefix      = 0x12
+	feeMarketPrefix           = 0x13
 )
 
 const (
@@ -491,10 +492,10 @@ func PrefixBlockKey(block ids.ID, parent ids.ID) (k []byte) {
 	return
 }
 
-func RelayerGasPriceKey(relayerID int) (k []byte) {
-	k = make([]byte, 1+consts.Uint64Len+consts.Uint16Len)
+func RelayerGasPriceKey(relayerID uint32) (k []byte) {
+	k = make([]byte, 1+consts.Uint32Len+consts.Uint16Len)
 	k[0] = relayerGasPrefix
-	binary.BigEndian.PutUint64(k[1:], uint64(relayerID))
+	binary.BigEndian.PutUint32(k[1:], relayerID)
 	binary.BigEndian.PutUint16(k[1+consts.IntLen:], RelayerGasChunks)
 	return
 }
@@ -502,7 +503,7 @@ func RelayerGasPriceKey(relayerID int) (k []byte) {
 func StoreRelayerGasPrice(
 	ctx context.Context,
 	mu state.Mutable,
-	relayerID int,
+	relayerID uint32,
 	price uint64,
 ) error {
 	k := RelayerGasPriceKey(relayerID)
@@ -512,7 +513,7 @@ func StoreRelayerGasPrice(
 func GetRelayerGasPrice(
 	ctx context.Context,
 	im state.Immutable,
-	relayerID int,
+	relayerID uint32,
 ) (uint64, error) {
 	k := RelayerGasPriceKey(relayerID)
 	v, err := im.GetValue(ctx, k)
@@ -525,10 +526,10 @@ func GetRelayerGasPrice(
 	return binary.BigEndian.Uint64(v), nil
 }
 
-func RelayerGasPriceUpdateTimeStampKey(relayerID int) (k []byte) {
-	k = make([]byte, 1+consts.Uint64Len+consts.Uint16Len)
+func RelayerGasPriceUpdateTimeStampKey(relayerID uint32) (k []byte) {
+	k = make([]byte, 1+consts.Uint32Len+consts.Uint16Len)
 	k[0] = relayerGasTimeStampPrefix
-	binary.BigEndian.PutUint64(k[1:], uint64(relayerID))
+	binary.BigEndian.PutUint32(k[1:], relayerID)
 	binary.BigEndian.PutUint16(k[1+consts.IntLen:], RelayerGasTimeStampChunks)
 	return
 }
@@ -536,7 +537,7 @@ func RelayerGasPriceUpdateTimeStampKey(relayerID int) (k []byte) {
 func StoreRelayerGasPriceUpdateTimeStamp(
 	ctx context.Context,
 	mu state.Mutable,
-	relayerID int,
+	relayerID uint32,
 	timeStamp int64,
 ) error {
 	k := RelayerGasPriceUpdateTimeStampKey(relayerID)
@@ -546,7 +547,7 @@ func StoreRelayerGasPriceUpdateTimeStamp(
 func GetRelayerGasPriceUpdateTimeStamp(
 	ctx context.Context,
 	im state.Immutable,
-	relayerID int,
+	relayerID uint32,
 ) (int64, error) {
 	k := RelayerGasPriceUpdateTimeStampKey(relayerID)
 	v, err := im.GetValue(ctx, k)
@@ -557,6 +558,77 @@ func GetRelayerGasPriceUpdateTimeStamp(
 		return 0, err
 	}
 	return int64(binary.BigEndian.Uint64(v)), nil
+}
+
+func RelayerBalanceKey(relayerID uint32) (k []byte) {
+	k = make([]byte, 1+consts.Uint32Len+consts.Uint16Len)
+	k[0] = relayerBalancePrefix
+	binary.BigEndian.PutUint32(k[1:], relayerID)
+	binary.BigEndian.PutUint16(k[1+consts.Uint32Len+consts.Uint64Len:], RelayerGasChunks)
+	return k
+}
+
+func AddRelayerBalance(
+	ctx context.Context,
+	mu state.Mutable,
+	relayerID uint32,
+	amount uint64,
+) error {
+	k := RelayerBalanceKey(relayerID)
+	bal, err := GetRelayerBalance(ctx, mu, relayerID)
+	if err != nil {
+		return err
+	}
+	nbal, err := smath.Add64(bal, amount)
+	if err != nil {
+		return err
+	}
+	return mu.Insert(ctx, k, binary.BigEndian.AppendUint64(nil, nbal))
+}
+
+func SubRelayerBalance(
+	ctx context.Context,
+	mu state.Mutable,
+	relayerID uint32,
+	amount uint64,
+) error {
+	k := RelayerBalanceKey(relayerID)
+	bal, err := GetRelayerBalance(ctx, mu, relayerID)
+	if err != nil {
+		return err
+	}
+	nbal, err := smath.Sub(bal, amount)
+	if err != nil {
+		return err
+	}
+	if nbal == 0 {
+		return mu.Remove(ctx, k)
+	}
+	return mu.Insert(ctx, k, binary.BigEndian.AppendUint64(nil, nbal))
+}
+
+func GetRelayerBalance(
+	ctx context.Context,
+	im state.Immutable,
+	relayerID uint32,
+) (uint64, error) {
+	k := RelayerBalanceKey(relayerID)
+	val, _, err := innerGetBalance(im.GetValue(ctx, k))
+	if err != nil {
+		return 0, err
+	}
+	return val, nil
+}
+
+func GetRelayerBalanceFromState(
+	ctx context.Context,
+	f ReadState,
+	relayerID uint32,
+) (uint64, error) {
+	k := RelayerBalanceKey(relayerID)
+	values, errs := f(ctx, [][]byte{k})
+	bal, _, err := innerGetBalance(values[0], errs[0])
+	return bal, err
 }
 
 func HeightKey() (k []byte) {

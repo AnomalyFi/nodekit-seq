@@ -14,7 +14,7 @@ import (
 var _ chain.Action = (*Oracle)(nil)
 
 type Oracle struct {
-	RelayerIDs    []int    `json:"relayer_ids"`
+	RelayerIDs    []uint32 `json:"relayer_ids"`
 	UnitGasPrices []uint64 `json:"unit_gas_prices"`
 }
 
@@ -78,7 +78,7 @@ func (*Oracle) Size() int {
 func (o *Oracle) Marshal(p *codec.Packer) {
 	p.PackInt(len(o.RelayerIDs))
 	for _, relayerID := range o.RelayerIDs {
-		p.PackInt(relayerID)
+		p.PackUint64(uint64(relayerID))
 	}
 	p.PackInt(len(o.UnitGasPrices))
 	for _, unitGasPrice := range o.UnitGasPrices {
@@ -90,7 +90,7 @@ func UnmarshalOracle(p *codec.Packer) (chain.Action, error) {
 	var oracle Oracle
 	relayerIDsLen := p.UnpackInt(true)
 	for i := 0; i < relayerIDsLen; i++ {
-		oracle.RelayerIDs = append(oracle.RelayerIDs, p.UnpackInt(true))
+		oracle.RelayerIDs = append(oracle.RelayerIDs, uint32(p.UnpackUint64(true)))
 	}
 	unitGasPricesLen := p.UnpackInt(true)
 	for i := 0; i < unitGasPricesLen; i++ {

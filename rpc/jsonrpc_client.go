@@ -319,6 +319,19 @@ func (cli *JSONRPCClient) WaitForTransaction(ctx context.Context, txID ids.ID) (
 	return success, fee, nil
 }
 
+func (cli *JSONRPCClient) GetRelayerBalance(ctx context.Context, relayerID uint32) (uint64, error) {
+	resp := new(BalanceReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"relayerBalance",
+		&RelayerBalanceArgs{
+			RelayerID: relayerID,
+		},
+		resp,
+	)
+	return resp.Amount, err
+}
+
 var _ chain.Parser = (*Parser)(nil)
 
 type Parser struct {
