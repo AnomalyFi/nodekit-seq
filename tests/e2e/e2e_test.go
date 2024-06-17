@@ -521,6 +521,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 					FromAddress: rsender,
 					Data:        data,
 					ChainId:     chainIDBytes,
+					RelayerID:   0,
 				}},
 				factory,
 			)
