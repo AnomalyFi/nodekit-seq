@@ -6,3 +6,4 @@ package actions
 import "errors"
 
 var ErrNoSwapToFill = errors.New("no swap to fill")
+var ErrRelayerIDsUnitGasPricesMismatch = errors.New("len of relayerIDs and unitGasPrices mismatched")

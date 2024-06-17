@@ -71,7 +71,7 @@ func (c *CreateAsset) Execute(
 	return nil, nil
 }
 
-func (*CreateAsset) ComputeUnits(chain.Rules) uint64 {
+func (*CreateAsset) ComputeUnits(codec.Address, chain.Rules) uint64 {
 	return CreateAssetComputeUnits
 }
 
@@ -101,4 +101,8 @@ func (*CreateAsset) ValidRange(chain.Rules) (int64, int64) {
 
 func (*CreateAsset) NMTNamespace() []byte {
 	return DefaultNMTNamespace
+}
+
+func (*CreateAsset) UseFeeMarket() bool {
+	return false
 }

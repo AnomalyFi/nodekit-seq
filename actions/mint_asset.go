@@ -81,7 +81,7 @@ func (m *MintAsset) Execute(
 	return nil, nil
 }
 
-func (*MintAsset) ComputeUnits(chain.Rules) uint64 {
+func (*MintAsset) ComputeUnits(codec.Address, chain.Rules) uint64 {
 	return MintAssetComputeUnits
 }
 
@@ -110,4 +110,8 @@ func (*MintAsset) ValidRange(chain.Rules) (int64, int64) {
 
 func (*MintAsset) NMTNamespace() []byte {
 	return DefaultNMTNamespace
+}
+
+func (*MintAsset) UseFeeMarket() bool {
+	return false
 }

@@ -63,6 +63,8 @@ type Config struct {
 	MempoolSponsorSize    int      `json:"mempoolSponsorSize"`
 	MempoolExemptSponsors []string `json:"mempoolExemptSponsors"`
 
+	// Whitelisted Address
+	WhitelistedAddresses []string `json:"whitelistedAddresses"`
 	// Order Book
 	//
 	// This is denoted as <asset 1>-<asset 2>
@@ -85,9 +87,10 @@ type Config struct {
 	// Archiver
 	ArchiverConfig archiver.ORMArchiverConfig `json:"archiverConfig"`
 
-	loaded               bool
-	nodeID               ids.NodeID
-	parsedExemptSponsors []codec.Address
+	loaded                     bool
+	nodeID                     ids.NodeID
+	parsedExemptSponsors       []codec.Address
+	parsedWhiteListedAddresses []codec.Address
 }
 
 func New(nodeID ids.NodeID, b []byte) (*Config, error) {
@@ -109,6 +112,14 @@ func New(nodeID ids.NodeID, b []byte) (*Config, error) {
 			return nil, err
 		}
 		c.parsedExemptSponsors[i] = p
+	}
+	c.parsedWhiteListedAddresses = make([]codec.Address, len(c.WhitelistedAddresses))
+	for i, addr := range c.WhitelistedAddresses {
+		p, err := codec.ParseAddressBech32(consts.HRP, addr)
+		if err != nil {
+			return nil, err
+		}
+		c.parsedWhiteListedAddresses[i] = p
 	}
 	return c, nil
 }

@@ -73,7 +73,7 @@ func (t *Transfer) Execute(
 	return nil, nil
 }
 
-func (*Transfer) ComputeUnits(chain.Rules) uint64 {
+func (*Transfer) ComputeUnits(codec.Address, chain.Rules) uint64 {
 	return TransferComputeUnits
 }
 
@@ -104,4 +104,8 @@ func (*Transfer) ValidRange(chain.Rules) (int64, int64) {
 
 func (*Transfer) NMTNamespace() []byte {
 	return DefaultNMTNamespace
+}
+
+func (*Transfer) UseFeeMarket() bool {
+	return false
 }

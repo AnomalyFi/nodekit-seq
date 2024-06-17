@@ -50,6 +50,13 @@ func (c *Controller) GetBalanceFromState(
 	return storage.GetBalanceFromState(ctx, c.inner.ReadState, addr, asset)
 }
 
+func (c *Controller) GetRelayerBalanceFromState(
+	ctx context.Context,
+	relayerID uint32,
+) (uint64, error) {
+	return storage.GetRelayerBalanceFromState(ctx, c.inner.ReadState, relayerID)
+}
+
 func (c *Controller) GetAcceptedBlockWindow() int {
 	return c.config.GetAcceptedBlockWindow()
 }

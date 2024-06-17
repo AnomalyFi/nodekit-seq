@@ -48,32 +48,38 @@ const (
 	txPrefix = 0x0
 
 	// stateDB
-	balancePrefix      = 0x0
-	assetPrefix        = 0x1
-	orderPrefix        = 0x2
-	loanPrefix         = 0x3
-	heightPrefix       = 0x4
-	timestampPrefix    = 0x5
-	feePrefix          = 0x6
-	incomingWarpPrefix = 0x7
-	outgoingWarpPrefix = 0x8
-	blockPrefix        = 0x9
+	balancePrefix             = 0x0
+	assetPrefix               = 0x1
+	orderPrefix               = 0x2
+	loanPrefix                = 0x3
+	heightPrefix              = 0x4
+	timestampPrefix           = 0x5
+	feePrefix                 = 0x6
+	incomingWarpPrefix        = 0x7
+	outgoingWarpPrefix        = 0x8
+	blockPrefix               = 0x9
+	relayerGasPrefix          = 0x10
+	relayerGasTimeStampPrefix = 0x11
+	relayerBalancePrefix      = 0x12
+	feeMarketPrefix           = 0x13
 )
 
 const (
-	BalanceChunks uint16 = 1
-	AssetChunks   uint16 = 5
-	OrderChunks   uint16 = 2
-	LoanChunks    uint16 = 1
+	BalanceChunks             uint16 = 1
+	AssetChunks               uint16 = 5
+	OrderChunks               uint16 = 2
+	LoanChunks                uint16 = 1
+	RelayerGasChunks          uint16 = 1
+	RelayerGasTimeStampChunks uint16 = 1
 )
 
 var (
-	failureByte  = byte(0x0)
-	successByte  = byte(0x1)
-	heightKey    = []byte{heightPrefix}
-	timestampKey = []byte{timestampPrefix}
-	feeKey       = []byte{feePrefix}
-
+	failureByte    = byte(0x0)
+	successByte    = byte(0x1)
+	heightKey      = []byte{heightPrefix}
+	timestampKey   = []byte{timestampPrefix}
+	feeKey         = []byte{feePrefix}
+	feeMarketKey   = []byte{feeMarketPrefix}
 	balanceKeyPool = sync.Pool{
 		New: func() any {
 			return make([]byte, 1+codec.AddressLen+ids.IDLen+consts.Uint16Len)
@@ -486,6 +492,145 @@ func PrefixBlockKey(block ids.ID, parent ids.ID) (k []byte) {
 	return
 }
 
+func RelayerGasPriceKey(relayerID uint32) (k []byte) {
+	k = make([]byte, 1+consts.Uint32Len+consts.Uint16Len)
+	k[0] = relayerGasPrefix
+	binary.BigEndian.PutUint32(k[1:], relayerID)
+	binary.BigEndian.PutUint16(k[1+consts.IntLen:], RelayerGasChunks)
+	return
+}
+
+func StoreRelayerGasPrice(
+	ctx context.Context,
+	mu state.Mutable,
+	relayerID uint32,
+	price uint64,
+) error {
+	k := RelayerGasPriceKey(relayerID)
+	return mu.Insert(ctx, k, binary.BigEndian.AppendUint64(nil, price))
+}
+
+func GetRelayerGasPrice(
+	ctx context.Context,
+	im state.Immutable,
+	relayerID uint32,
+) (uint64, error) {
+	k := RelayerGasPriceKey(relayerID)
+	v, err := im.GetValue(ctx, k)
+	if errors.Is(err, database.ErrNotFound) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	return binary.BigEndian.Uint64(v), nil
+}
+
+func RelayerGasPriceUpdateTimeStampKey(relayerID uint32) (k []byte) {
+	k = make([]byte, 1+consts.Uint32Len+consts.Uint16Len)
+	k[0] = relayerGasTimeStampPrefix
+	binary.BigEndian.PutUint32(k[1:], relayerID)
+	binary.BigEndian.PutUint16(k[1+consts.IntLen:], RelayerGasTimeStampChunks)
+	return
+}
+
+func StoreRelayerGasPriceUpdateTimeStamp(
+	ctx context.Context,
+	mu state.Mutable,
+	relayerID uint32,
+	timeStamp int64,
+) error {
+	k := RelayerGasPriceUpdateTimeStampKey(relayerID)
+	return mu.Insert(ctx, k, binary.BigEndian.AppendUint64(nil, uint64(timeStamp)))
+}
+
+func GetRelayerGasPriceUpdateTimeStamp(
+	ctx context.Context,
+	im state.Immutable,
+	relayerID uint32,
+) (int64, error) {
+	k := RelayerGasPriceUpdateTimeStampKey(relayerID)
+	v, err := im.GetValue(ctx, k)
+	if errors.Is(err, database.ErrNotFound) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	return int64(binary.BigEndian.Uint64(v)), nil
+}
+
+func RelayerBalanceKey(relayerID uint32) (k []byte) {
+	k = make([]byte, 1+consts.Uint32Len+consts.Uint16Len)
+	k[0] = relayerBalancePrefix
+	binary.BigEndian.PutUint32(k[1:], relayerID)
+	binary.BigEndian.PutUint16(k[1+consts.Uint32Len+consts.Uint64Len:], RelayerGasChunks)
+	return k
+}
+
+func AddRelayerBalance(
+	ctx context.Context,
+	mu state.Mutable,
+	relayerID uint32,
+	amount uint64,
+) error {
+	k := RelayerBalanceKey(relayerID)
+	bal, err := GetRelayerBalance(ctx, mu, relayerID)
+	if err != nil {
+		return err
+	}
+	nbal, err := smath.Add64(bal, amount)
+	if err != nil {
+		return err
+	}
+	return mu.Insert(ctx, k, binary.BigEndian.AppendUint64(nil, nbal))
+}
+
+func SubRelayerBalance(
+	ctx context.Context,
+	mu state.Mutable,
+	relayerID uint32,
+	amount uint64,
+) error {
+	k := RelayerBalanceKey(relayerID)
+	bal, err := GetRelayerBalance(ctx, mu, relayerID)
+	if err != nil {
+		return err
+	}
+	nbal, err := smath.Sub(bal, amount)
+	if err != nil {
+		return err
+	}
+	if nbal == 0 {
+		return mu.Remove(ctx, k)
+	}
+	return mu.Insert(ctx, k, binary.BigEndian.AppendUint64(nil, nbal))
+}
+
+func GetRelayerBalance(
+	ctx context.Context,
+	im state.Immutable,
+	relayerID uint32,
+) (uint64, error) {
+	k := RelayerBalanceKey(relayerID)
+	val, _, err := innerGetBalance(im.GetValue(ctx, k))
+	if err != nil {
+		return 0, err
+	}
+	return val, nil
+}
+
+func GetRelayerBalanceFromState(
+	ctx context.Context,
+	f ReadState,
+	relayerID uint32,
+) (uint64, error) {
+	k := RelayerBalanceKey(relayerID)
+	values, errs := f(ctx, [][]byte{k})
+	bal, _, err := innerGetBalance(values[0], errs[0])
+	return bal, err
+}
+
 func HeightKey() (k []byte) {
 	return heightKey
 }
@@ -496,4 +641,8 @@ func TimestampKey() (k []byte) {
 
 func FeeKey() (k []byte) {
 	return feeKey
+}
+
+func FeeMarketKey() (k []byte) {
+	return feeMarketKey
 }
