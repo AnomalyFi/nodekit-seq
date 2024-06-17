@@ -119,6 +119,8 @@ func (j *JSONRPCServer) SubmitMsgTx(
 		FromAddress: rsender,
 		Data:        args.Data,
 		ChainId:     args.SecondaryChainId,
+		// TODO: update this
+		RelayerID: 0,
 	}}
 	// TODO need to define action, authFactory
 	maxUnits, err := chain.EstimateUnits(parser.Rules(time.Now().UnixMilli()), actions, factory)
