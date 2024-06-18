@@ -45,8 +45,6 @@ func (*SequencerMsg) StateKeysMaxChunks() []uint16 {
 	}
 }
 
-// Execute outputs the DA cost for the sequencer msg.
-// output price is used to add to the total gas cost.
 func (s *SequencerMsg) Execute(
 	ctx context.Context,
 	_ chain.Rules,
@@ -79,9 +77,6 @@ func (*SequencerMsg) ComputeUnits(codec.Address, chain.Rules) uint64 {
 }
 
 func (*SequencerMsg) Size() int {
-	// TODO this should be larger because it should consider the max byte array length
-	// We use size as the price of this transaction but we could just as easily
-	// use any other calculation.
 	return codec.AddressLen + ids.IDLen + consts.Uint64Len + consts.IntLen
 }
 

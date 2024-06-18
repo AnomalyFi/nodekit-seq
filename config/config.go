@@ -186,3 +186,6 @@ func (c *Config) GetStoreTransactions() bool { return c.StoreTransactions }
 func (c *Config) Loaded() bool               { return c.loaded }
 func (c *Config) GetETHL1RPC() string        { return c.ETHRPCAddr }
 func (c *Config) GetETHL1WS() string         { return c.ETHWSAddr }
+func (c *Config) GetParsedWhiteListedAddress() []codec.Address {
+	return c.parsedWhiteListedAddresses
+}

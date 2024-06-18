@@ -113,6 +113,9 @@ func (r *Rules) GetFeeMarketMinUnitPrice() uint64 {
 	return r.g.FeeMarketMinUnits
 }
 
-func (*Rules) FetchCustom(string) (any, bool) {
+func (r *Rules) FetchCustom(s string) (any, bool) {
+	if s == "whitelisted.Addresses" {
+		return r.g.Config.GetParsedWhiteListedAddress(), false
+	}
 	return nil, false
 }

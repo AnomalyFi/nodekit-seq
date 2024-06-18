@@ -20,6 +20,7 @@ import (
 	hconsts "github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/state"
 	"github.com/AnomalyFi/hypersdk/vm"
+	"github.com/AnomalyFi/nodekit-seq/config"
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 )
@@ -32,6 +33,7 @@ type CustomAllocation struct {
 }
 
 type Genesis struct {
+	*config.Config
 	// State Parameters
 	StateBranchFactor merkledb.BranchFactor `json:"stateBranchFactor"`
 
@@ -108,13 +110,14 @@ func Default() *Genesis {
 	}
 }
 
-func New(b []byte, _ []byte /* upgradeBytes */) (*Genesis, error) {
+func New(b []byte, _ []byte /* upgradeBytes */, conf *config.Config) (*Genesis, error) {
 	g := Default()
 	if len(b) > 0 {
 		if err := json.Unmarshal(b, g); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal config %s: %w", string(b), err)
 		}
 	}
+	g.Config = conf
 	return g, nil
 }
 

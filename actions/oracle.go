@@ -42,14 +42,17 @@ func (o *Oracle) StateKeysMaxChunks() []uint16 {
 
 func (o *Oracle) Execute(
 	ctx context.Context,
-	_ chain.Rules,
+	rules chain.Rules,
 	mu state.Mutable,
 	timeStamp int64,
-	_ codec.Address,
+	actor codec.Address,
 	_ ids.ID,
 ) ([][]byte, error) {
-	// @todo changes in genesis and rules for getting config.
-	// @todo verify the actor is the whitelisted authority?
+	whitelistedAddressesB, _ := rules.FetchCustom("whitelisted.Addresses")
+	whitelistedAddresses := whitelistedAddressesB.([]codec.Address)
+	if !ContainsAddress(whitelistedAddresses, actor) {
+		return nil, ErrNotWhiteListed
+	}
 	if len(o.RelayerIDs) != len(o.UnitGasPrices) {
 		return nil, ErrRelayerIDsUnitGasPricesMismatch
 	}
@@ -64,10 +67,7 @@ func (o *Oracle) Execute(
 	return nil, nil
 }
 
-// TODO: tune this to reflect the spam prevention mechanism.
 func (*Oracle) ComputeUnits(codec.Address, chain.Rules) uint64 {
-	// @todo verify the actor is the whitelisted authority?
-	// verify if relayerIDs len match unitGasPrices len
 	return OracleComputeUnits
 }
 

@@ -93,7 +93,9 @@ func (c *Controller) Initialize(
 	c.snowCtx.Log.SetLevel(c.config.GetLogLevel())
 	snowCtx.Log.Info("initialized config", zap.Bool("loaded", c.config.Loaded()), zap.Any("contents", c.config))
 
-	c.genesis, err = genesis.New(genesisBytes, upgradeBytes)
+	// State changes happeining in genesis block would only be recorded for root calculation, similar to rest of the blocks.
+	// attatching config or any other item to genesis item would not result in any errors for generating genesis block root.
+	c.genesis, err = genesis.New(genesisBytes, upgradeBytes, c.config)
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf(
 			"unable to read genesis: %w",
