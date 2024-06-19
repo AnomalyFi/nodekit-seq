@@ -13,6 +13,10 @@ jobs:
     steps:
       - name: Git checkout
         uses: actions/checkout@v3
+      - name: Install killall
+        run: |
+          sudo apt-get update
+          sudo apt-get install psmisc
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
@@ -25,6 +29,10 @@ jobs:
         uses: hoverkraft-tech/compose-action@v2.0.1
         with:
           compose-file: "./compose.yml"
+          down-flags: |
+            -v
+          services: |
+            l1
       - name: Run e2e tests
         run: |
           chmod +x ./scripts/run.sh

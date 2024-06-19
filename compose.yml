@@ -19,7 +19,7 @@ services:
       - "7060:6060"
     volumes:
       - "l1_data:/db"
-      - "${PWD}/genesis-l1.json:/genesis.json"
-      - "${PWD}/test-jwt-secret.txt:/config/test-jwt-secret.txt"
+      - "./genesis-l1.json:/genesis.json"
+      - "./test-jwt-secret.txt:/config/test-jwt-secret.txt"
     environment:
       GETH_MINER_RECOMMIT: 100ms
