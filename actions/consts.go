@@ -22,7 +22,7 @@ const (
 
 	MsgComputeUnits = 15
 
-	OracleComputeUnits = 1000
+	OracleComputeUnits = 10
 
 	MaxSymbolSize   = 8
 	MaxMemoSize     = 256

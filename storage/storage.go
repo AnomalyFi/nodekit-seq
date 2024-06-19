@@ -564,7 +564,7 @@ func RelayerBalanceKey(relayerID uint32) (k []byte) {
 	k = make([]byte, 1+consts.Uint32Len+consts.Uint16Len)
 	k[0] = relayerBalancePrefix
 	binary.BigEndian.PutUint32(k[1:], relayerID)
-	binary.BigEndian.PutUint16(k[1+consts.Uint32Len+consts.Uint64Len:], RelayerGasChunks)
+	binary.BigEndian.PutUint16(k[1+consts.Uint32Len:], RelayerGasChunks)
 	return k
 }
 

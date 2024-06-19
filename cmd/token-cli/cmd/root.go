@@ -160,6 +160,7 @@ func init() {
 		mintAssetCmd,
 
 		sequencerMsgCmd,
+		oracleCmd,
 	)
 
 	// spam

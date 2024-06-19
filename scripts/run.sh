@@ -159,6 +159,7 @@ cat <<EOF > "${TMPDIR}"/tokenvm.config
   "mempoolSize": 10000000,
   "mempoolSponsorSize": 10000000,
   "mempoolExemptSponsors":["${ADDRESS}"],
+  "whitelistedAddresses":["${ADDRESS}"],
   "authVerificationCores": 2,
   "rootGenerationCores": 2,
   "transactionExecutionCores": 2,

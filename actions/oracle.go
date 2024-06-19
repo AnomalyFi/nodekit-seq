@@ -23,7 +23,7 @@ func (*Oracle) GetTypeID() uint8 {
 }
 
 func (o *Oracle) StateKeys(_ codec.Address, actionID ids.ID) state.Keys {
-	var keys state.Keys
+	keys := make(state.Keys, 2*len(o.RelayerIDs))
 	for _, relayerID := range o.RelayerIDs {
 		keys.Add(string(storage.RelayerGasPriceKey(relayerID)), state.Allocate|state.Write)
 		keys.Add(string(storage.RelayerGasPriceUpdateTimeStampKey(relayerID)), state.Allocate|state.Write)
@@ -71,8 +71,8 @@ func (*Oracle) ComputeUnits(codec.Address, chain.Rules) uint64 {
 	return OracleComputeUnits
 }
 
-func (*Oracle) Size() int {
-	return consts.IntLen + consts.Uint64Len
+func (o *Oracle) Size() int {
+	return 2*consts.IntLen + 2*len(o.RelayerIDs)*consts.Uint64Len
 }
 
 func (o *Oracle) Marshal(p *codec.Packer) {

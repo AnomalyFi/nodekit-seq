@@ -209,6 +209,7 @@ var sequencerMsgCmd = &cobra.Command{
 			Data:        []byte{0x00, 0x01, 0x02},
 			ChainId:     []byte("nkit"),
 			FromAddress: recipient,
+			RelayerID:   1,
 		}}, cli, scli, tcli, factory, true)
 
 		hutils.Outf("{{green}}txId:{{/}} %s\n", txId)
@@ -276,6 +277,27 @@ var mintAssetCmd = &cobra.Command{
 			Asset: assetID,
 			To:    recipient,
 			Value: amount,
+		}}, cli, scli, tcli, factory, true)
+		return err
+	},
+}
+
+var oracleCmd = &cobra.Command{
+	Use: "oracle",
+	RunE: func(*cobra.Command, []string) error {
+		ctx := context.Background()
+		_, _, factory, cli, scli, tcli, err := handler.DefaultActor()
+		if err != nil {
+			return err
+		}
+		// Confirm action
+		cont, err := handler.Root().PromptContinue()
+		if !cont || err != nil {
+			return err
+		}
+		_, err = sendAndWait(ctx, []chain.Action{&actions.Oracle{
+			RelayerIDs:    []uint32{1},
+			UnitGasPrices: []uint64{1},
 		}}, cli, scli, tcli, factory, true)
 		return err
 	},
