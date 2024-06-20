@@ -41,6 +41,10 @@ filippo.io/edwards25519 v1.0.0/go.mod h1:N1IkdkCkiLB6tki+MYJoSx2JTY9NUlxZE7eHn5E
 github.com/AndreasBriese/bbloom v0.0.0-20190306092124-e2d15f34fcf9/go.mod h1:bOvUY6CB00SOBii9/FifXqc0awNKxLFCL/+pkDPuyl8=
 github.com/AnomalyFi/hypersdk v0.0.0-20240613074544-863a4b32caa9 h1:6T52iMmeL101cCWSbteLFKM17eqU2Eo/cHGUGlQNiFs=
 github.com/AnomalyFi/hypersdk v0.0.0-20240613074544-863a4b32caa9/go.mod h1:UyhIJT0ViaKCJPYemkV4HuXMnAZfAZfo7rLB5uwrPpw=
+github.com/AnomalyFi/hypersdk v0.9.4-alpha.1 h1:2HZYVX/nVSzcMl9kQGsbafD5dbkR6LJU2fUwMa9cv50=
+github.com/AnomalyFi/hypersdk v0.9.4-alpha.1/go.mod h1:UyhIJT0ViaKCJPYemkV4HuXMnAZfAZfo7rLB5uwrPpw=
+github.com/AnomalyFi/hypersdk v0.9.4-alpha.1.0.20240620071330-5d4c82f8efaa h1:6yx+HljB3DcvB7uBbbaesbYMS7slx88Kz0mWhHiSI3Q=
+github.com/AnomalyFi/hypersdk v0.9.4-alpha.1.0.20240620071330-5d4c82f8efaa/go.mod h1:UyhIJT0ViaKCJPYemkV4HuXMnAZfAZfo7rLB5uwrPpw=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/toml v1.3.2 h1:o7IhLm0Msx3BaB+n3Ag7L8EVlByGnpq14C4YWiu/gL8=
 github.com/BurntSushi/toml v1.3.2/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
