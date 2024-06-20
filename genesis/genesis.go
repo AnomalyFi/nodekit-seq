@@ -87,7 +87,7 @@ func Default() *Genesis {
 		MaxBlockUnits:              fees.Dimensions{1_800_000, 2_000, 2_000, 2_000, 2_000},
 
 		// Fee Market Parameters
-		FeeMarketMinUnits:               10_000,
+		FeeMarketMinUnits:               100_000,
 		FeeMarketWindowTargetUnits:      600, // 600 KiB
 		FeeMarketPriceChangeDenominator: 48,
 		// Tx Parameters

@@ -97,8 +97,8 @@ var watchChainCmd = &cobra.Command{
 
 		var cli *trpc.JSONRPCClient
 		return handler.Root().WatchChain(hideTxs, pastBlocks, startBlock, func(uri string, networkID uint32, chainID ids.ID) (chain.Parser, error) {
-			fmt.Println("Here is network Id: %d", networkID)
-			fmt.Println("Here is uri: %s", uri)
+			fmt.Println("Here is network Id: ", networkID)
+			fmt.Println("Here is uri: ", uri)
 
 			cli = trpc.NewJSONRPCClient(uri, networkID, chainID)
 			return cli.Parser(context.TODO())
