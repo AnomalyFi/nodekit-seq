@@ -5,6 +5,8 @@ package cmd
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/binary"
 
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/spf13/cobra"
@@ -97,5 +99,54 @@ var runSpamCmd = &cobra.Command{
 				}
 			},
 		)
+	},
+}
+
+var runLocalFeeMarketCmd = &cobra.Command{
+	Use: "localFeeMarket",
+	RunE: func(*cobra.Command, []string) error {
+		ctx := context.Background()
+		_, _, factory, cli, scli, tcli, err := handler.DefaultActor()
+		if err != nil {
+			return err
+		}
+		recipient, err := handler.Root().PromptAddress("recipient")
+		if err != nil {
+			return err
+		}
+		kb, err := handler.Root().PromptInt("kb", 2000)
+		if err != nil {
+			return err
+		}
+		data := make([]byte, kb*1024)
+		if _, err := rand.Read(data); err != nil {
+			return err
+		}
+		chainID := []byte("nkit")
+		for i := 0; i < 10000; i++ {
+			price, e, err := cli.NameSpacePrice(ctx, string(chainID))
+			if err != nil {
+				return err
+			}
+			utils.Outf("{{yellow}}pre tx price:{{/}} %d\n", price)
+			utils.Outf("{{yellow}}pre tx err:{{/}} %s\n", e)
+			data = binary.BigEndian.AppendUint64(data, uint64(i))
+			_, err = sendAndWait(ctx, []chain.Action{&actions.SequencerMsg{
+				Data:        data,
+				ChainId:     chainID,
+				FromAddress: recipient,
+				RelayerID:   1,
+			}}, cli, scli, tcli, factory, false)
+			if err != nil {
+				return err
+			}
+			price, e, err = cli.NameSpacePrice(ctx, string(chainID))
+			if err != nil {
+				return err
+			}
+			utils.Outf("{{yellow}}post tx price:{{/}} %d\n", price)
+			utils.Outf("{{yellow}}post tx err:{{/}} %s\n", e)
+		}
+		return nil
 	},
 }

@@ -185,6 +185,7 @@ func init() {
 	spamCmd.AddCommand(
 		runSpamCmd,
 		//runSpamSequencerMsgCmd,
+		runLocalFeeMarketCmd,
 	)
 
 	// prometheus

@@ -76,8 +76,8 @@ func (*SequencerMsg) ComputeUnits(codec.Address, chain.Rules) uint64 {
 	return MsgComputeUnits
 }
 
-func (*SequencerMsg) Size() int {
-	return codec.AddressLen + ids.IDLen + consts.Uint64Len + consts.IntLen
+func (s *SequencerMsg) Size() int {
+	return codec.AddressLen + consts.Uint64Len + len(s.ChainId) + len(s.Data)
 }
 
 func (s *SequencerMsg) Marshal(p *codec.Packer) {
