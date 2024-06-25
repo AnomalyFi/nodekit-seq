@@ -63,7 +63,7 @@ type Config struct {
 	MempoolSponsorSize    int      `json:"mempoolSponsorSize"`
 	MempoolExemptSponsors []string `json:"mempoolExemptSponsors"`
 
-	// Whitelisted Address
+	// Whitelisted Address: Address used to get fee discounts, or are allowed to perform specific actions like submitting proofs.
 	WhitelistedAddresses []string `json:"whitelistedAddresses"`
 	// Order Book
 	//

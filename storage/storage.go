@@ -500,6 +500,7 @@ func RelayerGasPriceKey(relayerID uint32) (k []byte) {
 	return
 }
 
+// Relayer Gas Price is the price per byte in SEQ reported by oracle for posting data to the DA layer.
 func StoreRelayerGasPrice(
 	ctx context.Context,
 	mu state.Mutable,
