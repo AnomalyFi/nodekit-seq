@@ -30,4 +30,5 @@ type Controller interface {
 		txs []*chain.Transaction,
 	) (errs []error)
 	Logger() logging.Logger
+	MessageNetPort() string
 }

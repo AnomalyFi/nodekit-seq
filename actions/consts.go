@@ -11,6 +11,8 @@ const (
 	transferID    uint8 = 3
 	msgID         uint8 = 4
 	oracleID      uint8 = 5
+	deployID      uint8 = 6
+	transactID    uint8 = 7
 )
 
 const (
@@ -24,10 +26,21 @@ const (
 
 	OracleComputeUnits = 10
 
+	// Max chunks
+	DeployMaxChunks uint16 = 20_000
+
+	// W.S.C Compute Units
+	DeployComputeUnits   uint64 = 1_280_000
+	TransactComputeUnits uint64 = 10_000
+	BaseComputeUnits     uint64 = 10_000
+
 	MaxSymbolSize   = 8
 	MaxMemoSize     = 256
 	MaxMetadataSize = 256
 	MaxDecimals     = 9
+
+	// Num of statekeys
+	NumStateKeys int = 1024
 )
 
 var DefaultNMTNamespace = make([]byte, 8)

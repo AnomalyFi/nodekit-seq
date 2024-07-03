@@ -5,4 +5,5 @@ package rpc
 
 const (
 	JSONRPCEndpoint = "/tokenapi"
+	WSEndPoint      = "/seq-ws"
 )

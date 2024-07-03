@@ -6,12 +6,18 @@ require (
 	github.com/AnomalyFi/hypersdk v0.9.4-alpha.1.0.20240620071330-5d4c82f8efaa
 	github.com/ava-labs/avalanche-network-runner v1.7.4-rc.0
 	github.com/ava-labs/avalanchego v1.11.6
+	github.com/ava-labs/coreth v0.13.4-rc.0
+	github.com/consensys/gnark v0.10.0
+	github.com/consensys/gnark-crypto v0.12.2-0.20240215234832-d72fcb379d3e
 	github.com/ethereum/go-ethereum v1.13.8
 	github.com/fatih/color v1.13.0
+	github.com/gorilla/websocket v1.5.0
 	github.com/onsi/ginkgo/v2 v2.13.1
 	github.com/prometheus/client_golang v1.16.0
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
+	github.com/succinctlabs/gnark-plonky2-verifier v0.1.0
+	github.com/tetratelabs/wazero v1.7.3
 	github.com/tidwall/btree v1.5.0
 	github.com/wailsapp/wails/v2 v2.5.1
 	go.uber.org/zap v1.26.0
@@ -27,10 +33,10 @@ require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/VictoriaMetrics/fastcache v1.12.1 // indirect
-	github.com/ava-labs/coreth v0.13.4-rc.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bep/debounce v1.2.1 // indirect
 	github.com/bits-and-blooms/bitset v1.10.0 // indirect
+	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
 	github.com/btcsuite/btcd/btcutil v1.1.3 // indirect
 	github.com/celestiaorg/nmt v0.20.0 // indirect
@@ -43,7 +49,6 @@ require (
 	github.com/cockroachdb/redact v1.1.3 // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
-	github.com/consensys/gnark-crypto v0.12.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/crate-crypto/go-ipa v0.0.0-20231025140028-3c0104f4b233 // indirect
 	github.com/crate-crypto/go-kzg-4844 v0.7.0 // indirect
@@ -55,6 +60,7 @@ require (
 	github.com/ethereum/c-kzg-4844 v0.4.0 // indirect
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
+	github.com/fxamacker/cbor/v2 v2.5.0 // indirect
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/gballet/go-verkle v0.1.1-0.20231031103413-a67434b50f46 // indirect
 	github.com/getsentry/sentry-go v0.18.0 // indirect
@@ -67,12 +73,11 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
 	github.com/google/btree v1.1.2 // indirect
-	github.com/google/pprof v0.0.0-20230406165453-00490a63f317 // indirect
+	github.com/google/pprof v0.0.0-20230817174616-7a8ec2ada47b // indirect
 	github.com/google/renameio/v2 v2.0.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/rpc v1.2.0 // indirect
-	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
 	github.com/hashicorp/go-bexpr v0.1.10 // indirect
@@ -127,6 +132,7 @@ require (
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/rs/cors v1.7.0 // indirect
+	github.com/rs/zerolog v1.30.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/samber/lo v1.38.1 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
@@ -147,6 +153,7 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/wailsapp/mimetype v1.4.1 // indirect
+	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.opentelemetry.io/otel v1.22.0 // indirect
@@ -187,4 +194,4 @@ require (
 
 // replace github.com/ava-labs/coreth => github.com/AnomalyFi/coreth v0.12.5-rc.6.1
 
-// replace github.com/AnomalyFi/hypersdk => ../hypersdk
+replace github.com/AnomalyFi/hypersdk => ../hypersdk

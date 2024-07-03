@@ -14,6 +14,7 @@ import (
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/trace"
 	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
 )
 
 func (c *Controller) Genesis() *genesis.Genesis {
@@ -59,4 +60,12 @@ func (c *Controller) GetRelayerBalanceFromState(
 
 func (c *Controller) GetAcceptedBlockWindow() int {
 	return c.config.GetAcceptedBlockWindow()
+}
+
+func (c *Controller) WarpSigner() warp.Signer {
+	return c.snowCtx.WarpSigner
+}
+
+func (c *Controller) MessageNetPort() string {
+	return c.config.MessageNetPort
 }

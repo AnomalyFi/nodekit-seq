@@ -55,13 +55,12 @@ const (
 	heightPrefix              = 0x4
 	timestampPrefix           = 0x5
 	feePrefix                 = 0x6
-	incomingWarpPrefix        = 0x7
-	outgoingWarpPrefix        = 0x8
-	blockPrefix               = 0x9
-	relayerGasPrefix          = 0x10
-	relayerGasTimeStampPrefix = 0x11
-	relayerBalancePrefix      = 0x12
-	feeMarketPrefix           = 0x13
+	contractPrefix            = 0x7
+	blockPrefix               = 0x8
+	relayerGasPrefix          = 0x9
+	relayerGasTimeStampPrefix = 0x10
+	relayerBalancePrefix      = 0x11
+	feeMarketPrefix           = 0x12
 )
 
 const (
@@ -71,6 +70,7 @@ const (
 	LoanChunks                uint16 = 1
 	RelayerGasChunks          uint16 = 1
 	RelayerGasTimeStampChunks uint16 = 1
+	StateChunks               uint16 = 32
 )
 
 var (
@@ -646,4 +646,65 @@ func FeeKey() (k []byte) {
 
 func FeeMarketKey() (k []byte) {
 	return feeMarketKey
+}
+
+func ContractKey(txID ids.ID) (k []byte) {
+
+	k = make([]byte, 1+ids.IDLen+consts.Uint16Len)
+	k[0] = contractPrefix
+	copy(k[1:], txID[:])
+	binary.BigEndian.PutUint16(k[1+ids.IDLen:], consts.MaxUint16)
+	return
+}
+
+func StateStorageKey(contractAddress ids.ID, name string) (k []byte) {
+	bstring := []byte(name)
+	k = make([]byte, 1+ids.IDLen+len(bstring)+consts.Uint16Len)
+
+	k[0] = contractPrefix
+	copy(k[1:], append(contractAddress[:], bstring...))
+	binary.BigEndian.PutUint16(k[1+ids.IDLen+len(bstring):], StateChunks)
+	return k
+}
+
+func SetContract(
+	ctx context.Context,
+	mu state.Mutable,
+	txID ids.ID,
+	contractCode []byte,
+) error {
+	k := ContractKey(txID)
+	return mu.Insert(ctx, k, contractCode)
+}
+
+func GetContract(
+	ctx context.Context,
+	im state.Immutable,
+	txID ids.ID,
+) ([]byte, error) {
+	k := ContractKey(txID)
+	bt, err := im.GetValue(ctx, k)
+	if errors.Is(err, database.ErrNotFound) {
+		return nil, nil
+	}
+	return bt, err
+}
+
+func SetBytes(
+	ctx context.Context,
+	mu state.Mutable,
+	contractAddress ids.ID,
+	name string,
+	byteData []byte) error {
+	k := StateStorageKey(contractAddress, name)
+	return mu.Insert(ctx, k, byteData)
+}
+
+func GetBytes(
+	ctx context.Context,
+	im state.Immutable,
+	contractAddress ids.ID,
+	name string) ([]byte, error) {
+	k := StateStorageKey(contractAddress, name)
+	return im.GetValue(ctx, k)
 }

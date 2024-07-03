@@ -4,8 +4,11 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"math/rand"
+	"os"
 	"strings"
 	"time"
 
@@ -17,6 +20,11 @@ import (
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/ava-labs/avalanchego/utils/profiler"
+	"github.com/ava-labs/coreth/accounts/abi"
+	"github.com/ava-labs/coreth/accounts/abi/bind"
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/backend/plonk"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/AnomalyFi/nodekit-seq/archiver"
 	"github.com/AnomalyFi/nodekit-seq/consts"
@@ -30,6 +38,7 @@ const (
 	defaultContinuousProfilerMaxFiles  = 10
 	defaultStoreTransactions           = true
 	defaultMaxOrdersPerPair            = 1024
+	defaultMessageNetPort              = ":8080"
 )
 
 type Config struct {
@@ -87,10 +96,20 @@ type Config struct {
 	// Archiver
 	ArchiverConfig archiver.ORMArchiverConfig `json:"archiverConfig"`
 
+	// Plonk Verification Key
+	VerificationKey plonk.VerifyingKey
+
+	// Plonk Precompile Decoder ABI
+	GnarkPrecompileDecoderABI *abi.ABI
+
+	// messagenet port
+	MessageNetPort string `json:"messagenetPort"`
+
 	loaded                     bool
 	nodeID                     ids.NodeID
 	parsedExemptSponsors       []codec.Address
 	parsedWhiteListedAddresses []codec.Address
+	VKeyHex                    string `json:"vKeyHex"`
 }
 
 func New(nodeID ids.NodeID, b []byte) (*Config, error) {
@@ -102,6 +121,22 @@ func New(nodeID ids.NodeID, b []byte) (*Config, error) {
 		}
 		c.loaded = true
 	}
+
+	// load verification key.
+	vkeyBytes := common.Hex2Bytes(c.VKeyHex)
+
+	vk := plonk.NewVerifyingKey(ecc.BN254)
+	_, err := vk.ReadFrom(bytes.NewBuffer(vkeyBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read verification key: %w", err)
+	}
+	c.VerificationKey = vk
+
+	// cache the precompile decoder ABI
+	var GnarkPrecompMetaData = &bind.MetaData{
+		ABI: "[{\"inputs\":[{\"components\":[{\"internalType\":\"bytes\",\"name\":\"input\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"output\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"function_id_big_int\",\"type\":\"uint256\"}],\"internalType\":\"structgnarkPrecompile.GnarkPrecompileInputs\",\"name\":\"inputs\",\"type\":\"tuple\"}],\"name\":\"gnarkPrecompileInputsDummyFunction\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	}
+	c.GnarkPrecompileDecoderABI, _ = GnarkPrecompMetaData.GetAbi()
 
 	// Parse any exempt sponsors (usually used when a single account is
 	// broadcasting many txs at once)
@@ -121,6 +156,12 @@ func New(nodeID ids.NodeID, b []byte) (*Config, error) {
 		}
 		c.parsedWhiteListedAddresses[i] = p
 	}
+
+	// generate random 4 digit number for starting messagenet server.
+	seed := time.Now().UnixNano() + int64(os.Getpid())
+	rand.Seed(seed)
+	rand := rand.Intn(8999) + 1000
+	c.MessageNetPort = fmt.Sprintf(":%d", rand)
 	return c, nil
 }
 
@@ -145,6 +186,7 @@ func (c *Config) setDefault() {
 	c.MaxOrdersPerPair = defaultMaxOrdersPerPair
 	c.ETHRPCAddr = c.Config.GetETHL1RPC()
 	c.ETHWSAddr = c.Config.GetETHL1WS()
+	c.MessageNetPort = defaultMessageNetPort
 }
 
 func (c *Config) GetLogLevel() logging.Level                { return c.LogLevel }

@@ -12,11 +12,13 @@ import (
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/fees"
 	"github.com/AnomalyFi/hypersdk/gossiper"
+	"github.com/AnomalyFi/hypersdk/network"
 	hrpc "github.com/AnomalyFi/hypersdk/rpc"
 	hstorage "github.com/AnomalyFi/hypersdk/storage"
 	"github.com/AnomalyFi/hypersdk/vm"
 	ametrics "github.com/ava-labs/avalanchego/api/metrics"
 	"github.com/ava-labs/avalanchego/database"
+	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/snow"
 	"go.uber.org/zap"
 
@@ -26,6 +28,7 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/config"
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
+	"github.com/AnomalyFi/nodekit-seq/messagenet"
 
 	"github.com/AnomalyFi/nodekit-seq/rpc"
 	"github.com/AnomalyFi/nodekit-seq/storage"
@@ -48,6 +51,10 @@ type Controller struct {
 	metrics *metrics
 
 	metaDB database.Database
+
+	relayManager *RelayManager
+	MessageNet   *messagenet.MessageNet
+	wsServer     *rpc.WebSocketServer
 }
 
 func New() *vm.VM {
@@ -57,6 +64,7 @@ func New() *vm.VM {
 func (c *Controller) Initialize(
 	inner *vm.VM,
 	snowCtx *snow.Context,
+	networkManager *network.Manager,
 	gatherer ametrics.MultiGatherer,
 	genesisBytes []byte,
 	upgradeBytes []byte, // subnets to allow for AWM
@@ -156,12 +164,22 @@ func (c *Controller) Initialize(
 		}
 	}
 
+	// initiate messagenet
+	c.MessageNet = messagenet.NewMessageNet(1024, 1024, snowCtx.Log)
+	// initiate relayManager & relayHandler
+	relayHandler, relaySender := networkManager.Register()
+	c.relayManager = NewRelayManager(c.inner, c.MessageNet, snowCtx)
+	networkManager.SetHandler(relayHandler, NewRelayHandler(c))
+
+	go c.MessageNet.StartMessageNet(c.relayManager, c.config.MessageNetPort)
+	go c.relayManager.Run(relaySender)
+
 	return c.config, c.genesis, build, gossip, blockDB, stateDB, apis, consts.ActionRegistry, consts.AuthRegistry, auth.Engines(), nil
 }
 
 func (c *Controller) Rules(t int64) chain.Rules {
 	// TODO: extend with [UpgradeBytes]
-	return c.genesis.Rules(t, c.snowCtx.NetworkID, c.snowCtx.ChainID)
+	return c.genesis.Rules(t, c.snowCtx.NetworkID, c.snowCtx.ChainID, c.config.VerificationKey, c.config.GnarkPrecompileDecoderABI)
 }
 
 func (c *Controller) StateManager() chain.StateManager {
@@ -178,6 +196,14 @@ func (c *Controller) Submit(
 	txs []*chain.Transaction,
 ) (errs []error) {
 	return c.inner.Submit(ctx, verifySig, txs)
+}
+
+func (c *Controller) SendRequestToAll(ctx context.Context, data []byte, relayerID int) error {
+	return c.relayManager.SendRequestToAll(ctx, relayerID, data)
+}
+
+func (c *Controller) SendRequestToIndividual(ctx context.Context, data []byte, relayerID int, nodeID ids.NodeID) error {
+	return c.relayManager.SendRequestToIndividual(ctx, relayerID, nodeID, data)
 }
 
 // TODO I can add the blocks to the JSON RPC Server here instead of REST API
