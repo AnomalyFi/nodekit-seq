@@ -103,7 +103,7 @@ func (c *Controller) Initialize(
 
 	// State changes happeining in genesis block would only be recorded for root calculation, similar to rest of the blocks.
 	// attatching config or any other item to genesis item would not result in any errors for generating genesis block root.
-	c.genesis, err = genesis.New(genesisBytes, upgradeBytes, c.config)
+	c.genesis, err = genesis.New(genesisBytes, upgradeBytes)
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf(
 			"unable to read genesis: %w",
@@ -140,7 +140,10 @@ func (c *Controller) Initialize(
 	}
 
 	apis[rpc.JSONRPCEndpoint] = jsonRPCHandler
-
+	// websocket server for serving commitment callbacks esp for relayers
+	wsServer, pubsubServer := rpc.NewWebSocketServer(c, c.config.GetStreamingBacklogSize())
+	c.wsServer = wsServer
+	apis[rpc.WSEndPoint] = pubsubServer
 	// Create builder and gossiper
 	var (
 		build  builder.Builder
@@ -179,7 +182,7 @@ func (c *Controller) Initialize(
 
 func (c *Controller) Rules(t int64) chain.Rules {
 	// TODO: extend with [UpgradeBytes]
-	return c.genesis.Rules(t, c.snowCtx.NetworkID, c.snowCtx.ChainID, c.config.VerificationKey, c.config.GnarkPrecompileDecoderABI)
+	return c.genesis.Rules(t, c.snowCtx.NetworkID, c.snowCtx.ChainID, c.config.GetParsedWhiteListedAddress(), c.config.VerificationKey, c.config.GnarkPrecompileDecoderABI)
 }
 
 func (c *Controller) StateManager() chain.StateManager {
@@ -212,6 +215,10 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 	defer batch.Reset()
 
 	go c.archiver.InsertBlock(blk)
+	// filter the transactions in websocket_packer.go and send to the listeners
+	if err := c.wsServer.AcceptBlockWithSEQWasmTxs(blk); err != nil {
+		c.Logger().Info("failed to send block to websocket server", zap.Error(err))
+	}
 
 	if err := c.jsonRPCServer.AcceptBlock(blk); err != nil {
 		c.inner.Logger().Fatal("unable to accept block in json-rpc server", zap.Error(err))

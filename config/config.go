@@ -100,7 +100,7 @@ type Config struct {
 	VerificationKey plonk.VerifyingKey
 
 	// Plonk Precompile Decoder ABI
-	GnarkPrecompileDecoderABI *abi.ABI
+	GnarkPrecompileDecoderABI *abi.ABI `json:"gnarkPrecompileDecoderABI,omitempty"`
 
 	// messagenet port
 	MessageNetPort string `json:"messagenetPort"`

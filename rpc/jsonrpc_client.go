@@ -16,6 +16,7 @@ import (
 	"github.com/consensys/gnark/backend/plonk"
 
 	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/requester"
 	"github.com/AnomalyFi/hypersdk/rpc"
 	"github.com/AnomalyFi/hypersdk/utils"
@@ -369,7 +370,7 @@ func (p *Parser) ChainID() ids.ID {
 }
 
 func (p *Parser) Rules(t int64) chain.Rules {
-	return p.genesis.Rules(t, p.networkID, p.chainID, plonk.NewVerifyingKey(ecc.BN254), &abi.ABI{})
+	return p.genesis.Rules(t, p.networkID, p.chainID, []codec.Address{}, plonk.NewVerifyingKey(ecc.BN254), &abi.ABI{})
 }
 
 func (*Parser) Registry() (chain.ActionRegistry, chain.AuthRegistry) {

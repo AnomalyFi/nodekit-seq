@@ -756,7 +756,7 @@ func (p *ServerParser) ChainID() ids.ID {
 }
 
 func (p *ServerParser) Rules(t int64) chain.Rules {
-	return p.genesis.Rules(t, p.networkID, p.chainID, plonk.NewVerifyingKey(ecc.BN254), &abi.ABI{})
+	return p.genesis.Rules(t, p.networkID, p.chainID, []codec.Address{}, plonk.NewVerifyingKey(ecc.BN254), &abi.ABI{})
 }
 
 func (*ServerParser) Registry() (chain.ActionRegistry, chain.AuthRegistry) {
