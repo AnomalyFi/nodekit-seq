@@ -7,8 +7,8 @@ require (
 	github.com/ava-labs/avalanche-network-runner v1.7.4-rc.0
 	github.com/ava-labs/avalanchego v1.11.6
 	github.com/ava-labs/coreth v0.13.4-rc.0
-	github.com/consensys/gnark v0.10.0
-	github.com/consensys/gnark-crypto v0.12.2-0.20240215234832-d72fcb379d3e
+	github.com/consensys/gnark v0.9.1
+	github.com/consensys/gnark-crypto v0.12.2-0.20231013160410-1f65e75b6dfb
 	github.com/ethereum/go-ethereum v1.13.8
 	github.com/fatih/color v1.13.0
 	github.com/gorilla/websocket v1.5.0
