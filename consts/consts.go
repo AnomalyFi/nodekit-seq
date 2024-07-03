@@ -16,6 +16,11 @@ const (
 	Decimals = 9
 )
 
+const (
+	// Num of statekeys
+	NumStateKeys int = 1024
+)
+
 var ID ids.ID
 
 func init() {

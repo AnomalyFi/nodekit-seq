@@ -58,6 +58,14 @@ func (c *Controller) GetRelayerBalanceFromState(
 	return storage.GetRelayerBalanceFromState(ctx, c.inner.ReadState, relayerID)
 }
 
+func (c *Controller) GetDataOfStorageSlotFromState(
+	ctx context.Context,
+	contractAddress ids.ID,
+	slot string,
+) ([]byte, error) {
+	return storage.GetBytesFromState(ctx, c.inner.ReadState, contractAddress, slot)
+}
+
 func (c *Controller) GetAcceptedBlockWindow() int {
 	return c.config.GetAcceptedBlockWindow()
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/state"
+	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
@@ -41,7 +42,7 @@ func (t *Transact) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
 	stateKeys := state.Keys{
 		string(storage.ContractKey(t.ContractAddress)): state.Read,
 	}
-	for i := 0; i < NumStateKeys; i++ {
+	for i := 0; i < consts.NumStateKeys; i++ {
 		keyName := "slot" + strconv.Itoa(i)
 		stateKeys.Add(string(storage.StateStorageKey(t.ContractAddress, keyName)), state.Read|state.Write)
 	}

@@ -6,6 +6,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -334,6 +335,25 @@ func (cli *JSONRPCClient) GetRelayerBalance(ctx context.Context, relayerID uint3
 		resp,
 	)
 	return resp.Amount, err
+}
+
+func (cli *JSONRPCClient) GetStorageSlotData(ctx context.Context, address string, slot uint64) ([]byte, error) {
+	if slot > uint64(consts.NumStateKeys) {
+		return nil, fmt.Errorf("slot number must be less than number of state keys. slot: %d, num of state keys: %d", slot, consts.NumStateKeys)
+	}
+
+	resp := new(StorageSlotReply)
+	slotS := "slot" + strconv.Itoa(int(slot))
+	err := cli.requester.SendRequest(
+		ctx,
+		"storageSlot",
+		&StorageSlotArgs{
+			AddressStr: address,
+			Slot:       slotS,
+		},
+		resp,
+	)
+	return resp.Data, err
 }
 
 var _ chain.Parser = (*Parser)(nil)

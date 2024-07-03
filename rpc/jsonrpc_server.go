@@ -256,6 +256,7 @@ type RelayerBalanceArgs struct {
 	RelayerID uint32 `json:"relayer_id"`
 }
 
+// Returns balance available in relayer `RealyerID` account.
 func (j *JSONRPCServer) RelayerBalance(req *http.Request, args *RelayerBalanceArgs, reply *BalanceReply) error {
 	ctx, span := j.c.Tracer().Start(req.Context(), "Server.RelayerBalance")
 	defer span.End()
@@ -265,6 +266,31 @@ func (j *JSONRPCServer) RelayerBalance(req *http.Request, args *RelayerBalanceAr
 		return err
 	}
 	reply.Amount = balance
+	return err
+}
+
+type StorageSlotArgs struct {
+	AddressStr string `json:"address"`
+	Slot       string `json:"slot"`
+}
+
+type StorageSlotReply struct {
+	Data []byte `json:"data"`
+}
+
+// Returns data bytes `Data` stored at the storage slot `Slot` for contract address `Address`
+func (j *JSONRPCServer) StorageSlot(req *http.Request, args *StorageSlotArgs, reply *StorageSlotReply) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.StorageSlot")
+	defer span.End()
+	address, err := ids.FromString(args.AddressStr)
+	if err != nil {
+		return err
+	}
+	data, err := j.c.GetDataOfStorageSlotFromState(ctx, address, args.Slot)
+	if err != nil {
+		return err
+	}
+	reply.Data = data
 	return err
 }
 

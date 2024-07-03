@@ -38,9 +38,6 @@ const (
 	MaxMemoSize     = 256
 	MaxMetadataSize = 256
 	MaxDecimals     = 9
-
-	// Num of statekeys
-	NumStateKeys int = 1024
 )
 
 var DefaultNMTNamespace = make([]byte, 8)

@@ -22,6 +22,7 @@ type Controller interface {
 	GetAssetFromState(context.Context, ids.ID) (bool, []byte, uint8, []byte, uint64, codec.Address, error)
 	GetBalanceFromState(context.Context, codec.Address, ids.ID) (uint64, error)
 	GetRelayerBalanceFromState(ctx context.Context, relayerID uint32) (uint64, error)
+	GetDataOfStorageSlotFromState(ctx context.Context, contractAddress ids.ID, slot string) ([]byte, error)
 	UnitPrices(ctx context.Context) (fees.Dimensions, error)
 	GetAcceptedBlockWindow() int
 	Submit(

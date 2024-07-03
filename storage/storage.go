@@ -649,7 +649,6 @@ func FeeMarketKey() (k []byte) {
 }
 
 func ContractKey(txID ids.ID) (k []byte) {
-
 	k = make([]byte, 1+ids.IDLen+consts.Uint16Len)
 	k[0] = contractPrefix
 	copy(k[1:], txID[:])
@@ -657,6 +656,7 @@ func ContractKey(txID ids.ID) (k []byte) {
 	return
 }
 
+// @todo optimize for state key creation. cache keys
 func StateStorageKey(contractAddress ids.ID, name string) (k []byte) {
 	bstring := []byte(name)
 	k = make([]byte, 1+ids.IDLen+len(bstring)+consts.Uint16Len)
@@ -695,7 +695,8 @@ func SetBytes(
 	mu state.Mutable,
 	contractAddress ids.ID,
 	name string,
-	byteData []byte) error {
+	byteData []byte,
+) error {
 	k := StateStorageKey(contractAddress, name)
 	return mu.Insert(ctx, k, byteData)
 }
@@ -704,7 +705,19 @@ func GetBytes(
 	ctx context.Context,
 	im state.Immutable,
 	contractAddress ids.ID,
-	name string) ([]byte, error) {
+	name string,
+) ([]byte, error) {
 	k := StateStorageKey(contractAddress, name)
 	return im.GetValue(ctx, k)
+}
+
+func GetBytesFromState(
+	ctx context.Context,
+	f ReadState,
+	contractAddress ids.ID,
+	name string,
+) ([]byte, error) {
+	k := StateStorageKey(contractAddress, name)
+	values, errs := f(ctx, [][]byte{k})
+	return values[0], errs[0]
 }
