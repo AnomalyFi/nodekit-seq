@@ -28,6 +28,8 @@ func init() {
 		consts.ActionRegistry.Register((&actions.BurnAsset{}).GetTypeID(), actions.UnmarshalBurnAsset, false),
 		consts.ActionRegistry.Register((&actions.SequencerMsg{}).GetTypeID(), actions.UnmarshalSequencerMsg, false),
 		consts.ActionRegistry.Register((&actions.Oracle{}).GetTypeID(), actions.UnmarshalOracle, false),
+		consts.ActionRegistry.Register((&actions.Deploy{}).GetTypeID(), actions.UnmarshalDeploy, false),
+		consts.ActionRegistry.Register((&actions.Transact{}).GetTypeID(), actions.UnmarshalTransact, false),
 		// When registering new auth, ALWAYS make sure to append at the end.
 		consts.AuthRegistry.Register((&auth.ED25519{}).GetTypeID(), auth.UnmarshalED25519, false),
 		consts.AuthRegistry.Register((&auth.BLS{}).GetTypeID(), auth.UnmarshalBLS, false),

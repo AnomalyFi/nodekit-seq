@@ -16,7 +16,6 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/plonk"
 	"github.com/consensys/gnark/frontend"
@@ -53,10 +52,6 @@ func (*Transact) StateKeysMaxChunks() []uint16 {
 	return []uint16{storage.BalanceChunks, storage.BalanceChunks} //@todo tune this /change this
 }
 
-func (*Transact) OutputsWarpMessage() bool {
-	return false
-}
-
 func (t *Transact) Marshal(p *codec.Packer) {
 	p.PackString(t.FunctionName)
 	p.PackID(t.ContractAddress)
@@ -76,7 +71,7 @@ func (*Transact) ValidRange(chain.Rules) (int64, int64) {
 	return -1, -1
 }
 
-func UnmarshalTransact(p *codec.Packer, _ *warp.Message) (chain.Action, error) {
+func UnmarshalTransact(p *codec.Packer) (chain.Action, error) {
 	var transact Transact
 	transact.FunctionName = p.UnpackString(true)
 	p.UnpackID(true, &transact.ContractAddress)

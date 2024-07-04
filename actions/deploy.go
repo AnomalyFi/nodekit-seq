@@ -11,7 +11,6 @@ import (
 	"github.com/AnomalyFi/hypersdk/state"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
 )
 
 var _ chain.Action = (*Deploy)(nil)
@@ -70,7 +69,7 @@ func (d *Deploy) Marshal(p *codec.Packer) {
 	p.PackBytes(d.ContractCode)
 }
 
-func UnmarshalDeploy(p *codec.Packer, _ *warp.Message) (chain.Action, error) {
+func UnmarshalDeploy(p *codec.Packer) (chain.Action, error) {
 	var deploy Deploy
 	p.UnpackID(true, &deploy.ContractID)
 	p.UnpackBytes(int(math.MaxUint32), true, &deploy.ContractCode)
