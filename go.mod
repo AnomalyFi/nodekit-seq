@@ -1,14 +1,17 @@
 module github.com/AnomalyFi/nodekit-seq
 
-go 1.21.10
+go 1.22
+
+toolchain go1.22.2
 
 require (
 	github.com/AnomalyFi/hypersdk v0.9.4-alpha.1.0.20240620071330-5d4c82f8efaa
+	github.com/AnomalyFi/sp1-recursion-gnark v0.0.0-20240704121059-7971b4cdecd6
 	github.com/ava-labs/avalanche-network-runner v1.7.4-rc.0
 	github.com/ava-labs/avalanchego v1.11.6
 	github.com/ava-labs/coreth v0.13.4-rc.0
-	github.com/consensys/gnark v0.9.1
-	github.com/consensys/gnark-crypto v0.12.2-0.20231013160410-1f65e75b6dfb
+	github.com/consensys/gnark v0.10.1-0.20240504023521-d9bfacd7cb60
+	github.com/consensys/gnark-crypto v0.12.2-0.20240504013751-564b6f724c3b
 	github.com/ethereum/go-ethereum v1.13.8
 	github.com/fatih/color v1.13.0
 	github.com/gorilla/websocket v1.5.0
@@ -16,7 +19,6 @@ require (
 	github.com/prometheus/client_golang v1.16.0
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
-	github.com/succinctlabs/gnark-plonky2-verifier v0.1.0
 	github.com/tetratelabs/wazero v1.7.3
 	github.com/tidwall/btree v1.5.0
 	github.com/wailsapp/wails/v2 v2.5.1
@@ -26,6 +28,8 @@ require (
 	gorm.io/driver/sqlite v1.5.6
 	gorm.io/gorm v1.25.10
 )
+
+require github.com/ronanh/intcomp v1.1.0 // indirect
 
 require (
 	filippo.io/edwards25519 v1.0.0 // indirect
@@ -49,6 +53,7 @@ require (
 	github.com/cockroachdb/redact v1.1.3 // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
+	github.com/consensys/gnark-ignition-verifier v0.0.0-20230527014722-10693546ab33 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/crate-crypto/go-ipa v0.0.0-20231025140028-3c0104f4b233 // indirect
 	github.com/crate-crypto/go-kzg-4844 v0.7.0 // indirect
@@ -195,3 +200,5 @@ require (
 // replace github.com/ava-labs/coreth => github.com/AnomalyFi/coreth v0.12.5-rc.6.1
 
 replace github.com/AnomalyFi/hypersdk => ../hypersdk
+
+replace gihtub.com/AnomalyFi/sp1-recursion-gnark => ../sp1-recursion-gnark

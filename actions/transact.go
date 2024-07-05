@@ -13,14 +13,13 @@ import (
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/state"
 	"github.com/AnomalyFi/nodekit-seq/consts"
-	"github.com/AnomalyFi/nodekit-seq/genesis"
 	"github.com/AnomalyFi/nodekit-seq/storage"
+	sp1 "github.com/AnomalyFi/sp1-recursion-gnark/sp1"
+	babybear "github.com/AnomalyFi/sp1-recursion-gnark/sp1/babybear"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/plonk"
 	"github.com/consensys/gnark/frontend"
-	"github.com/succinctlabs/gnark-plonky2-verifier/poseidon"
-	"github.com/succinctlabs/gnark-plonky2-verifier/variables"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 )
@@ -107,16 +106,18 @@ func (t *Transact) Execute(
 	compiledMod, err := r.CompileModule(ctxWasm, deployedCodeAtContractAddress)
 
 	if err != nil {
-		return nil, errors.New("couldnot compile contract")
+		return nil, errors.New("contract not compiled")
 	}
 
 	expFunc := compiledMod.ExportedFunctions()
 	checkFunc := expFunc[function]
-
 	if checkFunc == nil {
 		return nil, errors.New("invalid function signature")
 	}
 
+	// System calls
+
+	// get bytes from state at slot i
 	stateGetBytesInner := func(ctxInner context.Context, m api.Module, i uint32) uint64 {
 		slot := "slot" + strconv.Itoa(int(i))
 		result, _ := storage.GetBytes(ctx, mu, contractAddress, slot)
@@ -126,6 +127,8 @@ func (t *Transact) Execute(
 		m.Memory().Write(uint32(offset), result)
 		return uint64(offset)<<32 | size
 	}
+
+	// store bytes in state at slot i
 	stateStoreBytesInner := func(ctxInner context.Context, m api.Module, i uint32, ptr uint32, size uint32) {
 		slot := "slot" + strconv.Itoa(int(i))
 		if bytes, ok := m.Memory().Read(ptr, size); !ok {
@@ -134,6 +137,8 @@ func (t *Transact) Execute(
 			storage.SetBytes(ctx, mu, contractAddress, slot, bytes)
 		}
 	}
+
+	// get bytes at state at dynamic slot i
 	stateGetDynamicBytesInner := func(ctxInner context.Context, m api.Module, offset uint32, key uint32) uint64 {
 		i := 128 + (offset*key)%896
 		slot := "slot" + strconv.Itoa(int(i))
@@ -144,6 +149,8 @@ func (t *Transact) Execute(
 		m.Memory().Write(uint32(offset2), result)
 		return uint64(offset2)<<32 | size
 	}
+
+	// store bytes in state at dynamic slot i
 	stateStoreDynamicBytesInner := func(ctxInner context.Context, m api.Module, offset uint32, key uint32, ptr uint32, size uint32) {
 		i := 128 + (offset*key)%896
 		slot := "slot" + strconv.Itoa(int(i))
@@ -153,71 +160,69 @@ func (t *Transact) Execute(
 			storage.SetBytes(ctx, mu, contractAddress, slot, bytes)
 		}
 	}
-	// precompiles
+
+	// SP1 plonk proof verifier pre-compile
 	gnarkVerify := func(ctxInner context.Context, m api.Module, ptr uint32, size uint32) uint32 {
-		// fetch vk, abi from cache(these should exist)
-		rHA, _ := rules.FetchCustom("")
-		helper := rHA.(genesis.RulesHelper)
-		vk := helper.VerificationKey
-		abi := helper.GnarkPrecompileABI
 		// read from memory
 		dataBytes, ok := m.Memory().Read(ptr, size)
 		if !ok {
 			return 0
 		}
-		// abi unpack
-		method := abi.Methods["gnarkPrecompileInputsDummyFunction"]
+		// abi unpack the data
+		method := GnarkPreCompileABI.Methods["gnarkPrecompile"]
 		upack, err := method.Inputs.Unpack(dataBytes)
 		if err != nil {
 			return 0
 		}
-		input := upack[0].(*GnarkPrecompileInputs)
-		// build digest from digest big int
-		digest, ok := (*helper.FunctionIDBigIntCache)[input.FunctionIdBigInt]
-		if !ok {
-			cirucitDigest := frontend.Variable(input.FunctionIdBigInt)
-			digestInner := poseidon.BN254HashOut(cirucitDigest)
-			(*helper.FunctionIDBigIntCache)[input.FunctionIdBigInt] = digestInner
-			digest = digestInner
+
+		// calculate publicValuesDisgest
+		preCompileInput := upack[0].(*GnarkPrecompileInputs)
+		publicValuesHash := sha256.Sum256(preCompileInput.PublicValues)
+		publicValuesB := new(big.Int).SetBytes(publicValuesHash[:])
+		publicValuesDigest := new(big.Int).And(publicValuesB, mask)
+		if publicValuesDigest.BitLen() > 253 {
+			return 0
 		}
-		// build proof
+		sp1Circuit := sp1.Circuit{
+			Vars:                 []frontend.Variable{},
+			Felts:                []babybear.Variable{},
+			Exts:                 []babybear.ExtensionVariable{},
+			VkeyHash:             preCompileInput.ProgramVKey,
+			CommitedValuesDigest: publicValuesDigest,
+		}
+
+		// read vk from preCompileInput
+		vk := plonk.NewVerifyingKey(ecc.BN254)
+		_, err = vk.ReadFrom(bytes.NewBuffer(preCompileInput.ProgramVKey))
+		if err != nil {
+			fmt.Printf("failed to read vk file: %s", err)
+			return 0
+		}
+
+		// read proof from preCompileInput
 		proof := plonk.NewProof(ecc.BN254)
-		_, err = proof.ReadFrom(bytes.NewBuffer(input.Proof))
+		_, err = proof.ReadFrom(bytes.NewBuffer(preCompileInput.ProofBytes))
 		if err != nil {
-			// ill-structured proof
+			fmt.Println(err)
 			return 0
 		}
-		// prepare input and output for verification
-		inputHash := sha256.Sum256(input.Input)
-		outputHash := sha256.Sum256(input.Output)
-		inputHashB := new(big.Int).SetBytes(inputHash[:])
-		outputHashB := new(big.Int).SetBytes(outputHash[:])
-		inputHashM := new(big.Int).And(inputHashB, mask)
-		outputHashM := new(big.Int).And(outputHashB, mask)
-		if inputHashM.BitLen() > 253 || outputHashM.BitLen() > 253 {
-			// ill-structured input or output
-			return 0
-		}
-		assg := &Plonky2xVerifierCircuit{
-			VerifierDigest: digest,
-			InputHash:      inputHashM,
-			OutputHash:     outputHashM,
-			ProofWithPis:   variables.ProofWithPublicInputs{},
-			VerifierData:   variables.VerifierOnlyCircuitData{},
-		}
-		wit, err := frontend.NewWitness(assg, ecc.BN254.ScalarField())
+
+		// create witness
+		wit, err := frontend.NewWitness(&sp1Circuit, ecc.BN254.ScalarField())
 		if err != nil {
-			// this usually will not happen
 			return 0
 		}
+
+		// get the public witness
 		pubWit, err := wit.Public()
 		if err != nil {
-			// this usually will not happend
 			return 0
 		}
+
+		// verify the proof
 		err = plonk.Verify(proof, vk, pubWit)
 		if err != nil {
-			// wrong proof - pubWit - vk pair or malicious proof
+			// the vk may not be corresponding to the proof or public witness are not corresponding to proofs or proof is invalid
 			return 0
 		}
 		return 1
@@ -240,22 +245,25 @@ func (t *Transact) Execute(
 		return nil, fmt.Errorf("can not build host module: %s", err.Error())
 	}
 
+	// Instantiate the module
 	mod, err := r.Instantiate(ctxWasm, deployedCodeAtContractAddress)
 	if err != nil {
 		return nil, fmt.Errorf("can not instantiate: %s", err.Error())
 	}
+
+	// Get the exported functions
 	allocate_ptr = mod.ExportedFunction("allocate_ptr")
 	deallocate_ptr := mod.ExportedFunction("deallocate_ptr")
 	txFunction := mod.ExportedFunction(function)
 
+	// allocate memory for input
 	inputBytesLen := uint64(len(inputBytes))
 	results, err := allocate_ptr.Call(ctxWasm, inputBytesLen)
 	if err != nil {
 		return nil, fmt.Errorf("can not allocate memory: %s", err.Error())
 	}
 	inputPtr := results[0]
-	defer deallocate_ptr.Call(ctxWasm, inputPtr, inputBytesLen) //@todo end abruptly or let dereferec?
-
+	defer deallocate_ptr.Call(ctxWasm, inputPtr, inputBytesLen)
 	mod.Memory().Write(uint32(inputPtr), inputBytes) // This shold not fail
 
 	//@todo experiment with output

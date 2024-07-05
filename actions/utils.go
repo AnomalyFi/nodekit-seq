@@ -4,10 +4,7 @@ import (
 	"math/big"
 
 	"github.com/AnomalyFi/hypersdk/codec"
-
-	"github.com/consensys/gnark/frontend"
-	gtype "github.com/succinctlabs/gnark-plonky2-verifier/types"
-	"github.com/succinctlabs/gnark-plonky2-verifier/variables"
+	"github.com/ava-labs/coreth/accounts/abi/bind"
 )
 
 func ContainsAddress(addrs []codec.Address, addr codec.Address) bool {
@@ -19,39 +16,19 @@ func ContainsAddress(addrs []codec.Address, addr codec.Address) bool {
 	return false
 }
 
-// GnarkPrecompileGnarkPrecompileInputs is an auto generated low-level Go binding around an user-defined struct.
+// GnarkPrecompileInputs is an auto generated low-level Go binding around an user-defined struct.
 type GnarkPrecompileInputs struct {
-	Input            []byte
-	Output           []byte
-	Proof            []byte
-	FunctionIdBigInt *big.Int
+	ProgramVKeyHash [32]byte
+	PublicValues    []byte
+	ProofBytes      []byte
+	ProgramVKey     []byte
 }
+
+// GnarkPreCompileMetaData contains all meta data concerning the SolGen contract.
+var GnarkPreCompileMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"programVKeyHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"publicValues\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"proofBytes\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"programVKey\",\"type\":\"bytes\"}],\"internalType\":\"structSolGen.gnarkPrecompileInputs\",\"name\":\"inputs\",\"type\":\"tuple\"}],\"name\":\"gnarkPrecompile\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+}
+
+var GnarkPreCompileABI, _ = GnarkPreCompileMetaData.GetAbi()
 
 var mask = new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 253), big.NewInt(1))
-
-// can't load this from the package. why?? plonky2x is not a go module
-
-// We assume that the publicInputs have 64 bytes
-// publicInputs[0:32] is a big-endian representation of a SHA256 hash that has been truncated to 253 bits.
-// Note that this truncation happens in the `WrappedCircuit` when computing the `input_hash`
-// The reason for truncation is that we only want 1 public input on-chain for the input hash
-// to save on gas costs
-type Plonky2xVerifierCircuit struct {
-	// A digest of the plonky2x circuit that is being verified.
-	VerifierDigest frontend.Variable `gnark:"verifierDigest,public"`
-
-	// The input hash is the hash of all onchain inputs into the function.
-	InputHash frontend.Variable `gnark:"inputHash,public"`
-
-	// The output hash is the hash of all outputs from the function.
-	OutputHash frontend.Variable `gnark:"outputHash,public"`
-
-	// Private inputs to the circuit
-	ProofWithPis variables.ProofWithPublicInputs
-	VerifierData variables.VerifierOnlyCircuitData
-
-	// Circuit configuration that is not part of the circuit itself.
-	CommonCircuitData gtype.CommonCircuitData `gnark:"-"`
-}
-
-func (c *Plonky2xVerifierCircuit) Define(api frontend.API) error { return nil }

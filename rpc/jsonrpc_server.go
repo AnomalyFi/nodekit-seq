@@ -13,9 +13,6 @@ import (
 	"time"
 
 	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/coreth/accounts/abi"
-	"github.com/consensys/gnark-crypto/ecc"
-	"github.com/consensys/gnark/backend/plonk"
 	"go.uber.org/zap"
 
 	"github.com/AnomalyFi/hypersdk/chain"
@@ -90,7 +87,6 @@ func (j *JSONRPCServer) SubmitMsgTx(
 	reply *SubmitMsgTxReply,
 ) error {
 	ctx := context.Background()
-
 	chainId, err := ids.FromString(args.ChainId)
 	if err != nil {
 		return err
@@ -110,7 +106,6 @@ func (j *JSONRPCServer) SubmitMsgTx(
 
 	priv := ed25519.PrivateKey(privBytes)
 	factory := auth.NewED25519Factory(priv)
-
 	tpriv, err := ed25519.GeneratePrivateKey()
 	if err != nil {
 		return err
@@ -153,6 +148,88 @@ func (j *JSONRPCServer) SubmitMsgTx(
 	}
 
 	// TODO above is new!
+
+	msg, err := tx.Digest()
+	if err != nil {
+		// Should never occur because populated during unmarshal
+		return err
+	}
+	if err := tx.Auth.Verify(ctx, msg); err != nil {
+		return err
+	}
+	txID := tx.ID()
+	reply.TxID = txID.String()
+	return j.c.Submit(ctx, false, []*chain.Transaction{tx})[0]
+}
+
+type SubmitTransactTxArgs struct {
+	ChainId         string `json:"chain_id"`
+	NetworkID       uint32 `json:"network_id"`
+	FunctionName    string `json:"function_name"`
+	ContractAddress string `json:"contract_address"`
+	Input           []byte `json:"input"`
+}
+
+type SubmitTransactTxReply struct {
+	TxID string `json:"txId"`
+}
+
+func (j *JSONRPCServer) SubmitTransactTx(
+	req *http.Request,
+	args *SubmitTransactTxArgs,
+	reply *SubmitTransactTxReply,
+) error {
+	ctx := context.Background()
+	chainId, err := ids.FromString(args.ChainId)
+	if err != nil {
+		return err
+	}
+	unitPrices, err := j.c.UnitPrices(ctx)
+	if err != nil {
+		return err
+	}
+	parser := j.ServerParser(ctx, args.NetworkID, chainId)
+	privBytes, _ := codec.LoadHex(
+		"323b1d8f4eed5f0da9da93071b034f2dce9d2d22692c172f3cb252a64ddfafd01b057de320297c29ad0c1f589ea216869cf1938d88c9fbd70d6748323dbf2fa7", //nolint:lll
+		ed25519.PrivateKeyLen,
+	)
+	priv := ed25519.PrivateKey(privBytes)
+	factory := auth.NewED25519Factory(priv)
+	addr, err := ids.FromString(args.ContractAddress)
+	if err != nil {
+		return err
+	}
+	actions := []chain.Action{&actions.Transact{
+		FunctionName:    args.FunctionName,
+		ContractAddress: addr,
+		Input:           args.Input,
+	}}
+
+	maxUnits, _, err := chain.EstimateUnits(parser.Rules(time.Now().UnixMilli()), actions, factory)
+	if err != nil {
+		return err
+	}
+	maxFee, err := fees.MulSum(unitPrices, maxUnits)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now().UnixMilli()
+	rules := parser.Rules(now)
+
+	base := &chain.Base{
+		Timestamp: utils.UnixRMilli(now, rules.GetValidityWindow()),
+		ChainID:   chainId,
+		MaxFee:    maxFee,
+	}
+
+	// Build transaction
+	actionRegistry, authRegistry := parser.Registry()
+	tx := chain.NewTx(base, actions)
+	tx, err = tx.Sign(factory, actionRegistry, authRegistry)
+	if err != nil {
+		return fmt.Errorf("%w: failed to sign transaction", err)
+	}
 
 	msg, err := tx.Digest()
 	if err != nil {
@@ -756,7 +833,7 @@ func (p *ServerParser) ChainID() ids.ID {
 }
 
 func (p *ServerParser) Rules(t int64) chain.Rules {
-	return p.genesis.Rules(t, p.networkID, p.chainID, []codec.Address{}, plonk.NewVerifyingKey(ecc.BN254), &abi.ABI{})
+	return p.genesis.Rules(t, p.networkID, p.chainID, []codec.Address{})
 }
 
 func (*ServerParser) Registry() (chain.ActionRegistry, chain.AuthRegistry) {

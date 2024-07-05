@@ -4,15 +4,10 @@
 package genesis
 
 import (
-	"math/big"
-
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/fees"
 	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/coreth/accounts/abi"
-	"github.com/consensys/gnark/backend/plonk"
-	"github.com/consensys/gnark/frontend"
 
 	"github.com/AnomalyFi/nodekit-seq/storage"
 )
@@ -25,21 +20,11 @@ type Rules struct {
 	networkID                uint32
 	chainID                  ids.ID
 	parsedWhiteListedAddress []codec.Address
-	verificationKey          plonk.VerifyingKey
-	GnarkPrecompileABI       *abi.ABI
-	FunctionIDBigIntCache    *map[*big.Int]frontend.Variable
-}
-
-type RulesHelper struct {
-	VerificationKey       plonk.VerifyingKey
-	GnarkPrecompileABI    *abi.ABI
-	FunctionIDBigIntCache *map[*big.Int]frontend.Variable
 }
 
 // TODO: use upgradeBytes
-func (g *Genesis) Rules(_ int64, networkID uint32, chainID ids.ID, parsedWhiteListedAddresses []codec.Address, verificationKey plonk.VerifyingKey, GnarkPrecompileABI *abi.ABI) *Rules {
-	d := make(map[*big.Int]frontend.Variable)
-	return &Rules{g, networkID, chainID, parsedWhiteListedAddresses, verificationKey, GnarkPrecompileABI, &d}
+func (g *Genesis) Rules(_ int64, networkID uint32, chainID ids.ID, parsedWhiteListedAddresses []codec.Address) *Rules {
+	return &Rules{g, networkID, chainID, parsedWhiteListedAddresses}
 }
 
 func (r *Rules) NetworkID() uint32 {
@@ -133,9 +118,6 @@ func (r *Rules) GetFeeMarketMinUnitPrice() uint64 {
 func (r *Rules) FetchCustom(s string) (any, bool) {
 	if s == "whitelisted.Addresses" {
 		return r.parsedWhiteListedAddress, false
-	} else if s == "precompile.Helper" {
-		return RulesHelper{r.verificationKey, r.GnarkPrecompileABI, r.FunctionIDBigIntCache}, false
-
 	}
 	return nil, false
 }
