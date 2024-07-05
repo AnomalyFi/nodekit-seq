@@ -6,7 +6,6 @@ toolchain go1.22.2
 
 require (
 	github.com/AnomalyFi/hypersdk v0.9.4-alpha.1.0.20240620071330-5d4c82f8efaa
-	github.com/AnomalyFi/sp1-recursion-gnark v0.0.0-20240704121059-7971b4cdecd6
 	github.com/ava-labs/avalanche-network-runner v1.7.4-rc.0
 	github.com/ava-labs/avalanchego v1.11.6
 	github.com/ava-labs/coreth v0.13.4-rc.0
@@ -53,7 +52,6 @@ require (
 	github.com/cockroachdb/redact v1.1.3 // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
-	github.com/consensys/gnark-ignition-verifier v0.0.0-20230527014722-10693546ab33 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/crate-crypto/go-ipa v0.0.0-20231025140028-3c0104f4b233 // indirect
 	github.com/crate-crypto/go-kzg-4844 v0.7.0 // indirect

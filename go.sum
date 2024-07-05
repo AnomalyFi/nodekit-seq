@@ -39,8 +39,6 @@ dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7
 filippo.io/edwards25519 v1.0.0 h1:0wAIcmJUqRdI8IJ/3eGi5/HwXZWPujYXXlkrQogz0Ek=
 filippo.io/edwards25519 v1.0.0/go.mod h1:N1IkdkCkiLB6tki+MYJoSx2JTY9NUlxZE7eHn5EwJns=
 github.com/AndreasBriese/bbloom v0.0.0-20190306092124-e2d15f34fcf9/go.mod h1:bOvUY6CB00SOBii9/FifXqc0awNKxLFCL/+pkDPuyl8=
-github.com/AnomalyFi/sp1-recursion-gnark v0.0.0-20240704121059-7971b4cdecd6 h1:qd7zJ1ybHcfYClFwon7FQ/UZSvMwwnbDGbP3/RDil+E=
-github.com/AnomalyFi/sp1-recursion-gnark v0.0.0-20240704121059-7971b4cdecd6/go.mod h1:3n8KBQVhzhpWp36pgV1qplfa+v3pzt+S/mA6JODUIbs=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/toml v1.3.2 h1:o7IhLm0Msx3BaB+n3Ag7L8EVlByGnpq14C4YWiu/gL8=
 github.com/BurntSushi/toml v1.3.2/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
@@ -147,8 +145,6 @@ github.com/consensys/gnark v0.10.1-0.20240504023521-d9bfacd7cb60 h1:+m2KO2BeqBkH
 github.com/consensys/gnark v0.10.1-0.20240504023521-d9bfacd7cb60/go.mod h1:DU7zXvIuOqheiS3EgVdD7ydbXDiLh71FkaArWPxwJqY=
 github.com/consensys/gnark-crypto v0.12.2-0.20240504013751-564b6f724c3b h1:tu0NaVr64o6vXzy9rYSK/LCZXmS+u/k9eP1F8OtRUWQ=
 github.com/consensys/gnark-crypto v0.12.2-0.20240504013751-564b6f724c3b/go.mod h1:wKqwsieaKPThcFkHe0d0zMsbHEUWFmZcG7KBCse210o=
-github.com/consensys/gnark-ignition-verifier v0.0.0-20230527014722-10693546ab33 h1:z42ewLaLxoTYeQ17arcF4WExZc/eSaN3YVlF7eEaPt4=
-github.com/consensys/gnark-ignition-verifier v0.0.0-20230527014722-10693546ab33/go.mod h1:JdKor28c/KR4BbznP88bz8AAvnCgovzrB3KWsiR7lwk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/go-etcd v2.0.0+incompatible/go.mod h1:Jez6KQU2B/sWsbdaef3ED8NzMklzPG4d5KIOhIy30Tk=
 github.com/coreos/go-semver v0.2.0/go.mod h1:nnelYz7RCh+5ahJtPPxZlU+153eP4D4r3EedlOD2RNk=

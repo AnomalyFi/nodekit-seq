@@ -4,18 +4,19 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 	"strconv"
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
+	"github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/state"
-	"github.com/AnomalyFi/nodekit-seq/consts"
+	nconsts "github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/storage"
-	sp1 "github.com/AnomalyFi/sp1-recursion-gnark/sp1"
-	babybear "github.com/AnomalyFi/sp1-recursion-gnark/sp1/babybear"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/plonk"
@@ -27,9 +28,11 @@ import (
 var _ chain.Action = (*Transact)(nil)
 
 type Transact struct {
-	FunctionName    string `json:"functionName"`
 	ContractAddress ids.ID `json:"contractAddress"`
+	FunctionName    string `json:"functionName"`
 	Input           []byte `json:"input"` // abi encoded input -> hex to bytes in cmd
+	// dynamic state slots?
+	DynamicStateSlots []string `json:"dynamicStateSlots"`
 }
 
 func (*Transact) GetTypeID() uint8 {
@@ -40,21 +43,34 @@ func (t *Transact) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
 	stateKeys := state.Keys{
 		string(storage.ContractKey(t.ContractAddress)): state.Read,
 	}
-	for i := 0; i < consts.NumStateKeys; i++ {
+	// do not limit state keys to have slot + integer concatenated
+	for i := 0; i < nconsts.NumStaticStateKeys; i++ {
 		keyName := "slot" + strconv.Itoa(i)
-		stateKeys.Add(string(storage.StateStorageKey(t.ContractAddress, keyName)), state.Read|state.Write)
+		stateKeys.Add(string(storage.StateStorageKey(t.ContractAddress, keyName)), state.All)
+	}
+	for _, v := range t.DynamicStateSlots {
+		stateKeys.Add(string(storage.StateStorageKey(t.ContractAddress, v)), state.All)
 	}
 	return stateKeys
 }
 
-func (*Transact) StateKeysMaxChunks() []uint16 {
-	return []uint16{storage.BalanceChunks, storage.BalanceChunks} //@todo tune this /change this
+func (t *Transact) StateKeysMaxChunks() []uint16 {
+	chunks := []uint16{consts.MaxUint16}
+	for i := 0; i < nconsts.NumStaticStateKeys+len(t.DynamicStateSlots); i++ {
+		chunks = append(chunks, storage.StateChunks)
+	}
+	return chunks
 }
 
 func (t *Transact) Marshal(p *codec.Packer) {
 	p.PackString(t.FunctionName)
 	p.PackID(t.ContractAddress)
 	p.PackBytes(t.Input)
+	strArrLen := len(t.DynamicStateSlots)
+	p.PackInt(strArrLen)
+	for i := 0; i < strArrLen; i++ {
+		p.PackString(t.DynamicStateSlots[i])
+	}
 }
 
 func (*Transact) ComputeUnits(codec.Address, chain.Rules) uint64 {
@@ -62,7 +78,11 @@ func (*Transact) ComputeUnits(codec.Address, chain.Rules) uint64 {
 }
 
 func (t *Transact) Size() int {
-	return codec.StringLen(t.FunctionName) + codec.BytesLen(t.Input) + ids.IDLen
+	var l int
+	for _, v := range t.DynamicStateSlots {
+		l += codec.StringLen(v)
+	}
+	return codec.StringLen(t.FunctionName) + codec.BytesLen(t.Input) + ids.IDLen + consts.IntLen + l
 }
 
 func (*Transact) ValidRange(chain.Rules) (int64, int64) {
@@ -74,8 +94,12 @@ func UnmarshalTransact(p *codec.Packer) (chain.Action, error) {
 	var transact Transact
 	transact.FunctionName = p.UnpackString(true)
 	p.UnpackID(true, &transact.ContractAddress)
-	p.UnpackBytes(1024, false, &transact.Input)
-
+	p.UnpackBytes(-1, false, &transact.Input) // @todo try and limit it to a certain size. i.e max 128 KiB
+	// unpack dynamic state storage slots.
+	strArrLen := p.UnpackInt(false)
+	for i := 0; i < strArrLen; i++ {
+		transact.DynamicStateSlots = append(transact.DynamicStateSlots, p.UnpackString(true))
+	}
 	return &transact, nil
 }
 
@@ -83,7 +107,7 @@ func (t *Transact) Execute(
 	ctx context.Context,
 	rules chain.Rules,
 	mu state.Mutable,
-	_ int64,
+	timeStamp int64,
 	actor codec.Address,
 	_ ids.ID,
 ) ([][]byte, error) {
@@ -104,7 +128,6 @@ func (t *Transact) Execute(
 	defer r.Close(ctxWasm)
 
 	compiledMod, err := r.CompileModule(ctxWasm, deployedCodeAtContractAddress)
-
 	if err != nil {
 		return nil, errors.New("contract not compiled")
 	}
@@ -138,11 +161,31 @@ func (t *Transact) Execute(
 		}
 	}
 
+	// store bytes in state at dynamic slot i
+	stateStoreDynamicBytesInner := func(ctxInner context.Context, m api.Module, id, ptrKey, sizeOfKey, ptr, size uint32) {
+		// read key from memory.
+		key, ok := m.Memory().Read(ptrKey, sizeOfKey)
+		if !ok {
+			hasEncError = true // handle error properly
+		}
+		if bytes, ok := m.Memory().Read(ptr, size); !ok {
+			hasEncError = true // handle error properly
+		} else {
+			slot := "slot" + strconv.Itoa(int(id)) + hex.EncodeToString(key)
+			storage.SetBytes(ctx, mu, contractAddress, slot, bytes)
+		}
+	}
+
 	// get bytes at state at dynamic slot i
-	stateGetDynamicBytesInner := func(ctxInner context.Context, m api.Module, offset uint32, key uint32) uint64 {
-		i := 128 + (offset*key)%896
-		slot := "slot" + strconv.Itoa(int(i))
+	stateGetDynamicBytesInner := func(ctxInner context.Context, m api.Module, id, ptrKey, sizeOfKey uint32) uint64 {
+		// read key from memory.
+		key, ok := m.Memory().Read(ptrKey, sizeOfKey)
+		if !ok {
+			os.Exit(10)
+		}
+		slot := "slot" + strconv.Itoa(int(id)) + hex.EncodeToString(key)
 		result, _ := storage.GetBytes(ctx, mu, contractAddress, slot)
+		// write value to memory.
 		size := uint64(len(result))
 		results, _ := allocate_ptr.Call(ctxInner, size)
 		offset2 := results[0]
@@ -150,17 +193,7 @@ func (t *Transact) Execute(
 		return uint64(offset2)<<32 | size
 	}
 
-	// store bytes in state at dynamic slot i
-	stateStoreDynamicBytesInner := func(ctxInner context.Context, m api.Module, offset uint32, key uint32, ptr uint32, size uint32) {
-		i := 128 + (offset*key)%896
-		slot := "slot" + strconv.Itoa(int(i))
-		if bytes, ok := m.Memory().Read(ptr, size); !ok {
-			hasEncError = true // handle error properly
-		} else {
-			storage.SetBytes(ctx, mu, contractAddress, slot, bytes)
-		}
-	}
-
+	// Precompiles
 	// SP1 plonk proof verifier pre-compile
 	gnarkVerify := func(ctxInner context.Context, m api.Module, ptr uint32, size uint32) uint32 {
 		// read from memory
@@ -183,10 +216,10 @@ func (t *Transact) Execute(
 		if publicValuesDigest.BitLen() > 253 {
 			return 0
 		}
-		sp1Circuit := sp1.Circuit{
+		sp1Circuit := SP1Circuit{
 			Vars:                 []frontend.Variable{},
-			Felts:                []babybear.Variable{},
-			Exts:                 []babybear.ExtensionVariable{},
+			Felts:                []babybearVariable{},
+			Exts:                 []babybearExtensionVariable{},
 			VkeyHash:             preCompileInput.ProgramVKey,
 			CommitedValuesDigest: publicValuesDigest,
 		}
@@ -227,28 +260,66 @@ func (t *Transact) Execute(
 		}
 		return 1
 	}
-	// fallbacks
-	addBalance := func(ctxInner context.Context, m api.Module) {}
-	subBalance := func(ctxInner context.Context, m api.Module) {}
 
-	_, err = r.NewHostModuleBuilder("env").NewFunctionBuilder().
-		WithFunc(stateGetBytesInner).Export("stateGetBytes").
+	setBalance := func(ctxInner context.Context, m api.Module, addressPtr, assetPtr uint32, amount uint64) uint32 {
+		addrBytes, ok := m.Memory().Read(addressPtr, codec.AddressLen)
+		if !ok {
+			return 0
+		}
+		assetBytes, ok := m.Memory().Read(assetPtr, codec.AddressLen)
+		if !ok {
+			return 0
+		}
+		addr := codec.Address(addrBytes)
+		asset := ids.ID(assetBytes)
+		if err := storage.SetBalance(ctx, mu, addr, asset, amount); err != nil {
+			return 0
+		}
+		return 1
+	}
+	getBalance := func(ctxInner context.Context, m api.Module, addressPtr, assetPtr uint32) uint64 {
+		addrBytes, ok := m.Memory().Read(addressPtr, codec.AddressLen)
+		if !ok {
+			return 0
+		}
+		assetBytes, ok := m.Memory().Read(assetPtr, codec.AddressLen)
+		if !ok {
+			return 0
+		}
+		addr := codec.Address(addrBytes)
+		asset := ids.ID(assetBytes)
+		balance, err := storage.GetBalance(ctx, mu, addr, asset)
+		if err != nil {
+			return 0
+		}
+		return balance
+	}
+
+	// build new host module "env"
+	_, err = r.NewHostModuleBuilder("env").
+		NewFunctionBuilder().WithFunc(stateGetBytesInner).Export("stateGetBytes").
 		NewFunctionBuilder().WithFunc(stateStoreBytesInner).Export("stateStoreBytes").
 		NewFunctionBuilder().WithFunc(stateStoreDynamicBytesInner).Export("stateStoreDynamicBytes").
 		NewFunctionBuilder().WithFunc(stateGetDynamicBytesInner).Export("stateGetDynamicBytes").
-		NewFunctionBuilder().WithFunc(gnarkVerify).Export("gnarkVerify").
-		NewFunctionBuilder().WithFunc(addBalance).Export("addBalance").
-		NewFunctionBuilder().WithFunc(subBalance).Export("subBalance").
 		Instantiate(ctxWasm)
-
 	if err != nil {
-		return nil, fmt.Errorf("can not build host module: %s", err.Error())
+		return nil, fmt.Errorf("error building host module env: %s", err.Error())
+	}
+
+	// build new host module "precompiles"
+	_, err = r.NewHostModuleBuilder("precompiles").
+		NewFunctionBuilder().WithFunc(gnarkVerify).Export("gnarkVerify").
+		NewFunctionBuilder().WithFunc(setBalance).Export("setBalance").
+		NewFunctionBuilder().WithFunc(getBalance).Export("getBalance").
+		Instantiate(ctxWasm)
+	if err != nil {
+		return nil, fmt.Errorf("error building host module precompiles: %s", err.Error())
 	}
 
 	// Instantiate the module
 	mod, err := r.Instantiate(ctxWasm, deployedCodeAtContractAddress)
 	if err != nil {
-		return nil, fmt.Errorf("can not instantiate: %s", err.Error())
+		return nil, fmt.Errorf("error instantiating: %s", err.Error())
 	}
 
 	// Get the exported functions
@@ -256,24 +327,43 @@ func (t *Transact) Execute(
 	deallocate_ptr := mod.ExportedFunction("deallocate_ptr")
 	txFunction := mod.ExportedFunction(function)
 
+	// Allocate and write to memory message sender and tx context.
+	results, err := allocate_ptr.Call(ctxWasm, codec.AddressLen)
+	if err != nil {
+		return nil, fmt.Errorf("error allocating memory: %s", err.Error())
+	}
+	address_ptr := results[0]
+	defer deallocate_ptr.Call(ctxWasm, address_ptr, codec.AddressLen)
+	mod.Memory().Write(uint32(address_ptr), actor[:])
+
+	txContext := TxContext{timestamp: timeStamp, msgSenderPtr: uint32(results[0])}
+	txContextBytes := txContextToBytes(txContext)
+
+	results, err = allocate_ptr.Call(ctxWasm, uint64(len(txContextBytes)))
+	if err != nil {
+		return nil, fmt.Errorf("error allocating memory: %s", err.Error())
+	}
+	txContextPtr := results[0]
+	defer deallocate_ptr.Call(ctxWasm, txContextPtr, uint64(len(txContextBytes)))
+	mod.Memory().Write(uint32(txContextPtr), txContextBytes)
+
 	// allocate memory for input
 	inputBytesLen := uint64(len(inputBytes))
-	results, err := allocate_ptr.Call(ctxWasm, inputBytesLen)
+	results, err = allocate_ptr.Call(ctxWasm, inputBytesLen)
 	if err != nil {
-		return nil, fmt.Errorf("can not allocate memory: %s", err.Error())
+		return nil, fmt.Errorf("error allocating memory: %s", err.Error())
 	}
 	inputPtr := results[0]
 	defer deallocate_ptr.Call(ctxWasm, inputPtr, inputBytesLen)
-	mod.Memory().Write(uint32(inputPtr), inputBytes) // This shold not fail
+	mod.Memory().Write(uint32(inputPtr), inputBytes)
 
-	//@todo experiment with output
-	txResult, err := txFunction.Call(ctxWasm, inputPtr, inputBytesLen)
-	//@todo introduce call back mechanism for every function. Add access control for callback mechansisms and
+	// call the function.
+	txResult, err := txFunction.Call(ctxWasm, txContextPtr, inputPtr, inputBytesLen)
 	if err != nil {
-		return nil, fmt.Errorf("can not call tx function: %s", err.Error())
+		return nil, fmt.Errorf("error calling function: %s", err.Error())
 	}
-	result := txResult[0]
-	if result == 1 && !hasEncError {
+	// value returned = 1, function call is successful. otherwise function call is not successfull, revert state changes if any.
+	if txResult[0] == 1 && !hasEncError {
 		return nil, nil
 	}
 	return nil, errors.New("error in contract execution")

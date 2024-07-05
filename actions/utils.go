@@ -2,9 +2,11 @@ package actions
 
 import (
 	"math/big"
+	"unsafe"
 
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/ava-labs/coreth/accounts/abi/bind"
+	"github.com/consensys/gnark/frontend"
 )
 
 func ContainsAddress(addrs []codec.Address, addr codec.Address) bool {
@@ -14,6 +16,40 @@ func ContainsAddress(addrs []codec.Address, addr codec.Address) bool {
 		}
 	}
 	return false
+}
+
+type TxContext struct {
+	timestamp    int64
+	msgSenderPtr uint32
+}
+
+func txContextToBytes(c TxContext) []byte {
+	// creates array of length 2^10 and access the memory at struct c to have enough space for all the struct.
+	// [:size:size] slices array to size and fixes array size as size
+	size := unsafe.Sizeof(c)
+	bytes := (*[1 << 10]byte)(unsafe.Pointer(&c))[:size:size]
+	return bytes
+}
+
+type SP1Circuit struct {
+	VkeyHash             frontend.Variable `gnark:",public"`
+	CommitedValuesDigest frontend.Variable `gnark:",public"`
+	Vars                 []frontend.Variable
+	Felts                []babybearVariable
+	Exts                 []babybearExtensionVariable
+}
+
+func (*SP1Circuit) Define(frontend.API) error {
+	return nil
+}
+
+type babybearVariable struct {
+	Value  frontend.Variable
+	NbBits uint
+}
+
+type babybearExtensionVariable struct {
+	Value [4]babybearVariable
 }
 
 // GnarkPrecompileInputs is an auto generated low-level Go binding around an user-defined struct.

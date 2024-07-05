@@ -336,8 +336,8 @@ func (cli *JSONRPCClient) GetRelayerBalance(ctx context.Context, relayerID uint3
 }
 
 func (cli *JSONRPCClient) GetStorageSlotData(ctx context.Context, address string, slot uint64) ([]byte, error) {
-	if slot > uint64(consts.NumStateKeys) {
-		return nil, fmt.Errorf("slot number must be less than number of state keys. slot: %d, num of state keys: %d", slot, consts.NumStateKeys)
+	if slot > uint64(consts.NumStaticStateKeys) {
+		return nil, fmt.Errorf("slot number must be less than number of state keys. slot: %d, num of state keys: %d", slot, consts.NumStaticStateKeys)
 	}
 
 	resp := new(StorageSlotReply)

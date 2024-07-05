@@ -70,7 +70,7 @@ const (
 	LoanChunks                uint16 = 1
 	RelayerGasChunks          uint16 = 1
 	RelayerGasTimeStampChunks uint16 = 1
-	StateChunks               uint16 = 32
+	StateChunks               uint16 = 256 // 256 * 64 bytes = 16 KiB
 )
 
 var (
