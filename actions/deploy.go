@@ -12,7 +12,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/state"
 	nconsts "github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/storage"
-	wasmruntime "github.com/AnomalyFi/nodekit-seq/wasm_runtime"
+	wasm "github.com/AnomalyFi/nodekit-seq/wasm"
 	"github.com/ava-labs/avalanchego/ids"
 )
 
@@ -72,7 +72,7 @@ func (d *Deploy) Execute(
 	contractAddress := txID
 	ctxWasm := context.Background()
 
-	err := wasmruntime.Runtime(ctx, ctxWasm, mu, timeStamp, contractAddress, actor, function, d.ContractCode, inputBytes)
+	err := wasm.Runtime(ctx, ctxWasm, mu, timeStamp, contractAddress, actor, function, d.ContractCode, inputBytes)
 	if err != nil {
 		return nil, err
 	}

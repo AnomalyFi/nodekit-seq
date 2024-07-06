@@ -11,7 +11,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/state"
 	nconsts "github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/storage"
-	wasmruntime "github.com/AnomalyFi/nodekit-seq/wasm_runtime"
+	wasm "github.com/AnomalyFi/nodekit-seq/wasm"
 	"github.com/ava-labs/avalanchego/ids"
 )
 
@@ -109,7 +109,7 @@ func (t *Transact) Execute(
 		return nil, errors.New("contract not deployed")
 	}
 
-	err = wasmruntime.Runtime(ctx, ctxWasm, mu, timeStamp, contractAddress, actor, function, contractBytes, inputBytes)
+	err = wasm.Runtime(ctx, ctxWasm, mu, timeStamp, contractAddress, actor, function, contractBytes, inputBytes)
 	if err != nil {
 		return nil, err
 	}

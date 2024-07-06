@@ -1,4 +1,4 @@
-package wasmruntime
+package wasm
 
 import (
 	"bytes"
