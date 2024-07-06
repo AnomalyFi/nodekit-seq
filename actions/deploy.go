@@ -2,22 +2,27 @@ package actions
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
+	"strconv"
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
+	"github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/state"
+	nconsts "github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/storage"
+	wasmruntime "github.com/AnomalyFi/nodekit-seq/wasm_runtime"
 	"github.com/ava-labs/avalanchego/ids"
 )
 
 var _ chain.Action = (*Deploy)(nil)
 
 type Deploy struct {
-	ContractID   ids.ID `json:"contractID"`
-	ContractCode []byte `json:"contractCode"`
+	ContractCode            []byte   `json:"contractCode"`
+	InitializerFunctionName string   `json:"initializerFunctionName"`
+	Input                   []byte   `json:"input"`
+	DynamicStateSlots       []string `json:"dynamicStateSlots"`
 }
 
 func (*Deploy) GetTypeID() uint8 {
@@ -25,38 +30,53 @@ func (*Deploy) GetTypeID() uint8 {
 }
 
 func (d *Deploy) StateKeys(actor codec.Address, txID ids.ID) state.Keys {
-	return state.Keys{
-		string(storage.ContractKey(d.ContractID)): state.All,
+	stateKeys := state.Keys{
+		string(storage.ContractKey(txID)): state.All,
 	}
+	for i := 0; i < nconsts.NumStaticStateKeys; i++ {
+		keyName := "slot" + strconv.Itoa(i)
+		stateKeys.Add(string(storage.StateStorageKey(txID, keyName)), state.All)
+	}
+	for _, v := range d.DynamicStateSlots {
+		stateKeys.Add(string(storage.StateStorageKey(txID, v)), state.All)
+	}
+	return stateKeys
 }
 
-func (*Deploy) StateKeysMaxChunks() []uint16 {
-	return []uint16{DeployMaxChunks}
+func (d *Deploy) StateKeysMaxChunks() []uint16 {
+	chunks := []uint16{consts.MaxUint16}
+	for i := 0; i < nconsts.NumStaticStateKeys+len(d.DynamicStateSlots); i++ {
+		chunks = append(chunks, storage.StateChunks)
+	}
+	return chunks
 }
 
 func (d *Deploy) Execute(
 	ctx context.Context,
 	rules chain.Rules,
 	mu state.Mutable,
-	_ int64,
+	timeStamp int64,
 	actor codec.Address,
 	txID ids.ID,
 ) ([][]byte, error) {
-	whitelistedAddressesB, _ := rules.FetchCustom("whitelisted.Addresses")
-	whitelistedAddresses := whitelistedAddressesB.([]codec.Address)
-	if !ContainsAddress(whitelistedAddresses, actor) {
+	if !IsWhiteListed(rules, actor) {
 		return nil, ErrNotWhiteListed
 	}
-	code := d.ContractCode
-	// units := uint64(codec.BytesLen(code))
-	code2, err := storage.GetContract(ctx, mu, d.ContractID)
-	if err != nil {
-		return nil, errors.New("cant find contract")
-	}
-	code = append(code2, code...)
-	if err := storage.SetContract(ctx, mu, d.ContractID, code); err != nil {
+
+	if err := storage.SetContract(ctx, mu, txID, d.ContractCode); err != nil {
 		return nil, fmt.Errorf("cant set contract: %s", err)
 	}
+
+	function := d.InitializerFunctionName
+	inputBytes := d.Input
+	contractAddress := txID
+	ctxWasm := context.Background()
+
+	err := wasmruntime.Runtime(ctx, ctxWasm, mu, timeStamp, contractAddress, actor, function, d.ContractCode, inputBytes)
+	if err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 
@@ -65,19 +85,34 @@ func (*Deploy) ComputeUnits(codec.Address, chain.Rules) uint64 {
 }
 
 func (d *Deploy) Marshal(p *codec.Packer) {
-	p.PackID(d.ContractID)
 	p.PackBytes(d.ContractCode)
+	p.PackString(d.InitializerFunctionName)
+	p.PackBytes(d.Input)
+	strArrLen := len(d.DynamicStateSlots)
+	p.PackInt(strArrLen)
+	for _, v := range d.DynamicStateSlots {
+		p.PackString(v)
+	}
 }
 
 func UnmarshalDeploy(p *codec.Packer) (chain.Action, error) {
 	var deploy Deploy
-	p.UnpackID(true, &deploy.ContractID)
 	p.UnpackBytes(int(math.MaxUint32), true, &deploy.ContractCode)
+	deploy.InitializerFunctionName = p.UnpackString(false)
+	p.UnpackBytes(-1, false, &deploy.Input)
+	strArrLen := p.UnpackInt(false)
+	for i := 0; i < strArrLen; i++ {
+		deploy.DynamicStateSlots = append(deploy.DynamicStateSlots, p.UnpackString(true))
+	}
 	return &deploy, p.Err()
 }
 
 func (d *Deploy) Size() int {
-	return codec.BytesLen(d.ContractCode) + ids.IDLen
+	var l int
+	for _, v := range d.DynamicStateSlots {
+		l += codec.StringLen(v)
+	}
+	return l + codec.BytesLen(d.ContractCode) + codec.BytesLen(d.Input) + codec.StringLen(d.InitializerFunctionName)
 }
 
 func (*Deploy) ValidRange(chain.Rules) (int64, int64) {

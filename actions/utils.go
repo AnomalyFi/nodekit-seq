@@ -1,13 +1,17 @@
 package actions
 
 import (
-	"math/big"
-	"unsafe"
+	"encoding/binary"
 
+	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
-	"github.com/ava-labs/coreth/accounts/abi/bind"
-	"github.com/consensys/gnark/frontend"
 )
+
+func IsWhiteListed(rules chain.Rules, actor codec.Address) bool {
+	whitelistedAddressesB, _ := rules.FetchCustom("whitelisted.Addresses")
+	whitelistedAddresses := whitelistedAddressesB.([]codec.Address)
+	return ContainsAddress(whitelistedAddresses, actor)
+}
 
 func ContainsAddress(addrs []codec.Address, addr codec.Address) bool {
 	for _, a := range addrs {
@@ -18,53 +22,10 @@ func ContainsAddress(addrs []codec.Address, addr codec.Address) bool {
 	return false
 }
 
-type TxContext struct {
-	timestamp    int64
-	msgSenderPtr uint32
+func RelayerIDToAddress(relayerID uint32) codec.Address {
+	fillBytes := make([]byte, 29)
+	relayerIDBytes := binary.BigEndian.AppendUint32(nil, relayerID)
+	rB := append(fillBytes, relayerIDBytes...)
+	addr, _ := codec.ToAddress(rB)
+	return addr
 }
-
-func txContextToBytes(c TxContext) []byte {
-	// creates array of length 2^10 and access the memory at struct c to have enough space for all the struct.
-	// [:size:size] slices array to size and fixes array size as size
-	size := unsafe.Sizeof(c)
-	bytes := (*[1 << 10]byte)(unsafe.Pointer(&c))[:size:size]
-	return bytes
-}
-
-type SP1Circuit struct {
-	VkeyHash             frontend.Variable `gnark:",public"`
-	CommitedValuesDigest frontend.Variable `gnark:",public"`
-	Vars                 []frontend.Variable
-	Felts                []babybearVariable
-	Exts                 []babybearExtensionVariable
-}
-
-func (*SP1Circuit) Define(frontend.API) error {
-	return nil
-}
-
-type babybearVariable struct {
-	Value  frontend.Variable
-	NbBits uint
-}
-
-type babybearExtensionVariable struct {
-	Value [4]babybearVariable
-}
-
-// GnarkPrecompileInputs is an auto generated low-level Go binding around an user-defined struct.
-type GnarkPrecompileInputs struct {
-	ProgramVKeyHash [32]byte
-	PublicValues    []byte
-	ProofBytes      []byte
-	ProgramVKey     []byte
-}
-
-// GnarkPreCompileMetaData contains all meta data concerning the SolGen contract.
-var GnarkPreCompileMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"programVKeyHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"publicValues\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"proofBytes\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"programVKey\",\"type\":\"bytes\"}],\"internalType\":\"structSolGen.gnarkPrecompileInputs\",\"name\":\"inputs\",\"type\":\"tuple\"}],\"name\":\"gnarkPrecompile\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
-}
-
-var GnarkPreCompileABI, _ = GnarkPreCompileMetaData.GetAbi()
-
-var mask = new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 253), big.NewInt(1))

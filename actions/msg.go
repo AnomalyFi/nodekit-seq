@@ -30,10 +30,11 @@ func (*SequencerMsg) GetTypeID() uint8 {
 }
 
 func (s *SequencerMsg) StateKeys(actor codec.Address, actionID ids.ID) state.Keys {
+	relayerAddr := RelayerIDToAddress(s.RelayerID)
 	return state.Keys{
-		string(storage.RelayerGasPriceKey(s.RelayerID)): state.Read,
-		string(storage.BalanceKey(actor, ids.Empty)):    state.All,
-		string(storage.RelayerBalanceKey(s.RelayerID)):  state.All,
+		string(storage.RelayerGasPriceKey(s.RelayerID)):    state.Read,
+		string(storage.BalanceKey(actor, ids.Empty)):       state.All,
+		string(storage.BalanceKey(relayerAddr, ids.Empty)): state.All,
 	}
 }
 
@@ -66,7 +67,8 @@ func (s *SequencerMsg) Execute(
 		return nil, err
 	}
 	// add DA costs to the relayer's balance
-	if err := storage.AddRelayerBalance(ctx, mu, s.RelayerID, cost); err != nil {
+	relayerAddr := RelayerIDToAddress(s.RelayerID)
+	if err := storage.AddBalance(ctx, mu, relayerAddr, ids.Empty, cost, true); err != nil {
 		return nil, err
 	}
 	return nil, nil

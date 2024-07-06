@@ -322,19 +322,6 @@ func (cli *JSONRPCClient) WaitForTransaction(ctx context.Context, txID ids.ID) (
 	return success, fee, nil
 }
 
-func (cli *JSONRPCClient) GetRelayerBalance(ctx context.Context, relayerID uint32) (uint64, error) {
-	resp := new(BalanceReply)
-	err := cli.requester.SendRequest(
-		ctx,
-		"relayerBalance",
-		&RelayerBalanceArgs{
-			RelayerID: relayerID,
-		},
-		resp,
-	)
-	return resp.Amount, err
-}
-
 func (cli *JSONRPCClient) GetStorageSlotData(ctx context.Context, address string, slot uint64) ([]byte, error) {
 	if slot > uint64(consts.NumStaticStateKeys) {
 		return nil, fmt.Errorf("slot number must be less than number of state keys. slot: %d, num of state keys: %d", slot, consts.NumStaticStateKeys)

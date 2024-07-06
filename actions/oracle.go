@@ -48,11 +48,10 @@ func (o *Oracle) Execute(
 	actor codec.Address,
 	_ ids.ID,
 ) ([][]byte, error) {
-	whitelistedAddressesB, _ := rules.FetchCustom("whitelisted.Addresses")
-	whitelistedAddresses := whitelistedAddressesB.([]codec.Address)
-	if !ContainsAddress(whitelistedAddresses, actor) {
+	if !IsWhiteListed(rules, actor) {
 		return nil, ErrNotWhiteListed
 	}
+
 	if len(o.RelayerIDs) != len(o.UnitGasPrices) {
 		return nil, ErrRelayerIDsUnitGasPricesMismatch
 	}
