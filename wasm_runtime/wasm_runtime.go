@@ -144,7 +144,11 @@ func Runtime(
 
 		// read proof from preCompileInput
 		proof := plonk.NewProof(ecc.BN254)
-		_, err = proof.ReadFrom(bytes.NewBuffer(preCompileInput.ProofBytes))
+		proofData, err := hex.DecodeString(string(preCompileInput.ProofBytes))
+		if err != nil {
+			return 0
+		}
+		_, err = proof.ReadFrom(bytes.NewReader(proofData))
 		if err != nil {
 			return 0
 		}
