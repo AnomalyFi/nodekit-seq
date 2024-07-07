@@ -31,7 +31,7 @@ type babybearExtensionVariable struct {
 
 // GnarkPrecompileInputs is an auto generated low-level Go binding around an user-defined struct.
 type GnarkPrecompileInputs struct {
-	ProgramVKeyHash [32]byte
+	ProgramVKeyHash []byte
 	PublicValues    []byte
 	ProofBytes      []byte
 	ProgramVKey     []byte
@@ -39,7 +39,7 @@ type GnarkPrecompileInputs struct {
 
 // GnarkPreCompileMetaData contains all meta data concerning the SolGen contract.
 var GnarkPreCompileMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"programVKeyHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"publicValues\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"proofBytes\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"programVKey\",\"type\":\"bytes\"}],\"internalType\":\"structSolGen.gnarkPrecompileInputs\",\"name\":\"inputs\",\"type\":\"tuple\"}],\"name\":\"gnarkPrecompile\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"components\":[{\"internalType\":\"bytes\",\"name\":\"programVKeyHash\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"publicValues\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"proofBytes\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"programVKey\",\"type\":\"bytes\"}],\"internalType\":\"structSolGen.gnarkPrecompileInputs\",\"name\":\"inputs\",\"type\":\"tuple\"}],\"name\":\"gnarkPrecompile\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 var GnarkPreCompileABI, _ = GnarkPreCompileMetaData.GetAbi()

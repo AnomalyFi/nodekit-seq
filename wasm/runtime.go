@@ -118,8 +118,14 @@ func Runtime(
 			return 0
 		}
 
+		preCompileInput := upack[0].(struct {
+			ProgramVKeyHash []byte `json:"programVKeyHash"`
+			PublicValues    []byte `json:"publicValues"`
+			ProofBytes      []byte `json:"proofBytes"`
+			ProgramVKey     []byte `json:"programVKey"`
+		})
+
 		// calculate publicValuesDisgest
-		preCompileInput := upack[0].(*GnarkPrecompileInputs)
 		publicValuesHash := sha256.Sum256(preCompileInput.PublicValues)
 		publicValuesB := new(big.Int).SetBytes(publicValuesHash[:])
 		publicValuesDigest := new(big.Int).And(publicValuesB, mask)
@@ -131,7 +137,7 @@ func Runtime(
 			Vars:                 []frontend.Variable{},
 			Felts:                []babybearVariable{},
 			Exts:                 []babybearExtensionVariable{},
-			VkeyHash:             preCompileInput.ProgramVKey,
+			VkeyHash:             string(preCompileInput.ProgramVKeyHash),
 			CommitedValuesDigest: publicValuesDigest,
 		}
 

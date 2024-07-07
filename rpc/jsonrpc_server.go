@@ -354,6 +354,21 @@ func (j *JSONRPCServer) StorageSlot(req *http.Request, args *StorageSlotArgs, re
 	return err
 }
 
+func (j *JSONRPCServer) Contract(req *http.Request, args *TxArgs, reply *StorageSlotReply) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.Contract")
+	defer span.End()
+	address, err := ids.FromString(args.TxID.String())
+	if err != nil {
+		return err
+	}
+	data, err := j.c.GetContractFromState(ctx, address)
+	if err != nil {
+		return err
+	}
+	reply.Data = data
+	return err
+}
+
 func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *types.GetBlockHeadersByHeightArgs, reply *types.BlockHeadersResponse) error {
 	Prev := types.BlockInfo{}
 

@@ -108,7 +108,6 @@ func (t *Transact) Execute(
 	if err != nil {
 		return nil, errors.New("contract not deployed")
 	}
-
 	err = wasm.Runtime(ctx, ctxWasm, mu, timeStamp, contractAddress, actor, function, contractBytes, inputBytes)
 	if err != nil {
 		return nil, err
@@ -122,5 +121,5 @@ func (*Transact) NMTNamespace() []byte {
 }
 
 func (*Transact) UseFeeMarket() bool {
-	return false
+	return true
 }

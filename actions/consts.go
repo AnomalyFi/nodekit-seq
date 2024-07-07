@@ -26,13 +26,9 @@ const (
 
 	OracleComputeUnits = 10
 
-	// Max chunks
-	DeployMaxChunks uint16 = 20_000
-
 	// W.S.C Compute Units
-	DeployComputeUnits   uint64 = 1_280_000
-	TransactComputeUnits uint64 = 10_000
-	BaseComputeUnits     uint64 = 10_000
+	DeployComputeUnits   uint64 = 10_000
+	TransactComputeUnits uint64 = 5_000
 
 	MaxSymbolSize   = 8
 	MaxMemoSize     = 256

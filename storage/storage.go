@@ -69,7 +69,7 @@ const (
 	LoanChunks                uint16 = 1
 	RelayerGasChunks          uint16 = 1
 	RelayerGasTimeStampChunks uint16 = 1
-	StateChunks               uint16 = 256 // 256 * 64 bytes = 16 KiB
+	StateChunks               uint16 = 1024 // 1024 * 64 bytes = 64 KiB
 )
 
 var (
@@ -611,11 +611,7 @@ func GetContract(
 	txID ids.ID,
 ) ([]byte, error) {
 	k := ContractKey(txID)
-	bt, err := im.GetValue(ctx, k)
-	if errors.Is(err, database.ErrNotFound) {
-		return nil, nil
-	}
-	return bt, err
+	return im.GetValue(ctx, k)
 }
 
 func SetBytes(
@@ -648,4 +644,14 @@ func GetBytesFromState(
 	k := StateStorageKey(contractAddress, name)
 	values, errs := f(ctx, [][]byte{k})
 	return values[0], errs[0]
+}
+
+func GetContractFromState(
+	ctx context.Context,
+	f ReadState,
+	contractAddress ids.ID,
+) ([]byte, error) {
+	k := ContractKey(contractAddress)
+	bt, err := f(ctx, [][]byte{k})
+	return bt[0], err[0]
 }

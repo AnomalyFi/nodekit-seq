@@ -59,6 +59,13 @@ func (c *Controller) GetDataOfStorageSlotFromState(
 	return storage.GetBytesFromState(ctx, c.inner.ReadState, contractAddress, slot)
 }
 
+func (c *Controller) GetContractFromState(
+	ctx context.Context,
+	contractAddress ids.ID,
+) ([]byte, error) {
+	return storage.GetContractFromState(ctx, c.inner.ReadState, contractAddress)
+}
+
 func (c *Controller) GetAcceptedBlockWindow() int {
 	return c.config.GetAcceptedBlockWindow()
 }

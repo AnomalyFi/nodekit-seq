@@ -80,6 +80,8 @@ func handleTx(c *trpc.JSONRPCClient, tx *chain.Transaction, result *chain.Result
 		actionID := chain.CreateActionID(tx.ID(), uint8(i))
 		var summaryStr string
 		switch action := act.(type) {
+		case *actions.Deploy:
+			summaryStr = fmt.Sprintf("contract address: %s", actionID)
 		case *actions.CreateAsset:
 			summaryStr = fmt.Sprintf("assetID: %s symbol: %s decimals: %d metadata: %s", actionID, action.Symbol, action.Decimals, action.Metadata)
 		case *actions.MintAsset:
@@ -104,6 +106,7 @@ func handleTx(c *trpc.JSONRPCClient, tx *chain.Transaction, result *chain.Result
 				summaryStr += fmt.Sprintf(" (memo: %s)", action.Memo)
 			}
 		}
+
 		utils.Outf(
 			"%s {{yellow}}%s{{/}} {{yellow}}actor:{{/}} %s {{yellow}}summary (%s):{{/}} [%s] {{yellow}}fee (max %.2f%%):{{/}} %s %s {{yellow}}consumed:{{/}} [%s]\n",
 			"✅",

@@ -64,7 +64,7 @@ func (d *Deploy) Execute(
 	}
 
 	if err := storage.SetContract(ctx, mu, txID, d.ContractCode); err != nil {
-		return nil, fmt.Errorf("cant set contract: %s", err)
+		return nil, fmt.Errorf("error storing contract: %s", err)
 	}
 
 	function := d.InitializerFunctionName
@@ -76,7 +76,6 @@ func (d *Deploy) Execute(
 	if err != nil {
 		return nil, err
 	}
-
 	return nil, nil
 }
 
@@ -125,5 +124,5 @@ func (*Deploy) NMTNamespace() []byte {
 }
 
 func (*Deploy) UseFeeMarket() bool {
-	return false
+	return true
 }
