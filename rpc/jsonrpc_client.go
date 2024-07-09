@@ -6,7 +6,6 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -322,20 +321,15 @@ func (cli *JSONRPCClient) WaitForTransaction(ctx context.Context, txID ids.ID) (
 	return success, fee, nil
 }
 
-// @todo modify the storage slot, string assignment criteria
-func (cli *JSONRPCClient) GetStorageSlotData(ctx context.Context, address string, slot uint64) ([]byte, error) {
-	if slot > uint64(consts.NumStaticStateKeys) {
-		return nil, fmt.Errorf("slot number must be less than number of state keys. slot: %d, num of state keys: %d", slot, consts.NumStaticStateKeys)
-	}
+func (cli *JSONRPCClient) GetStorageSlotData(ctx context.Context, address string, slot string) ([]byte, error) {
 
 	resp := new(StorageSlotReply)
-	slotS := "slot" + strconv.Itoa(int(slot))
 	err := cli.requester.SendRequest(
 		ctx,
 		"storageSlot",
 		&StorageSlotArgs{
 			AddressStr: address,
-			Slot:       slotS,
+			Slot:       slot,
 		},
 		resp,
 	)

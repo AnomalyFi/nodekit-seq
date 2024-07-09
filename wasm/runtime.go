@@ -243,7 +243,7 @@ func Runtime(
 	}
 	// Get the exported functions
 	allocate_ptr = mod.ExportedFunction("allocate_ptr")
-	deallocate_ptr := mod.ExportedFunction("deallocate_ptr")
+	// deallocate_ptr := mod.ExportedFunction("deallocate_ptr")
 	txFunction := mod.ExportedFunction(function)
 
 	// Allocate and write to memory message sender and tx context.
@@ -252,28 +252,17 @@ func Runtime(
 		return fmt.Errorf("error allocating memory: %s", err.Error())
 	}
 	address_ptr := results[0]
-	defer deallocate_ptr.Call(ctxWasm, address_ptr, codec.AddressLen)
 	mod.Memory().Write(uint32(address_ptr), actor[:])
 
 	txContext := TxContext{timestamp: timeStamp, msgSenderPtr: uint32(results[0])}
 	txContextBytes := txContextToBytes(txContext)
 
-	results, err = allocate_ptr.Call(ctxWasm, uint64(len(txContextBytes)))
-	if err != nil {
-		return fmt.Errorf("error allocating memory: %s", err.Error())
-	}
-	txContextPtr := results[0]
-	defer deallocate_ptr.Call(ctxWasm, txContextPtr, uint64(len(txContextBytes)))
+	txContextPtr := address_ptr + codec.AddressLen
 	mod.Memory().Write(uint32(txContextPtr), txContextBytes)
 
 	// allocate memory for input
 	inputBytesLen := uint64(len(inputBytes))
-	results, err = allocate_ptr.Call(ctxWasm, inputBytesLen)
-	if err != nil {
-		return fmt.Errorf("error allocating memory: %s", err.Error())
-	}
-	inputPtr := results[0]
-	defer deallocate_ptr.Call(ctxWasm, inputPtr, inputBytesLen)
+	inputPtr := txContextPtr + uint64(len(txContextBytes))
 	mod.Memory().Write(uint32(inputPtr), inputBytes)
 
 	// call the function.

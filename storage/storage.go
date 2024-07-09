@@ -69,7 +69,7 @@ const (
 	LoanChunks                uint16 = 1
 	RelayerGasChunks          uint16 = 1
 	RelayerGasTimeStampChunks uint16 = 1
-	StateChunks               uint16 = 1024 // 1024 * 64 bytes = 64 KiB
+	StateChunks               uint16 = 1024 // 1024 * 64 bytes = 64 KiB. This is a nice value for the chunk size as rust can read only 2^16 bytes at a time.
 )
 
 var (
@@ -584,7 +584,7 @@ func ContractKey(txID ids.ID) (k []byte) {
 	return
 }
 
-// @todo optimize for state key creation. cache keys
+// TODO: optimize for state key creation. cache keys
 func StateStorageKey(contractAddress ids.ID, name string) (k []byte) {
 	bstring := []byte(name)
 	k = make([]byte, 1+ids.IDLen+len(bstring)+consts.Uint16Len)

@@ -240,7 +240,6 @@ func (r *RelayManager) SignAndSendRequestToIndividual(
 	return nil
 }
 
-// @todo update relayer to use bls.PublicKeyFromCompressedBytes
 func (r *RelayManager) SignAndSendRequestToAll(
 	ctx context.Context,
 	relayerID int,

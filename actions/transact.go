@@ -82,7 +82,7 @@ func UnmarshalTransact(p *codec.Packer) (chain.Action, error) {
 	var transact Transact
 	transact.FunctionName = p.UnpackString(true)
 	p.UnpackID(true, &transact.ContractAddress)
-	p.UnpackBytes(-1, false, &transact.Input) // @todo try and limit it to a certain size. i.e max 128 KiB
+	p.UnpackBytes(-1, false, &transact.Input) // TODO: try and limit it to a certain size. i.e max 128 KiB
 	// unpack dynamic state storage slots.
 	strArrLen := p.UnpackInt(false)
 	for i := 0; i < strArrLen; i++ {
