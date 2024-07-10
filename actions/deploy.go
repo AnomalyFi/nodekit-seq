@@ -19,16 +19,26 @@ import (
 var _ chain.Action = (*Deploy)(nil)
 
 type Deploy struct {
-	ContractCode            []byte   `json:"contractCode"`
-	InitializerFunctionName string   `json:"initializerFunctionName"`
-	Input                   []byte   `json:"input"`
-	DynamicStateSlots       []string `json:"dynamicStateSlots"`
+	// WASM Bytecode of Smart contracts. This code will be stored in the state of the chain, with contractID as txID of the deploy transaction.
+	// For compiling SEQ compatible WASM Bytecode, check https://github.com/AnomalyFi/seq-wasm/tree/main/sdk
+	ContractCode []byte `json:"contractCode"`
+	// Function called after the contract is deployed. This function will be called with the input provided in the deploy transaction.
+	// The function should be present in the contract code. check https://github.com/AnomalyFi/seq-wasm/tree/main/sdk#usage
+	InitializerFunctionName string `json:"initializerFunctionName"`
+	// Input to the initializer function. This input will be passed to the initializer function.
+	Input []byte `json:"input"`
+	// Non-default storage slots touched by Initializer function execution.
+	DynamicStateSlots []string `json:"dynamicStateSlots"`
 }
 
 func (*Deploy) GetTypeID() uint8 {
 	return deployID
 }
 
+// StateKeys returns the keys that the action reads or writes or allocates.
+// 128 static keys from slot0 to slot127 are allocated for the contract.
+// If a contract needs more keys or want to implement dynamic types like mapping or an array, it can use dynamic keys.
+// Check: https://github.com/AnomalyFi/seq-wasm/tree/main/sdk#state
 func (d *Deploy) StateKeys(actor codec.Address, txID ids.ID) state.Keys {
 	stateKeys := state.Keys{
 		string(storage.ContractKey(txID)): state.All,

@@ -34,7 +34,7 @@ func Runtime(
 
 	r := wazero.NewRuntime(ctxWasm)
 	var allocate_ptr api.Function
-	// defer r.Close(ctxWasm)
+	defer r.Close(ctxWasm)
 
 	compiledMod, err := r.CompileModule(ctxWasm, contractBytes)
 	if err != nil {
@@ -49,6 +49,17 @@ func Runtime(
 
 	/// System calls
 
+	// store bytes in state at slot i
+	stateStoreBytesInner := func(ctxInner context.Context, m api.Module, i uint32, ptr uint32, size uint32) {
+		slot := "slot" + strconv.Itoa(int(i))
+		if bytes, ok := m.Memory().Read(ptr, size); !ok {
+			// TODO
+			return
+		} else {
+			storage.SetBytes(ctx, mu, contractAddress, slot, bytes)
+		}
+	}
+
 	// get bytes from state at slot i
 	stateGetBytesInner := func(ctxInner context.Context, m api.Module, i uint32) uint64 {
 		slot := "slot" + strconv.Itoa(int(i))
@@ -60,25 +71,17 @@ func Runtime(
 		return uint64(offset)<<32 | size
 	}
 
-	// store bytes in state at slot i
-	stateStoreBytesInner := func(ctxInner context.Context, m api.Module, i uint32, ptr uint32, size uint32) {
-		slot := "slot" + strconv.Itoa(int(i))
-		if bytes, ok := m.Memory().Read(ptr, size); !ok {
-			return
-		} else {
-			storage.SetBytes(ctx, mu, contractAddress, slot, bytes)
-		}
-	}
-
 	// store bytes in state at dynamic slot i
 	stateStoreDynamicBytesInner := func(ctxInner context.Context, m api.Module, id, ptrKey, sizeOfKey, ptr, size uint32) {
 		// read key from memory.
 		key, ok := m.Memory().Read(ptrKey, sizeOfKey)
 		if !ok {
+			// TODO
 			return
 		}
 		if bytes, ok := m.Memory().Read(ptr, size); !ok {
-			// hasEncError = true // handle error properly
+			// TODO
+			return
 		} else {
 			slot := "slot" + strconv.Itoa(int(id)) + hex.EncodeToString(key)
 			storage.SetBytes(ctx, mu, contractAddress, slot, bytes)
@@ -90,6 +93,7 @@ func Runtime(
 		// read key from memory.
 		key, ok := m.Memory().Read(ptrKey, sizeOfKey)
 		if !ok {
+			// TODO
 			return 0
 		}
 		slot := "slot" + strconv.Itoa(int(id)) + hex.EncodeToString(key)
@@ -109,12 +113,14 @@ func Runtime(
 		// read from memory
 		dataBytes, ok := m.Memory().Read(ptr, size)
 		if !ok {
+			// TODO:
 			return 0
 		}
 		// abi unpack the data
 		method := GnarkPreCompileABI.Methods["gnarkPrecompile"]
 		upack, err := method.Inputs.Unpack(dataBytes)
 		if err != nil {
+			// TODO:
 			return 0
 		}
 
@@ -183,10 +189,12 @@ func Runtime(
 	setBalance := func(ctxInner context.Context, m api.Module, addressPtr, assetPtr uint32, amount uint64) uint32 {
 		addrBytes, ok := m.Memory().Read(addressPtr, codec.AddressLen)
 		if !ok {
+			// TODO:
 			return 0
 		}
 		assetBytes, ok := m.Memory().Read(assetPtr, codec.AddressLen)
 		if !ok {
+			// TODO:
 			return 0
 		}
 		addr := codec.Address(addrBytes)
@@ -200,10 +208,12 @@ func Runtime(
 	getBalance := func(ctxInner context.Context, m api.Module, addressPtr, assetPtr uint32) uint64 {
 		addrBytes, ok := m.Memory().Read(addressPtr, codec.AddressLen)
 		if !ok {
+			// TODO:
 			return 0
 		}
 		assetBytes, ok := m.Memory().Read(assetPtr, codec.AddressLen)
 		if !ok {
+			// TODO:
 			return 0
 		}
 		addr := codec.Address(addrBytes)
@@ -247,7 +257,7 @@ func Runtime(
 	txFunction := mod.ExportedFunction(function)
 
 	// Allocate and write to memory message sender and tx context.
-	results, err := allocate_ptr.Call(ctxWasm, codec.AddressLen)
+	results, err := allocate_ptr.Call(ctxWasm, codec.AddressLen+uint64(len(inputBytes))+12 /*txContext*/)
 	if err != nil {
 		return fmt.Errorf("error allocating memory: %s", err.Error())
 	}

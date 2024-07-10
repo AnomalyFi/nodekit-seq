@@ -17,10 +17,15 @@ import (
 
 var _ chain.Action = (*Transact)(nil)
 
+// Transact executes the contract deployed at `ContractAddress` with the function `FunctionName` and the input `Input`.
 type Transact struct {
-	ContractAddress   ids.ID   `json:"contractAddress"`
-	FunctionName      string   `json:"functionName"`
-	Input             []byte   `json:"input"` // abi encoded input -> hex to bytes in cmd
+	// Address of the contract to be executed.
+	ContractAddress ids.ID `json:"contractAddress"`
+	// Name of the function to be executed.
+	FunctionName string `json:"functionName"`
+	// Input to the function.
+	Input []byte `json:"input"`
+	// Non-Static storage slots touched by the function execution.
 	DynamicStateSlots []string `json:"dynamicStateSlots"`
 }
 
