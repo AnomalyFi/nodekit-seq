@@ -535,26 +535,34 @@ var _ = ginkgo.Describe("[Test]", func() {
 			err = wsCli.RegisterBlocks()
 			require.NoError(err)
 			found := false
-			for {
-				if found {
-					break
-				}
+			waitTillIncluded := func(ctx context.Context) error {
+				for {
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					default:
+						if found {
+							return nil
+						}
 
-				b, rs, _, _, err := wsCli.ListenBlock(context.Background(), parser)
-				require.NoError(err)
-				for _, t := range b.Txs {
-					if t.ID() == tx.ID() {
-						found = true
-						hutils.Outf("{{green}}inclusion block found{{/}}\n")
-						break
+						b, rs, _, _, err := wsCli.ListenBlock(context.Background(), parser)
+						require.NoError(err)
+						for _, t := range b.Txs {
+							if t.ID() == tx.ID() {
+								found = true
+								hutils.Outf("{{green}}inclusion block found{{/}}\n")
+								break
+							}
+						}
+
+						blk = b
+						results = rs
 					}
 				}
-
-				blk = b
-				results = rs
 			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+			waitTillIncluded(ctx)
 			success, _, err := instances[0].tcli.WaitForTransaction(ctx, tx.ID())
 			cancel()
 			require.NoError(err)
@@ -608,9 +616,14 @@ var _ = ginkgo.Describe("[Test]", func() {
 			data := make([][]byte, 0, 2)
 			data = append(data, []byte("somedata"))
 			data = append(data, []byte("somedata2"))
-			txID, err := instances[0].tcli.SubmitMsgTx(ctx, blockchainID, 1337, []byte("nkit"), data)
+			txIDStr, err := instances[0].tcli.SubmitMsgTx(ctx, blockchainID, 1337, []byte("nkit"), data)
 			require.NoError(err)
-			hutils.Outf("{{green}}txID of submitted data:{{/}}%s \n", txID)
+			hutils.Outf("{{green}}txID of submitted data:{{/}}%s \n", txIDStr)
+			txID, err := ids.FromString(txIDStr)
+			require.NoError(err)
+			success, _, err := instances[0].tcli.WaitForTransaction(ctx, txID)
+			require.NoError(err)
+			require.True(success)
 		})
 
 		ginkgo.By("issuing zero transactions", func() {
