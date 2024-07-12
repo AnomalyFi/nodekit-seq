@@ -70,10 +70,10 @@ func (j *JSONRPCServer) Genesis(_ *http.Request, _ *struct{}, reply *GenesisRepl
 }
 
 type SubmitMsgTxArgs struct {
-	ChainId          string `json:"chain_id"`
-	NetworkID        uint32 `json:"network_id"`
-	SecondaryChainId []byte `json:"secondary_chain_id"`
-	Data             []byte `json:"data"`
+	ChainId          string   `json:"chain_id"`
+	NetworkID        uint32   `json:"network_id"`
+	SecondaryChainId []byte   `json:"secondary_chain_id"`
+	Data             [][]byte `json:"data"`
 }
 
 type SubmitMsgTxReply struct {
@@ -115,15 +115,19 @@ func (j *JSONRPCServer) SubmitMsgTx(
 
 	rsender := auth.NewED25519Address(tpriv.PublicKey())
 
-	actions := []chain.Action{&actions.SequencerMsg{
-		FromAddress: rsender,
-		Data:        args.Data,
-		ChainId:     args.SecondaryChainId,
-		// TODO: update this
-		RelayerID: 0,
-	}}
+	acts := make([]chain.Action, 0, len(args.Data))
+	for _, data := range args.Data {
+		act := actions.SequencerMsg{
+			FromAddress: rsender,
+			Data:        data,
+			ChainId:     args.SecondaryChainId,
+			// TODO: update this
+			RelayerID: 0,
+		}
+		acts = append(acts, &act)
+	}
 	// TODO need to define action, authFactory
-	maxUnits, err := chain.EstimateUnits(parser.Rules(time.Now().UnixMilli()), actions, factory)
+	maxUnits, err := chain.EstimateUnits(parser.Rules(time.Now().UnixMilli()), acts, factory)
 	if err != nil {
 		return err
 	}
@@ -145,7 +149,7 @@ func (j *JSONRPCServer) SubmitMsgTx(
 
 	// Build transaction
 	actionRegistry, authRegistry := parser.Registry()
-	tx := chain.NewTx(base, actions)
+	tx := chain.NewTx(base, acts)
 	tx, err = tx.Sign(factory, actionRegistry, authRegistry)
 	if err != nil {
 		return fmt.Errorf("%w: failed to sign transaction", err)
