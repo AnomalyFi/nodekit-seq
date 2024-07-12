@@ -600,6 +600,16 @@ var _ = ginkgo.Describe("[Test]", func() {
 		})
 	})
 
+	ginkgo.It("ensure SubmitMsgTx work", func() {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		data := make([][]byte, 0, 1)
+		data = append(data, []byte("somedata"))
+		txID, err := instances[0].tcli.SubmitMsgTx(ctx, blockchainID, 1337, []byte("nkit"), data)
+		require.NoError(err)
+		hutils.Outf("{{green}}txID of submitted data:{{/}}%s \n", txID)
+	})
 	// TODO: add custom asset test
 	// TODO: test with only part of sig weight
 	// TODO: attempt to mint a warp asset
