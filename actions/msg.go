@@ -95,7 +95,7 @@ func UnmarshalSequencerMsg(p *codec.Packer) (chain.Action, error) {
 	// TODO need to correct this and check byte count
 	p.UnpackBytes(-1, true, &sequencermsg.Data)
 	p.UnpackBytes(-1, true, &sequencermsg.ChainId)
-	sequencermsg.RelayerID = uint32(p.UnpackUint64(true))
+	sequencermsg.RelayerID = uint32(p.UnpackUint64(false))
 	return &sequencermsg, p.Err()
 }
 

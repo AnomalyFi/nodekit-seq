@@ -1,21 +1,16 @@
 package wasm
 
 import (
-	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"math/big"
 	"strconv"
 
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/state"
 	"github.com/AnomalyFi/nodekit-seq/storage"
+	"github.com/AnomalyFi/nodekit-seq/wasm/precompiles"
 	"github.com/ava-labs/avalanchego/ids"
-	"github.com/consensys/gnark-crypto/ecc"
-	"github.com/consensys/gnark/backend/plonk"
-	"github.com/consensys/gnark/frontend"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 )
@@ -106,86 +101,6 @@ func Runtime(
 		return uint64(offset2)<<32 | size
 	}
 
-	/// Precompiles
-
-	// SP1 plonk proof verifier pre-compile
-	gnarkVerify := func(ctxInner context.Context, m api.Module, ptr uint32, size uint32) uint32 {
-		// read from memory
-		dataBytes, ok := m.Memory().Read(ptr, size)
-		if !ok {
-			// TODO:
-			return 0
-		}
-		// abi unpack the data
-		method := GnarkPreCompileABI.Methods["gnarkPrecompile"]
-		upack, err := method.Inputs.Unpack(dataBytes)
-		if err != nil {
-			// TODO:
-			return 0
-		}
-
-		preCompileInput := upack[0].(struct {
-			ProgramVKeyHash []byte `json:"programVKeyHash"`
-			PublicValues    []byte `json:"publicValues"`
-			ProofBytes      []byte `json:"proofBytes"`
-			ProgramVKey     []byte `json:"programVKey"`
-		})
-
-		// calculate publicValuesDisgest
-		publicValuesHash := sha256.Sum256(preCompileInput.PublicValues)
-		publicValuesB := new(big.Int).SetBytes(publicValuesHash[:])
-		publicValuesDigest := new(big.Int).And(publicValuesB, mask)
-		if publicValuesDigest.BitLen() > 253 {
-			return 0
-		}
-
-		sp1Circuit := SP1Circuit{
-			Vars:                 []frontend.Variable{},
-			Felts:                []babybearVariable{},
-			Exts:                 []babybearExtensionVariable{},
-			VkeyHash:             string(preCompileInput.ProgramVKeyHash),
-			CommitedValuesDigest: publicValuesDigest,
-		}
-
-		// read vk from preCompileInput
-		vk := plonk.NewVerifyingKey(ecc.BN254)
-		_, err = vk.ReadFrom(bytes.NewBuffer(preCompileInput.ProgramVKey))
-		if err != nil {
-			return 0
-		}
-
-		// read proof from preCompileInput
-		proof := plonk.NewProof(ecc.BN254)
-		proofData, err := hex.DecodeString(string(preCompileInput.ProofBytes))
-		if err != nil {
-			return 0
-		}
-		_, err = proof.ReadFrom(bytes.NewReader(proofData))
-		if err != nil {
-			return 0
-		}
-
-		// create witness
-		wit, err := frontend.NewWitness(&sp1Circuit, ecc.BN254.ScalarField())
-		if err != nil {
-			return 0
-		}
-
-		// get the public witness
-		pubWit, err := wit.Public()
-		if err != nil {
-			return 0
-		}
-
-		// verify the proof
-		err = plonk.Verify(proof, vk, pubWit)
-		if err != nil {
-			// the vk may not be corresponding to the proof or public witness are not corresponding to proofs or proof is invalid
-			return 0
-		}
-		return 1
-	}
-
 	setBalance := func(ctxInner context.Context, m api.Module, addressPtr, assetPtr uint32, amount uint64) uint32 {
 		addrBytes, ok := m.Memory().Read(addressPtr, codec.AddressLen)
 		if !ok {
@@ -238,7 +153,7 @@ func Runtime(
 
 	// build new host module "precompiles"
 	_, err = r.NewHostModuleBuilder("precompiles").
-		NewFunctionBuilder().WithFunc(gnarkVerify).Export("gnarkVerify").
+		NewFunctionBuilder().WithFunc(precompiles.GnarkPreCompile).Export("gnarkVerify").
 		NewFunctionBuilder().WithFunc(setBalance).Export("setBalance").
 		NewFunctionBuilder().WithFunc(getBalance).Export("getBalance").
 		Instantiate(ctxWasm)

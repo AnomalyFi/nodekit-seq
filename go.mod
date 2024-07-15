@@ -8,7 +8,6 @@ require (
 	github.com/AnomalyFi/hypersdk v0.9.4-alpha.1.0.20240620071330-5d4c82f8efaa
 	github.com/ava-labs/avalanche-network-runner v1.7.4-rc.0
 	github.com/ava-labs/avalanchego v1.11.6
-	github.com/ava-labs/coreth v0.13.4-rc.0
 	github.com/consensys/gnark v0.10.1-0.20240504023521-d9bfacd7cb60
 	github.com/consensys/gnark-crypto v0.12.2-0.20240504013751-564b6f724c3b
 	github.com/ethereum/go-ethereum v1.13.8
@@ -36,6 +35,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/VictoriaMetrics/fastcache v1.12.1 // indirect
+	github.com/ava-labs/coreth v0.13.4-rc.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bep/debounce v1.2.1 // indirect
 	github.com/bits-and-blooms/bitset v1.10.0 // indirect
