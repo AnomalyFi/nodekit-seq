@@ -2,9 +2,9 @@ package actions
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"math"
-	"strconv"
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
@@ -28,7 +28,7 @@ type Deploy struct {
 	// Input to the initializer function. This input will be passed to the initializer function.
 	Input []byte `json:"input"`
 	// Non-default storage slots touched by Initializer function execution.
-	DynamicStateSlots []string `json:"dynamicStateSlots"`
+	DynamicStateSlots [][]byte `json:"dynamicStateSlots"`
 }
 
 func (*Deploy) GetTypeID() uint8 {
@@ -43,9 +43,10 @@ func (d *Deploy) StateKeys(actor codec.Address, txID ids.ID) state.Keys {
 	stateKeys := state.Keys{
 		string(storage.ContractKey(txID)): state.All,
 	}
-	for i := 0; i < nconsts.NumStaticStateKeys; i++ {
-		keyName := "slot" + strconv.Itoa(i)
-		stateKeys.Add(string(storage.StateStorageKey(txID, keyName)), state.All)
+	var i uint32
+	for i = 0; i < nconsts.NumStaticStateKeys; i++ {
+		slot := binary.BigEndian.AppendUint32(nil, i)
+		stateKeys.Add(string(storage.StateStorageKey(txID, slot)), state.All)
 	}
 	for _, v := range d.DynamicStateSlots {
 		stateKeys.Add(string(storage.StateStorageKey(txID, v)), state.All)
@@ -55,7 +56,7 @@ func (d *Deploy) StateKeys(actor codec.Address, txID ids.ID) state.Keys {
 
 func (d *Deploy) StateKeysMaxChunks() []uint16 {
 	chunks := []uint16{consts.MaxUint16}
-	for i := 0; i < nconsts.NumStaticStateKeys+len(d.DynamicStateSlots); i++ {
+	for i := 0; i < int(nconsts.NumStaticStateKeys)+len(d.DynamicStateSlots); i++ {
 		chunks = append(chunks, storage.StateChunks)
 	}
 	return chunks
@@ -100,7 +101,7 @@ func (d *Deploy) Marshal(p *codec.Packer) {
 	strArrLen := len(d.DynamicStateSlots)
 	p.PackInt(strArrLen)
 	for _, v := range d.DynamicStateSlots {
-		p.PackString(v)
+		p.PackBytes(v)
 	}
 }
 
@@ -111,7 +112,9 @@ func UnmarshalDeploy(p *codec.Packer) (chain.Action, error) {
 	p.UnpackBytes(-1, false, &deploy.Input)
 	strArrLen := p.UnpackInt(false)
 	for i := 0; i < strArrLen; i++ {
-		deploy.DynamicStateSlots = append(deploy.DynamicStateSlots, p.UnpackString(true))
+		var slot []byte
+		p.UnpackBytes(-1, true, &slot)
+		deploy.DynamicStateSlots = append(deploy.DynamicStateSlots, slot)
 	}
 	return &deploy, p.Err()
 }
@@ -119,7 +122,7 @@ func UnmarshalDeploy(p *codec.Packer) (chain.Action, error) {
 func (d *Deploy) Size() int {
 	var l int
 	for _, v := range d.DynamicStateSlots {
-		l += codec.StringLen(v)
+		l += codec.BytesLen(v)
 	}
 	return l + codec.BytesLen(d.ContractCode) + codec.BytesLen(d.Input) + codec.StringLen(d.InitializerFunctionName)
 }

@@ -2,9 +2,8 @@ package wasm
 
 import (
 	"context"
-	"encoding/hex"
+	"encoding/binary"
 	"fmt"
-	"strconv"
 
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/state"
@@ -46,18 +45,18 @@ func Runtime(
 
 	// store bytes in state at slot i
 	stateStoreBytesInner := func(ctxInner context.Context, m api.Module, i uint32, ptr uint32, size uint32) {
-		slot := "slot" + strconv.Itoa(int(i))
 		if bytes, ok := m.Memory().Read(ptr, size); !ok {
 			// TODO
 			return
 		} else {
+			slot := binary.BigEndian.AppendUint32(nil, i)
 			storage.SetBytes(ctx, mu, contractAddress, slot, bytes)
 		}
 	}
 
 	// get bytes from state at slot i
 	stateGetBytesInner := func(ctxInner context.Context, m api.Module, i uint32) uint64 {
-		slot := "slot" + strconv.Itoa(int(i))
+		slot := binary.BigEndian.AppendUint32(nil, i)
 		result, _ := storage.GetBytes(ctx, mu, contractAddress, slot)
 		size := uint64(len(result))
 		results, _ := allocate_ptr.Call(ctxInner, size)
@@ -78,7 +77,7 @@ func Runtime(
 			// TODO
 			return
 		} else {
-			slot := "slot" + strconv.Itoa(int(id)) + hex.EncodeToString(key)
+			slot := append(binary.BigEndian.AppendUint32(nil, id), key...)
 			storage.SetBytes(ctx, mu, contractAddress, slot, bytes)
 		}
 	}
@@ -91,7 +90,7 @@ func Runtime(
 			// TODO
 			return 0
 		}
-		slot := "slot" + strconv.Itoa(int(id)) + hex.EncodeToString(key)
+		slot := append(binary.BigEndian.AppendUint32(nil, id), key...)
 		result, _ := storage.GetBytes(ctx, mu, contractAddress, slot)
 		// write value to memory.
 		size := uint64(len(result))

@@ -2,8 +2,8 @@ package actions
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
-	"strconv"
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
@@ -26,7 +26,7 @@ type Transact struct {
 	// Input to the function.
 	Input []byte `json:"input"`
 	// Non-Static storage slots touched by the function execution.
-	DynamicStateSlots []string `json:"dynamicStateSlots"`
+	DynamicStateSlots [][]byte `json:"dynamicStateSlots"`
 }
 
 func (*Transact) GetTypeID() uint8 {
@@ -37,9 +37,10 @@ func (t *Transact) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
 	stateKeys := state.Keys{
 		string(storage.ContractKey(t.ContractAddress)): state.Read,
 	}
-	for i := 0; i < nconsts.NumStaticStateKeys; i++ {
-		keyName := "slot" + strconv.Itoa(i)
-		stateKeys.Add(string(storage.StateStorageKey(t.ContractAddress, keyName)), state.All)
+	var i uint32
+	for i = 0; i < nconsts.NumStaticStateKeys; i++ {
+		slot := binary.BigEndian.AppendUint32(nil, i)
+		stateKeys.Add(string(storage.StateStorageKey(t.ContractAddress, slot)), state.All)
 	}
 	for _, v := range t.DynamicStateSlots {
 		stateKeys.Add(string(storage.StateStorageKey(t.ContractAddress, v)), state.All)
@@ -49,7 +50,7 @@ func (t *Transact) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
 
 func (t *Transact) StateKeysMaxChunks() []uint16 {
 	chunks := []uint16{consts.MaxUint16}
-	for i := 0; i < nconsts.NumStaticStateKeys+len(t.DynamicStateSlots); i++ {
+	for i := 0; i < int(nconsts.NumStaticStateKeys)+len(t.DynamicStateSlots); i++ {
 		chunks = append(chunks, storage.StateChunks)
 	}
 	return chunks
@@ -62,7 +63,7 @@ func (t *Transact) Marshal(p *codec.Packer) {
 	strArrLen := len(t.DynamicStateSlots)
 	p.PackInt(strArrLen)
 	for _, v := range t.DynamicStateSlots {
-		p.PackString(v)
+		p.PackBytes(v)
 	}
 }
 
@@ -73,7 +74,7 @@ func (*Transact) ComputeUnits(codec.Address, chain.Rules) uint64 {
 func (t *Transact) Size() int {
 	var l int
 	for _, v := range t.DynamicStateSlots {
-		l += codec.StringLen(v)
+		l += codec.BytesLen(v)
 	}
 	return codec.StringLen(t.FunctionName) + codec.BytesLen(t.Input) + ids.IDLen + consts.IntLen + l
 }
@@ -91,7 +92,9 @@ func UnmarshalTransact(p *codec.Packer) (chain.Action, error) {
 	// unpack dynamic state storage slots.
 	strArrLen := p.UnpackInt(false)
 	for i := 0; i < strArrLen; i++ {
-		transact.DynamicStateSlots = append(transact.DynamicStateSlots, p.UnpackString(true))
+		var slot []byte
+		p.UnpackBytes(-1, true, &slot)
+		transact.DynamicStateSlots = append(transact.DynamicStateSlots, slot)
 	}
 	return &transact, nil
 }

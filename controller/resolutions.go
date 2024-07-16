@@ -54,7 +54,7 @@ func (c *Controller) GetBalanceFromState(
 func (c *Controller) GetDataOfStorageSlotFromState(
 	ctx context.Context,
 	contractAddress ids.ID,
-	slot string,
+	slot []byte,
 ) ([]byte, error) {
 	return storage.GetBytesFromState(ctx, c.inner.ReadState, contractAddress, slot)
 }

@@ -18,7 +18,7 @@ const (
 
 const (
 	// Num of statekeys
-	NumStaticStateKeys int = 128
+	NumStaticStateKeys uint32 = 128
 )
 
 var ID ids.ID

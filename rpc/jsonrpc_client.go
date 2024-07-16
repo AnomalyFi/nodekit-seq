@@ -131,6 +131,18 @@ func (cli *JSONRPCClient) Balance(ctx context.Context, addr string, asset ids.ID
 	return resp.Amount, err
 }
 
+func (cli *JSONRPCClient) MessageNetPort(ctx context.Context) (string, error) {
+	resp := new(MessageNetPortReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"messageNetPort",
+		nil,
+		resp,
+	)
+	return resp.Port, err
+
+}
+
 func (cli *JSONRPCClient) GetBlockHeadersByHeight(
 	ctx context.Context,
 	height uint64,
@@ -321,8 +333,7 @@ func (cli *JSONRPCClient) WaitForTransaction(ctx context.Context, txID ids.ID) (
 	return success, fee, nil
 }
 
-func (cli *JSONRPCClient) GetStorageSlotData(ctx context.Context, address string, slot string) ([]byte, error) {
-
+func (cli *JSONRPCClient) GetStorageSlotData(ctx context.Context, address string, slot []byte) ([]byte, error) {
 	resp := new(StorageSlotReply)
 	err := cli.requester.SendRequest(
 		ctx,

@@ -585,13 +585,12 @@ func ContractKey(txID ids.ID) (k []byte) {
 }
 
 // TODO: optimize for state key creation. cache keys
-func StateStorageKey(contractAddress ids.ID, name string) (k []byte) {
-	bstring := []byte(name)
-	k = make([]byte, 1+ids.IDLen+len(bstring)+consts.Uint16Len)
+func StateStorageKey(contractAddress ids.ID, slot []byte) (k []byte) {
+	k = make([]byte, 1+ids.IDLen+len(slot)+consts.Uint16Len)
 
 	k[0] = contractPrefix
-	copy(k[1:], append(contractAddress[:], bstring...))
-	binary.BigEndian.PutUint16(k[1+ids.IDLen+len(bstring):], StateChunks)
+	copy(k[1:], append(contractAddress[:], slot...))
+	binary.BigEndian.PutUint16(k[1+ids.IDLen+len(slot):], StateChunks)
 	return k
 }
 
@@ -618,10 +617,10 @@ func SetBytes(
 	ctx context.Context,
 	mu state.Mutable,
 	contractAddress ids.ID,
-	name string,
+	slot []byte,
 	byteData []byte,
 ) error {
-	k := StateStorageKey(contractAddress, name)
+	k := StateStorageKey(contractAddress, slot)
 	return mu.Insert(ctx, k, byteData)
 }
 
@@ -629,9 +628,9 @@ func GetBytes(
 	ctx context.Context,
 	im state.Immutable,
 	contractAddress ids.ID,
-	name string,
+	slot []byte,
 ) ([]byte, error) {
-	k := StateStorageKey(contractAddress, name)
+	k := StateStorageKey(contractAddress, slot)
 	return im.GetValue(ctx, k)
 }
 
@@ -639,9 +638,9 @@ func GetBytesFromState(
 	ctx context.Context,
 	f ReadState,
 	contractAddress ids.ID,
-	name string,
+	slot []byte,
 ) ([]byte, error) {
-	k := StateStorageKey(contractAddress, name)
+	k := StateStorageKey(contractAddress, slot)
 	values, errs := f(ctx, [][]byte{k})
 	return values[0], errs[0]
 }

@@ -332,7 +332,7 @@ func (j *JSONRPCServer) Balance(req *http.Request, args *BalanceArgs, reply *Bal
 
 type StorageSlotArgs struct {
 	AddressStr string `json:"address"`
-	Slot       string `json:"slot"`
+	Slot       []byte `json:"slot"`
 }
 
 type StorageSlotReply struct {
