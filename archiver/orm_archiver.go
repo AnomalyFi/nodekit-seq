@@ -394,7 +394,7 @@ func (oa *ORMArchiver) GetCommitmentBlocks(args *types.GetBlockCommitmentArgs, p
 	}
 
 	var blocks []DBBlock
-	res := oa.db.Where("height >= ? AND height < ?", args.First, args.CurrentHeight).Order("height").Limit(args.MaxBlocks).Find(&blocks)
+	res := oa.db.Where("height >= ? AND height <= ?", args.First, args.CurrentHeight).Order("height").Limit(args.MaxBlocks).Find(&blocks)
 	if res.Error != nil {
 		return nil, res.Error
 	}
@@ -405,13 +405,17 @@ func (oa *ORMArchiver) GetCommitmentBlocks(args *types.GetBlockCommitmentArgs, p
 		if err != nil {
 			return nil, err
 		}
+		blkID, err := blk.ID()
+		if err != nil {
+			return nil, err
+		}
 
 		header := &types.Header{
 			Height:    dbBlock.Height,
 			Timestamp: uint64(dbBlock.Timestamp),
 			L1Head:    uint64(dbBlock.L1Head),
 			TransactionsRoot: types.NmtRoot{
-				Root: blk.NMTRoot,
+				Root: blkID[:],
 			},
 		}
 

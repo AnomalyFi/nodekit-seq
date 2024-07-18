@@ -779,7 +779,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			defer cancel()
 			resp, err := instances[0].tcli.GetCommitmentBlocks(ctx, blk.Hght-1, blk.Hght, 100)
 			require.NoError(err)
-			require.Equal(len(resp.Blocks), 1)
+			require.Equal(len(resp.Blocks), 2)
 		})
 	})
 
