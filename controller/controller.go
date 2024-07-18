@@ -185,11 +185,12 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 	batch := c.metaDB.NewBatch()
 	defer batch.Reset()
 
-	go c.archiver.InsertBlock(blk)
-
-	if err := c.jsonRPCServer.AcceptBlock(blk); err != nil {
-		c.inner.Logger().Fatal("unable to accept block in json-rpc server", zap.Error(err))
-	}
+	go func() {
+		err := c.archiver.InsertBlock(blk)
+		if err != nil {
+			c.Logger().Debug("err inserting block", zap.Error(err))
+		}
+	}()
 
 	results := blk.Results()
 	for i, tx := range blk.Txs {

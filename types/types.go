@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	// "github.com/AnomalyFi/hypersdk/chain"
+
 	"github.com/ava-labs/avalanchego/ids"
 )
 
@@ -14,6 +15,11 @@ type SEQTransaction struct {
 	Tx_id       string `json:"tx_id"`
 	Index       uint64 `json:"tx_index"`
 	Transaction []byte `json:"transaction"`
+}
+
+type SEQTransactionResponse struct {
+	Txs     []*SEQTransaction `json:"txs"`
+	BlockId string            `json:"id"`
 }
 
 type SequencerBlock struct {
@@ -163,6 +169,11 @@ type BlockHeadersResponse struct {
 type GetBlockHeadersIDArgs struct {
 	ID  string `json:"id"`
 	End int64  `json:"end"`
+}
+
+type GetBlockHeadersByHeightArgs struct {
+	Height uint64 `json:"height"`
+	End    int64  `json:"end"`
 }
 
 type GetBlockHeadersByStartArgs struct {

@@ -9,6 +9,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/fees"
 
+	"github.com/AnomalyFi/nodekit-seq/archiver"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
@@ -52,4 +53,16 @@ func (c *Controller) GetBalanceFromState(
 
 func (c *Controller) GetAcceptedBlockWindow() int {
 	return c.config.GetAcceptedBlockWindow()
+}
+
+func (c *Controller) Archiver() *archiver.ORMArchiver {
+	return c.archiver
+}
+
+func (c *Controller) NetworkID() uint32 {
+	return c.snowCtx.NetworkID
+}
+
+func (c *Controller) ChainID() ids.ID {
+	return c.snowCtx.ChainID
 }

@@ -635,6 +635,154 @@ var _ = ginkgo.Describe("[Test]", func() {
 			require.Error(err)
 		})
 	})
+
+	ginkgo.It("test rpc server and archiver is working correctly", func() {
+		var blk *chain.StatefulBlock
+		var blkID ids.ID
+		var txID ids.ID
+		namespace := hex.EncodeToString([]byte("nkit"))
+		// util funcs
+		parser, err := instances[0].tcli.Parser(context.TODO())
+		require.NoError(err)
+		wsCli, err := rpc.NewWebSocketClient(instances[0].uri, rpc.DefaultHandshakeTimeout, pubsub.MaxPendingMessages, pubsub.MaxReadMessageSize)
+		require.NoError(err)
+		err = wsCli.RegisterBlocks()
+		require.NoError(err)
+		waitTillIncluded := func(ctx context.Context, txIDStr string) (bool, *chain.StatefulBlock, error) {
+			txID, err := ids.FromString(txIDStr)
+			require.NoError(err)
+			for {
+				select {
+				case <-ctx.Done():
+					return false, nil, ctx.Err()
+				default:
+					b, _, _, _, err := wsCli.ListenBlock(context.Background(), parser)
+					require.NoError(err)
+					for _, t := range b.Txs {
+						if t.ID() == txID {
+							hutils.Outf("{{green}}inclusion block found{{/}}\n")
+							return true, b, nil
+						}
+					}
+				}
+			}
+		}
+		ginkgo.By("issuing some transactions", func() {
+			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+			data := make([][]byte, 0, 2)
+			data = append(data, []byte("somedata"))
+			data = append(data, []byte("somedata2"))
+			txIDStr, err := instances[0].tcli.SubmitMsgTx(ctx, blockchainID, 1337, []byte("nkit"), data)
+			require.NoError(err)
+			txID, err = ids.FromString(txIDStr)
+			require.NoError(err)
+			hutils.Outf("{{green}}txID of submitted data:{{/}}%s \n", txIDStr)
+			included, block, err := waitTillIncluded(ctx, txIDStr)
+			require.True(included)
+			require.NoError(err)
+			require.NotNil(block)
+			blockID, err := block.ID()
+			require.NoError(err)
+
+			blkID = blockID
+			blk = block
+		})
+
+		ginkgo.By("issuing GetBlockTransactions", func() {
+			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+			resp, err := instances[0].tcli.GetBlockTransactions(ctx, blkID.String())
+			require.NoError(err)
+			require.Equal(2, len(resp.Txs))
+
+			hutils.Outf("{{green}}height: %d blockID wanted:{{/}}%s \n", blk.Hght, blkID.String())
+			txInBlock := resp.Txs[0]
+			require.Equal(txID.String(), txInBlock.Tx_id)
+		})
+
+		ginkgo.By("issuing GetBlockTransactions", func() {
+			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+			resp, err := instances[0].tcli.GetBlockTransactionsByNamespace(ctx, blk.Hght, namespace)
+			require.NoError(err)
+			require.Equal(2, len(resp.Txs))
+
+			resp, err = instances[0].tcli.GetBlockTransactionsByNamespace(ctx, blk.Hght, "someothernamespace")
+			require.NoError(err)
+			require.Equal(0, len(resp.Txs))
+		})
+
+		ginkgo.By("issuing GetBlockHeadersByHeight", func() {
+			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+			resp, err := instances[0].tcli.GetBlockHeadersByHeight(ctx, blk.Hght, blk.Tmstmp+100)
+			require.NoError(err)
+			require.Greater(len(resp.Blocks), 0)
+
+			found := false
+			hutils.Outf("{{green}}height: %d blockID wanted:{{/}}%s \n", blk.Hght, blkID.String())
+			for _, b := range resp.Blocks {
+				hutils.Outf("{{green}}height: %d blockID:{{/}}%s \n", b.Height, b.BlockId)
+				if b.BlockId == blkID.String() {
+					found = true
+				}
+			}
+			require.True(found)
+		})
+
+		ginkgo.By("issuing GetBlockHeadersByID", func() {
+			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+			resp, err := instances[0].tcli.GetBlockHeadersID(ctx, blkID.String(), blk.Tmstmp+100)
+			require.NoError(err)
+			require.Greater(len(resp.Blocks), 0)
+
+			found := false
+			blkID, err := blk.ID()
+			require.NoError(err)
+			for _, b := range resp.Blocks {
+				if b.BlockId == blkID.String() {
+					found = true
+				}
+			}
+			require.True(found)
+		})
+
+		ginkgo.By("issuing GetBlockHeadersByStart", func() {
+			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+			resp, err := instances[0].tcli.GetBlockHeadersByStart(ctx, blk.Tmstmp, blk.Tmstmp+100)
+			require.NoError(err)
+			require.Greater(len(resp.Blocks), 0)
+
+			found := false
+			blkID, err := blk.ID()
+			require.NoError(err)
+			for _, b := range resp.Blocks {
+				if b.BlockId == blkID.String() {
+					found = true
+				}
+			}
+			require.True(found)
+		})
+
+		ginkgo.By("issuing GetCommitmentBlocks", func() {
+			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+			resp, err := instances[0].tcli.GetCommitmentBlocks(ctx, blk.Hght-1, blk.Hght, 100)
+			require.NoError(err)
+			require.Equal(len(resp.Blocks), 1)
+		})
+	})
+
 	// TODO: add custom asset test
 	// TODO: test with only part of sig weight
 	// TODO: attempt to mint a warp asset

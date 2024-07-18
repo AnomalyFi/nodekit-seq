@@ -38,6 +38,7 @@ if [[ ${MODE} != "run" ]]; then
   MIN_BLOCK_GAP=250 #ms
   STORE_TXS=true
   UNLIMITED_USAGE=true
+  rm /tmp/default.db
 fi
 
 WINDOW_TARGET_UNITS="40000000,450000,450000,450000,450000"
