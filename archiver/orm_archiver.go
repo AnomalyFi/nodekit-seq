@@ -238,7 +238,7 @@ func (oa *ORMArchiver) GetBlockHeadersByHeight(args *types.GetBlockHeadersByHeig
 		ret.Blocks = append(ret.Blocks, blkInfo)
 	}
 	var next DBBlock
-	res = oa.db.Where("height = ? AND timestamp >= ?", args.Height+1, args.End).First(&next)
+	res = oa.db.Where("timestamp >= ?", args.End).First(&next)
 	if res.Error == nil {
 		ret.Next = types.BlockInfo{
 			BlockId:   next.BlockId,
@@ -307,7 +307,7 @@ func (oa *ORMArchiver) GetBlockHeadersByID(args *types.GetBlockHeadersIDArgs) (*
 		ret.Blocks = append(ret.Blocks, blkInfo)
 	}
 	var next DBBlock
-	res = oa.db.Where("height = ? AND timestamp >= ?", firstBlockHeight+1, args.End).First(&next)
+	res = oa.db.Where("timestamp >= ?", args.End).First(&next)
 	if res.Error == nil {
 		ret.Next = types.BlockInfo{
 			BlockId:   next.BlockId,
@@ -371,7 +371,7 @@ func (oa *ORMArchiver) GetBlockHeadersAfterTimestamp(args *types.GetBlockHeaders
 		ret.Blocks = append(ret.Blocks, blkInfo)
 	}
 	var next DBBlock
-	res = oa.db.Where("height = ? AND timestamp >= ?", firstBlockHeight+1, args.End).First(&next)
+	res = oa.db.Where("timestamp >= ?", args.End).Order("height").First(&next)
 	if res.Error == nil {
 		ret.Next = types.BlockInfo{
 			BlockId:   next.BlockId,
