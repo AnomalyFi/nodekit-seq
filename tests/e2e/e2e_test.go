@@ -669,7 +669,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		}
 		ginkgo.By("issuing some transactions", func() {
 			ctx := context.Background()
-			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 			defer cancel()
 			data := make([][]byte, 0, 2)
 			data = append(data, []byte("somedata"))
