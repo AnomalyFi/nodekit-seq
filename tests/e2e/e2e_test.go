@@ -31,6 +31,7 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/actions"
 	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/types"
 
 	hutils "github.com/AnomalyFi/hypersdk/utils"
 	trpc "github.com/AnomalyFi/nodekit-seq/rpc"
@@ -690,6 +691,9 @@ var _ = ginkgo.Describe("[Test]", func() {
 			blk = block
 		})
 
+		// wait for more blocks to be produced
+		time.Sleep(10 * time.Second)
+
 		ginkgo.By("issuing GetBlockTransactions", func() {
 			ctx := context.Background()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -720,7 +724,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			ctx := context.Background()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
-			resp, err := instances[0].tcli.GetBlockHeadersByHeight(ctx, blk.Hght, blk.Tmstmp+100)
+			resp, err := instances[0].tcli.GetBlockHeadersByHeight(ctx, blk.Hght, blk.Tmstmp+5000)
 			require.NoError(err)
 			require.Greater(len(resp.Blocks), 0)
 
@@ -732,14 +736,18 @@ var _ = ginkgo.Describe("[Test]", func() {
 					found = true
 				}
 			}
+			fmt.Printf("prev: %+v, blocks[0]: %+v, next: %+v, blocks[-1]: %+v\n", resp.Prev, resp.Blocks[0], resp.Next, resp.Blocks[len(resp.Blocks)-1])
 			require.True(found)
+			require.NotEqual(resp.Next, types.BlockInfo{})
+			require.Equal(resp.Next.Height-1, resp.Blocks[len(resp.Blocks)-1].Height)
+			require.Equal(resp.Prev.Height+1, resp.Blocks[0].Height)
 		})
 
 		ginkgo.By("issuing GetBlockHeadersByID", func() {
 			ctx := context.Background()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
-			resp, err := instances[0].tcli.GetBlockHeadersID(ctx, blkID.String(), blk.Tmstmp+100)
+			resp, err := instances[0].tcli.GetBlockHeadersID(ctx, blkID.String(), blk.Tmstmp+5000)
 			require.NoError(err)
 			require.Greater(len(resp.Blocks), 0)
 
@@ -751,14 +759,17 @@ var _ = ginkgo.Describe("[Test]", func() {
 					found = true
 				}
 			}
+			fmt.Printf("prev: %+v, blocks[0]: %+v, next: %+v, blocks[-1]: %+v\n", resp.Prev, resp.Blocks[0], resp.Next, resp.Blocks[len(resp.Blocks)-1])
 			require.True(found)
+			require.Equal(resp.Next.Height-1, resp.Blocks[len(resp.Blocks)-1].Height)
+			require.Equal(resp.Prev.Height+1, resp.Blocks[0].Height)
 		})
 
 		ginkgo.By("issuing GetBlockHeadersByStart", func() {
 			ctx := context.Background()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
-			resp, err := instances[0].tcli.GetBlockHeadersByStart(ctx, blk.Tmstmp, blk.Tmstmp+100)
+			resp, err := instances[0].tcli.GetBlockHeadersByStart(ctx, blk.Tmstmp, blk.Tmstmp+5000)
 			require.NoError(err)
 			require.Greater(len(resp.Blocks), 0)
 
@@ -770,7 +781,10 @@ var _ = ginkgo.Describe("[Test]", func() {
 					found = true
 				}
 			}
+			fmt.Printf("prev: %+v, blocks[0]: %+v, next: %+v, blocks[-1]: %+v\n", resp.Prev, resp.Blocks[0], resp.Next, resp.Blocks[len(resp.Blocks)-1])
 			require.True(found)
+			require.Equal(resp.Next.Height-1, resp.Blocks[len(resp.Blocks)-1].Height)
+			require.Equal(resp.Prev.Height+1, resp.Blocks[0].Height)
 		})
 
 		ginkgo.By("issuing GetCommitmentBlocks", func() {
