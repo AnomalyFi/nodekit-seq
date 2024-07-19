@@ -254,6 +254,12 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 					c.metrics.transfer.Inc()
 				case *actions.SequencerMsg:
 					c.metrics.sequencerMsg.Inc()
+				case *actions.Oracle:
+					c.metrics.oracle.Inc()
+				case *actions.Deploy:
+					c.metrics.deploy.Inc()
+				case *actions.Transact:
+					c.metrics.transact.Inc()
 				}
 			}
 		}

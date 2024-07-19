@@ -184,7 +184,6 @@ func init() {
 	)
 	spamCmd.AddCommand(
 		runSpamCmd,
-		//runSpamSequencerMsgCmd,
 		runLocalFeeMarketCmd,
 	)
 
@@ -192,13 +191,13 @@ func init() {
 	generatePrometheusCmd.PersistentFlags().StringVar(
 		&prometheusBaseURI,
 		"prometheus-base-uri",
-		"http://localhost:9090",
+		"http://localhost:9096",
 		"prometheus server location",
 	)
 	generatePrometheusCmd.PersistentFlags().BoolVar(
 		&prometheusOpenBrowser,
 		"prometheus-open-browser",
-		true,
+		false,
 		"open browser to prometheus dashboard",
 	)
 	generatePrometheusCmd.PersistentFlags().StringVar(
