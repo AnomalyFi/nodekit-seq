@@ -9,6 +9,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/fees"
+	"github.com/AnomalyFi/nodekit-seq/archiver"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/trace"
@@ -16,6 +17,8 @@ import (
 )
 
 type Controller interface {
+	NetworkID() uint32
+	ChainID() ids.ID
 	Genesis() *genesis.Genesis
 	Tracer() trace.Tracer
 	GetTransaction(context.Context, ids.ID) (bool, int64, bool, fees.Dimensions, uint64, error)
@@ -29,4 +32,6 @@ type Controller interface {
 		txs []*chain.Transaction,
 	) (errs []error)
 	Logger() logging.Logger
+	// TODO: update this to only have read permission
+	Archiver() *archiver.ORMArchiver
 }
