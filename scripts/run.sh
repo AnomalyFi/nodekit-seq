@@ -41,7 +41,7 @@ if [[ ${MODE} != "run" ]]; then
 fi
 
 WINDOW_TARGET_UNITS="40000000,450000,450000,450000,450000"
-MAX_BLOCK_UNITS="1800000,15000,15000,2500,15000"
+MAX_BLOCK_UNITS="1800000,40000,${MAX_UINT64},${MAX_UINT64},${MAX_UINT64}"
 if ${UNLIMITED_USAGE}; then
   WINDOW_TARGET_UNITS="${MAX_UINT64},${MAX_UINT64},${MAX_UINT64},${MAX_UINT64},${MAX_UINT64}"
   # If we don't limit the block size, AvalancheGo will reject the block.
@@ -177,7 +177,8 @@ cat <<EOF > "${TMPDIR}"/tokenvm.config
     "enabled": true,
     "archiverType": "sqlite",
     "dsn": "/tmp/default.db"
-  }
+  },
+  "messagenetPort": ":9321"
 }
 EOF
 mkdir -p "${TMPDIR}"/tokenvm-e2e-profiles
@@ -217,7 +218,7 @@ ACK_GINKGO_RC=true ginkgo build ./tests/e2e
 # download avalanche-network-runner
 # https://github.com/ava-labs/avalanche-network-runner
 ANR_REPO_PATH=github.com/ava-labs/avalanche-network-runner
-ANR_VERSION=v1.8.0
+ANR_VERSION=v1.8.2
 # version set
 go install -v "${ANR_REPO_PATH}"@"${ANR_VERSION}"
 

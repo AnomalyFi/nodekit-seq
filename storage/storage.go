@@ -55,13 +55,11 @@ const (
 	heightPrefix              = 0x4
 	timestampPrefix           = 0x5
 	feePrefix                 = 0x6
-	incomingWarpPrefix        = 0x7
-	outgoingWarpPrefix        = 0x8
-	blockPrefix               = 0x9
-	relayerGasPrefix          = 0x10
-	relayerGasTimeStampPrefix = 0x11
-	relayerBalancePrefix      = 0x12
-	feeMarketPrefix           = 0x13
+	contractPrefix            = 0x7
+	blockPrefix               = 0x8
+	relayerGasPrefix          = 0x9
+	relayerGasTimeStampPrefix = 0x10
+	feeMarketPrefix           = 0x12
 )
 
 const (
@@ -71,6 +69,7 @@ const (
 	LoanChunks                uint16 = 1
 	RelayerGasChunks          uint16 = 1
 	RelayerGasTimeStampChunks uint16 = 1
+	StateChunks               uint16 = 1024 // 1024 * 64 bytes = 64 KiB. This is a nice value for the chunk size as rust can read only 2^16 bytes at a time.
 )
 
 var (
@@ -561,77 +560,6 @@ func GetRelayerGasPriceUpdateTimeStamp(
 	return int64(binary.BigEndian.Uint64(v)), nil
 }
 
-func RelayerBalanceKey(relayerID uint32) (k []byte) {
-	k = make([]byte, 1+consts.Uint32Len+consts.Uint16Len)
-	k[0] = relayerBalancePrefix
-	binary.BigEndian.PutUint32(k[1:], relayerID)
-	binary.BigEndian.PutUint16(k[1+consts.Uint32Len:], RelayerGasChunks)
-	return k
-}
-
-func AddRelayerBalance(
-	ctx context.Context,
-	mu state.Mutable,
-	relayerID uint32,
-	amount uint64,
-) error {
-	k := RelayerBalanceKey(relayerID)
-	bal, err := GetRelayerBalance(ctx, mu, relayerID)
-	if err != nil {
-		return err
-	}
-	nbal, err := smath.Add64(bal, amount)
-	if err != nil {
-		return err
-	}
-	return mu.Insert(ctx, k, binary.BigEndian.AppendUint64(nil, nbal))
-}
-
-func SubRelayerBalance(
-	ctx context.Context,
-	mu state.Mutable,
-	relayerID uint32,
-	amount uint64,
-) error {
-	k := RelayerBalanceKey(relayerID)
-	bal, err := GetRelayerBalance(ctx, mu, relayerID)
-	if err != nil {
-		return err
-	}
-	nbal, err := smath.Sub(bal, amount)
-	if err != nil {
-		return err
-	}
-	if nbal == 0 {
-		return mu.Remove(ctx, k)
-	}
-	return mu.Insert(ctx, k, binary.BigEndian.AppendUint64(nil, nbal))
-}
-
-func GetRelayerBalance(
-	ctx context.Context,
-	im state.Immutable,
-	relayerID uint32,
-) (uint64, error) {
-	k := RelayerBalanceKey(relayerID)
-	val, _, err := innerGetBalance(im.GetValue(ctx, k))
-	if err != nil {
-		return 0, err
-	}
-	return val, nil
-}
-
-func GetRelayerBalanceFromState(
-	ctx context.Context,
-	f ReadState,
-	relayerID uint32,
-) (uint64, error) {
-	k := RelayerBalanceKey(relayerID)
-	values, errs := f(ctx, [][]byte{k})
-	bal, _, err := innerGetBalance(values[0], errs[0])
-	return bal, err
-}
-
 func HeightKey() (k []byte) {
 	return heightKey
 }
@@ -646,4 +574,83 @@ func FeeKey() (k []byte) {
 
 func FeeMarketKey() (k []byte) {
 	return feeMarketKey
+}
+
+func ContractKey(txID ids.ID) (k []byte) {
+	k = make([]byte, 1+ids.IDLen+consts.Uint16Len)
+	k[0] = contractPrefix
+	copy(k[1:], txID[:])
+	binary.BigEndian.PutUint16(k[1+ids.IDLen:], consts.MaxUint16)
+	return
+}
+
+// TODO: optimize for state key creation. cache keys
+func StateStorageKey(contractAddress ids.ID, slot []byte) (k []byte) {
+	k = make([]byte, 1+ids.IDLen+len(slot)+consts.Uint16Len)
+
+	k[0] = contractPrefix
+	copy(k[1:], append(contractAddress[:], slot...))
+	binary.BigEndian.PutUint16(k[1+ids.IDLen+len(slot):], StateChunks)
+	return k
+}
+
+func SetContract(
+	ctx context.Context,
+	mu state.Mutable,
+	txID ids.ID,
+	contractCode []byte,
+) error {
+	k := ContractKey(txID)
+	return mu.Insert(ctx, k, contractCode)
+}
+
+func GetContract(
+	ctx context.Context,
+	im state.Immutable,
+	txID ids.ID,
+) ([]byte, error) {
+	k := ContractKey(txID)
+	return im.GetValue(ctx, k)
+}
+
+func SetBytes(
+	ctx context.Context,
+	mu state.Mutable,
+	contractAddress ids.ID,
+	slot []byte,
+	byteData []byte,
+) error {
+	k := StateStorageKey(contractAddress, slot)
+	return mu.Insert(ctx, k, byteData)
+}
+
+func GetBytes(
+	ctx context.Context,
+	im state.Immutable,
+	contractAddress ids.ID,
+	slot []byte,
+) ([]byte, error) {
+	k := StateStorageKey(contractAddress, slot)
+	return im.GetValue(ctx, k)
+}
+
+func GetBytesFromState(
+	ctx context.Context,
+	f ReadState,
+	contractAddress ids.ID,
+	slot []byte,
+) ([]byte, error) {
+	k := StateStorageKey(contractAddress, slot)
+	values, errs := f(ctx, [][]byte{k})
+	return values[0], errs[0]
+}
+
+func GetContractFromState(
+	ctx context.Context,
+	f ReadState,
+	contractAddress ids.ID,
+) ([]byte, error) {
+	k := ContractKey(contractAddress)
+	bt, err := f(ctx, [][]byte{k})
+	return bt[0], err[0]
 }

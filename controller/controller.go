@@ -12,11 +12,13 @@ import (
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/fees"
 	"github.com/AnomalyFi/hypersdk/gossiper"
+	"github.com/AnomalyFi/hypersdk/network"
 	hrpc "github.com/AnomalyFi/hypersdk/rpc"
 	hstorage "github.com/AnomalyFi/hypersdk/storage"
 	"github.com/AnomalyFi/hypersdk/vm"
 	ametrics "github.com/ava-labs/avalanchego/api/metrics"
 	"github.com/ava-labs/avalanchego/database"
+	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/snow"
 	"go.uber.org/zap"
 
@@ -26,6 +28,7 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/config"
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
+	"github.com/AnomalyFi/nodekit-seq/messagenet"
 
 	"github.com/AnomalyFi/nodekit-seq/rpc"
 	"github.com/AnomalyFi/nodekit-seq/storage"
@@ -48,6 +51,10 @@ type Controller struct {
 	metrics *metrics
 
 	metaDB database.Database
+
+	relayManager *RelayManager
+	MessageNet   *messagenet.MessageNet
+	wsServer     *rpc.WebSocketServer
 }
 
 func New() *vm.VM {
@@ -57,6 +64,7 @@ func New() *vm.VM {
 func (c *Controller) Initialize(
 	inner *vm.VM,
 	snowCtx *snow.Context,
+	networkManager *network.Manager,
 	gatherer ametrics.MultiGatherer,
 	genesisBytes []byte,
 	upgradeBytes []byte, // subnets to allow for AWM
@@ -95,7 +103,7 @@ func (c *Controller) Initialize(
 
 	// State changes happeining in genesis block would only be recorded for root calculation, similar to rest of the blocks.
 	// attatching config or any other item to genesis item would not result in any errors for generating genesis block root.
-	c.genesis, err = genesis.New(genesisBytes, upgradeBytes, c.config)
+	c.genesis, err = genesis.New(genesisBytes, upgradeBytes)
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf(
 			"unable to read genesis: %w",
@@ -132,7 +140,10 @@ func (c *Controller) Initialize(
 	}
 
 	apis[rpc.JSONRPCEndpoint] = jsonRPCHandler
-
+	// websocket server for serving commitment callbacks esp for relayers
+	wsServer, pubsubServer := rpc.NewWebSocketServer(c, c.config.GetStreamingBacklogSize())
+	c.wsServer = wsServer
+	apis[rpc.WSEndPoint] = pubsubServer
 	// Create builder and gossiper
 	var (
 		build  builder.Builder
@@ -156,12 +167,22 @@ func (c *Controller) Initialize(
 		}
 	}
 
+	// initiate messagenet
+	c.MessageNet = messagenet.NewMessageNet(1024, 1024, snowCtx.Log)
+	// initiate relayManager & relayHandler
+	relayHandler, relaySender := networkManager.Register()
+	c.relayManager = NewRelayManager(c.inner, c.MessageNet, snowCtx)
+	networkManager.SetHandler(relayHandler, NewRelayHandler(c))
+
+	go c.MessageNet.StartMessageNet(c.relayManager, c.config.MessageNetPort)
+	go c.relayManager.Run(relaySender)
+
 	return c.config, c.genesis, build, gossip, blockDB, stateDB, apis, consts.ActionRegistry, consts.AuthRegistry, auth.Engines(), nil
 }
 
 func (c *Controller) Rules(t int64) chain.Rules {
 	// TODO: extend with [UpgradeBytes]
-	return c.genesis.Rules(t, c.snowCtx.NetworkID, c.snowCtx.ChainID)
+	return c.genesis.Rules(t, c.snowCtx.NetworkID, c.snowCtx.ChainID, c.config.GetParsedWhiteListedAddress())
 }
 
 func (c *Controller) StateManager() chain.StateManager {
@@ -180,12 +201,24 @@ func (c *Controller) Submit(
 	return c.inner.Submit(ctx, verifySig, txs)
 }
 
+func (c *Controller) SendRequestToAll(ctx context.Context, data []byte, relayerID int) error {
+	return c.relayManager.SendRequestToAll(ctx, relayerID, data)
+}
+
+func (c *Controller) SendRequestToIndividual(ctx context.Context, data []byte, relayerID int, nodeID ids.NodeID) error {
+	return c.relayManager.SendRequestToIndividual(ctx, relayerID, nodeID, data)
+}
+
 // TODO I can add the blocks to the JSON RPC Server here instead of REST API
 func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) error {
 	batch := c.metaDB.NewBatch()
 	defer batch.Reset()
 
 	go c.archiver.InsertBlock(blk)
+	// filter the transactions in websocket_packer.go and send to the listeners
+	if err := c.wsServer.AcceptBlockWithSEQWasmTxs(blk); err != nil {
+		c.Logger().Info("failed to send block to websocket server", zap.Error(err))
+	}
 
 	if err := c.jsonRPCServer.AcceptBlock(blk); err != nil {
 		c.inner.Logger().Fatal("unable to accept block in json-rpc server", zap.Error(err))
@@ -221,6 +254,12 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 					c.metrics.transfer.Inc()
 				case *actions.SequencerMsg:
 					c.metrics.sequencerMsg.Inc()
+				case *actions.Oracle:
+					c.metrics.oracle.Inc()
+				case *actions.Deploy:
+					c.metrics.deploy.Inc()
+				case *actions.Transact:
+					c.metrics.transact.Inc()
 				}
 			}
 		}

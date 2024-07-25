@@ -18,6 +18,11 @@ type metrics struct {
 	transfer prometheus.Counter
 
 	sequencerMsg prometheus.Counter
+
+	oracle prometheus.Counter
+
+	deploy   prometheus.Counter
+	transact prometheus.Counter
 }
 
 func newMetrics(gatherer ametrics.MultiGatherer) (*metrics, error) {
@@ -48,6 +53,24 @@ func newMetrics(gatherer ametrics.MultiGatherer) (*metrics, error) {
 			Name:      "sequencer_msg",
 			Help:      "number of sequencer msg actions",
 		}),
+
+		oracle: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: "actions",
+			Name:      "oracle",
+			Help:      "number of oracle actions",
+		}),
+
+		deploy: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: "actions",
+			Name:      "deploy",
+			Help:      "number of deploy actions",
+		}),
+
+		transact: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: "actions",
+			Name:      "transact",
+			Help:      "number of transact actions",
+		}),
 	}
 	r := prometheus.NewRegistry()
 	errs := wrappers.Errs{}
@@ -59,6 +82,11 @@ func newMetrics(gatherer ametrics.MultiGatherer) (*metrics, error) {
 		r.Register(m.transfer),
 
 		r.Register(m.sequencerMsg),
+
+		r.Register(m.oracle),
+
+		r.Register(m.deploy),
+		r.Register(m.transact),
 		gatherer.Register(consts.Name, r),
 	)
 	return m, errs.Err

@@ -5,6 +5,7 @@ package genesis
 
 import (
 	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/fees"
 	"github.com/ava-labs/avalanchego/ids"
 
@@ -16,13 +17,14 @@ var _ chain.Rules = (*Rules)(nil)
 type Rules struct {
 	g *Genesis
 
-	networkID uint32
-	chainID   ids.ID
+	networkID                uint32
+	chainID                  ids.ID
+	parsedWhiteListedAddress []codec.Address
 }
 
 // TODO: use upgradeBytes
-func (g *Genesis) Rules(_ int64, networkID uint32, chainID ids.ID) *Rules {
-	return &Rules{g, networkID, chainID}
+func (g *Genesis) Rules(_ int64, networkID uint32, chainID ids.ID, parsedWhiteListedAddresses []codec.Address) *Rules {
+	return &Rules{g, networkID, chainID, parsedWhiteListedAddresses}
 }
 
 func (r *Rules) NetworkID() uint32 {
@@ -115,7 +117,7 @@ func (r *Rules) GetFeeMarketMinUnitPrice() uint64 {
 
 func (r *Rules) FetchCustom(s string) (any, bool) {
 	if s == "whitelisted.Addresses" {
-		return r.g.Config.GetParsedWhiteListedAddress(), false
+		return r.parsedWhiteListedAddress, false
 	}
 	return nil, false
 }

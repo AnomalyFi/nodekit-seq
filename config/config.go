@@ -6,6 +6,8 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
+	"os"
 	"strings"
 	"time"
 
@@ -30,6 +32,7 @@ const (
 	defaultContinuousProfilerMaxFiles  = 10
 	defaultStoreTransactions           = true
 	defaultMaxOrdersPerPair            = 1024
+	defaultMessageNetPort              = ":8080"
 )
 
 type Config struct {
@@ -87,6 +90,9 @@ type Config struct {
 	// Archiver
 	ArchiverConfig archiver.ORMArchiverConfig `json:"archiverConfig"`
 
+	// messagenet port
+	MessageNetPort string `json:"messagenetPort"`
+
 	loaded                     bool
 	nodeID                     ids.NodeID
 	parsedExemptSponsors       []codec.Address
@@ -102,7 +108,6 @@ func New(nodeID ids.NodeID, b []byte) (*Config, error) {
 		}
 		c.loaded = true
 	}
-
 	// Parse any exempt sponsors (usually used when a single account is
 	// broadcasting many txs at once)
 	c.parsedExemptSponsors = make([]codec.Address, len(c.MempoolExemptSponsors))
@@ -121,6 +126,12 @@ func New(nodeID ids.NodeID, b []byte) (*Config, error) {
 		}
 		c.parsedWhiteListedAddresses[i] = p
 	}
+
+	// generate random 4 digit number for starting messagenet server.
+	seed := time.Now().UnixNano() + int64(os.Getpid())
+	rand.Seed(seed)
+	rand := rand.Intn(8999) + 1000
+	c.MessageNetPort = fmt.Sprintf(":%d", rand)
 	return c, nil
 }
 
@@ -145,6 +156,7 @@ func (c *Config) setDefault() {
 	c.MaxOrdersPerPair = defaultMaxOrdersPerPair
 	c.ETHRPCAddr = c.Config.GetETHL1RPC()
 	c.ETHWSAddr = c.Config.GetETHL1WS()
+	c.MessageNetPort = defaultMessageNetPort
 }
 
 func (c *Config) GetLogLevel() logging.Level                { return c.LogLevel }

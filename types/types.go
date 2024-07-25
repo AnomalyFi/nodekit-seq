@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
-	// "github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/ava-labs/avalanchego/ids"
 )
 
@@ -153,11 +153,9 @@ type BlockInfo struct {
 	Height    uint64 `json:"height"`
 }
 
-type BlockHeadersResponse struct {
-	From   uint64      `json:"from"`
-	Blocks []BlockInfo `json:"blocks"`
-	Prev   BlockInfo   `json:"prev"`
-	Next   BlockInfo   `json:"next"`
+type GetBlockHeadersByHeightArgs struct {
+	Height uint64 `json:"height"`
+	End    int64  `json:"end"`
 }
 
 type GetBlockHeadersIDArgs struct {
@@ -176,6 +174,13 @@ type GetBlockCommitmentArgs struct {
 	MaxBlocks     int    `json:"max_blocks"`
 }
 
+type BlockHeadersResponse struct {
+	From   uint64      `json:"from"`
+	Blocks []BlockInfo `json:"blocks"`
+	Prev   BlockInfo   `json:"prev"`
+	Next   BlockInfo   `json:"next"`
+}
+
 type SequencerWarpBlockResponse struct {
 	Blocks []SequencerWarpBlock `json:"blocks"`
 }
@@ -187,4 +192,34 @@ type SequencerWarpBlock struct {
 	Height     *big.Int `json:"height"`
 	BlockRoot  *big.Int `json:"root"`
 	ParentRoot *big.Int `json:"parent"`
+}
+
+type BlockArgs struct {
+	// either of them need to be fed
+	ID     ids.ID `json:"id"`
+	Height uint64 `json:"height"`
+}
+
+type BlockReply struct {
+	Block []byte `json:"block"`
+}
+
+// TODO(Noah) need to fix this. Tech debt
+type TransactionResponse struct {
+	Txs     []*chain.Transaction `json:"txs"`
+	BlockId string               `json:"id"`
+}
+
+type SEQTransactionResponse struct {
+	Txs     []*SEQTransaction `json:"txs"`
+	BlockId string            `json:"id"`
+}
+
+type GetBlockTransactionsArgs struct {
+	ID string `json:"block_id"`
+}
+
+type GetBlockTransactionsByNamespaceArgs struct {
+	Height    uint64 `json:"height"`
+	Namespace string `json:"namespace"`
 }

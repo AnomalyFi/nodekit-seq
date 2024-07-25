@@ -14,6 +14,7 @@ import (
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/trace"
 	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
 )
 
 func (c *Controller) Genesis() *genesis.Genesis {
@@ -50,13 +51,29 @@ func (c *Controller) GetBalanceFromState(
 	return storage.GetBalanceFromState(ctx, c.inner.ReadState, addr, asset)
 }
 
-func (c *Controller) GetRelayerBalanceFromState(
+func (c *Controller) GetDataOfStorageSlotFromState(
 	ctx context.Context,
-	relayerID uint32,
-) (uint64, error) {
-	return storage.GetRelayerBalanceFromState(ctx, c.inner.ReadState, relayerID)
+	contractAddress ids.ID,
+	slot []byte,
+) ([]byte, error) {
+	return storage.GetBytesFromState(ctx, c.inner.ReadState, contractAddress, slot)
+}
+
+func (c *Controller) GetContractFromState(
+	ctx context.Context,
+	contractAddress ids.ID,
+) ([]byte, error) {
+	return storage.GetContractFromState(ctx, c.inner.ReadState, contractAddress)
 }
 
 func (c *Controller) GetAcceptedBlockWindow() int {
 	return c.config.GetAcceptedBlockWindow()
+}
+
+func (c *Controller) WarpSigner() warp.Signer {
+	return c.snowCtx.WarpSigner
+}
+
+func (c *Controller) MessageNetPort() string {
+	return c.config.MessageNetPort
 }

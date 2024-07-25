@@ -5,6 +5,10 @@ package e2e_test
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"os"
@@ -20,7 +24,9 @@ import (
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
+	hconsts "github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
+	"github.com/AnomalyFi/hypersdk/pubsub"
 	"github.com/AnomalyFi/hypersdk/rpc"
 	"github.com/AnomalyFi/nodekit-seq/actions"
 	"github.com/AnomalyFi/nodekit-seq/auth"
@@ -491,6 +497,106 @@ var _ = ginkgo.Describe("[Test]", func() {
 				require.NoError(err)
 				require.Equal(balance, sendAmount)
 			}
+		})
+	})
+
+	ginkgo.It("submit a sequencer msg", func() {
+		blk := new(chain.StatefulBlock)
+		results := make([]*chain.Result, 1)
+
+		ginkgo.By("issue SequencerMsg to the first node", func() {
+			parser, err := instances[0].tcli.Parser(context.TODO())
+			require.NoError(err)
+			chainID := 45200
+			chainIDBytes := make([]byte, 8)
+			binary.LittleEndian.PutUint64(chainIDBytes, uint64(chainID))
+			data := make([]byte, 200)
+			_, err = rand.Read(data)
+			require.NoError(err)
+
+			submit, tx, maxFee, err := instances[0].cli.GenerateTransaction(
+				context.Background(),
+				parser,
+				[]chain.Action{&actions.SequencerMsg{
+					FromAddress: rsender,
+					Data:        data,
+					ChainId:     chainIDBytes,
+					RelayerID:   0,
+				}},
+				factory,
+			)
+			require.NoError(err)
+			hutils.Outf("{{yellow}}generated sequencer message transaction{{/}}\n")
+			require.NoError(submit(context.Background()))
+			hutils.Outf("{{yellow}}submitted transaction{{/}}\n")
+			// listen block
+			wsCli, err := rpc.NewWebSocketClient(instances[0].uri, rpc.DefaultHandshakeTimeout, pubsub.MaxPendingMessages, pubsub.MaxReadMessageSize)
+			require.NoError(err)
+			err = wsCli.RegisterBlocks()
+			require.NoError(err)
+			found := false
+			for {
+				if found {
+					break
+				}
+
+				b, rs, _, _, err := wsCli.ListenBlock(context.Background(), parser)
+				require.NoError(err)
+				for _, t := range b.Txs {
+					if t.ID() == tx.ID() {
+						found = true
+						hutils.Outf("{{green}}inclusion block found{{/}}\n")
+						break
+					}
+				}
+
+				blk = b
+				results = rs
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+			success, _, err := instances[0].tcli.WaitForTransaction(ctx, tx.ID())
+			cancel()
+			require.NoError(err)
+			require.True(success)
+			hutils.Outf("{{yellow}}found transaction{{/}}\n")
+			hutils.Outf(
+				"{{yellow}}chainID=%d fee=%d sender=%s{{/}}\n",
+				chainID,
+				maxFee,
+				sender,
+			)
+
+			// check if NMT Proof is correct
+			nID := tx.Actions[0].NMTNamespace()
+			require.Equal(chainIDBytes, nID)
+			root := blk.NMTRoot
+			require.Equal(hconsts.NMTRootLen, len(root))
+			proof, ok := blk.NMTProofs[hex.EncodeToString(nID)]
+			require.True(ok)
+			hutils.Outf("{{green}}proof:{{/}}%+v \n", proof)
+			hutils.Outf("{{green}}proofs:{{/}}%+v \n", blk.NMTProofs)
+			actionData := make([]byte, 0)
+			// should only contain results of the sequencer msg tx
+			require.Equal(1, len(results))
+			// prepare action data to be verified
+			txID := tx.ID()
+			txResult := results[0]
+			actionData = append(actionData, nID...)
+			actionData = append(actionData, txID[:]...)
+			// append `result` of Action 0 of Tx 0
+			for k := 0; k < len(txResult.Outputs[0]); k++ {
+				actionData = append(actionData, txResult.Outputs[0][k][:]...)
+			}
+
+			hutils.Outf("{{green}}actionData:{{/}}%+v \n", hex.EncodeToString(actionData))
+
+			// leaves without prefix namespace ID
+			leaves := make([][]byte, 0, 1)
+			leaves = append(leaves, actionData)
+
+			verified := proof.VerifyNamespace(sha256.New(), nID, leaves, root)
+			require.True(verified)
 		})
 	})
 

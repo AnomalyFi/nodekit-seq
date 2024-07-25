@@ -11,6 +11,8 @@ const (
 	transferID    uint8 = 3
 	msgID         uint8 = 4
 	oracleID      uint8 = 5
+	deployID      uint8 = 6
+	transactID    uint8 = 7
 )
 
 const (
@@ -23,6 +25,10 @@ const (
 	MsgComputeUnits = 15
 
 	OracleComputeUnits = 10
+
+	// W.S.C Compute Units
+	DeployComputeUnits   uint64 = 10_000
+	TransactComputeUnits uint64 = 5_000
 
 	MaxSymbolSize   = 8
 	MaxMemoSize     = 256

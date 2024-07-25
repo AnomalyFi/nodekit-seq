@@ -87,7 +87,6 @@ func (j *JSONRPCServer) SubmitMsgTx(
 	reply *SubmitMsgTxReply,
 ) error {
 	ctx := context.Background()
-
 	chainId, err := ids.FromString(args.ChainId)
 	if err != nil {
 		return err
@@ -107,7 +106,6 @@ func (j *JSONRPCServer) SubmitMsgTx(
 
 	priv := ed25519.PrivateKey(privBytes)
 	factory := auth.NewED25519Factory(priv)
-
 	tpriv, err := ed25519.GeneratePrivateKey()
 	if err != nil {
 		return err
@@ -119,6 +117,7 @@ func (j *JSONRPCServer) SubmitMsgTx(
 		FromAddress: rsender,
 		Data:        args.Data,
 		ChainId:     args.SecondaryChainId,
+		RelayerID:   0,
 	}}
 	// TODO need to define action, authFactory
 	maxUnits, _, err := chain.EstimateUnits(parser.Rules(time.Now().UnixMilli()), actions, factory)
@@ -150,6 +149,90 @@ func (j *JSONRPCServer) SubmitMsgTx(
 	}
 
 	// TODO above is new!
+
+	msg, err := tx.Digest()
+	if err != nil {
+		// Should never occur because populated during unmarshal
+		return err
+	}
+	if err := tx.Auth.Verify(ctx, msg); err != nil {
+		return err
+	}
+	txID := tx.ID()
+	reply.TxID = txID.String()
+	return j.c.Submit(ctx, false, []*chain.Transaction{tx})[0]
+}
+
+type SubmitTransactTxArgs struct {
+	ChainId         string `json:"chain_id"`
+	NetworkID       uint32 `json:"network_id"`
+	FunctionName    string `json:"function_name"`
+	ContractAddress string `json:"contract_address"`
+	Input           []byte `json:"input"`
+	DynamicStateSlots [][]byte `json:"dynamic_state_slots"`
+}
+
+type SubmitTransactTxReply struct {
+	TxID string `json:"txId"`
+}
+
+func (j *JSONRPCServer) SubmitTransactTx(
+	req *http.Request,
+	args *SubmitTransactTxArgs,
+	reply *SubmitTransactTxReply,
+) error {
+	ctx := context.Background()
+	chainId, err := ids.FromString(args.ChainId)
+	if err != nil {
+		return err
+	}
+	unitPrices, err := j.c.UnitPrices(ctx)
+	if err != nil {
+		return err
+	}
+	parser := j.ServerParser(ctx, args.NetworkID, chainId)
+	privBytes, _ := codec.LoadHex(
+		"323b1d8f4eed5f0da9da93071b034f2dce9d2d22692c172f3cb252a64ddfafd01b057de320297c29ad0c1f589ea216869cf1938d88c9fbd70d6748323dbf2fa7", //nolint:lll
+		ed25519.PrivateKeyLen,
+	)
+	priv := ed25519.PrivateKey(privBytes)
+	factory := auth.NewED25519Factory(priv)
+	addr, err := ids.FromString(args.ContractAddress)
+	if err != nil {
+		return err
+	}
+	actions := []chain.Action{&actions.Transact{
+		FunctionName:    args.FunctionName,
+		ContractAddress: addr,
+		Input:           args.Input,
+		DynamicStateSlots: args.DynamicStateSlots,
+	}}
+
+	maxUnits, _, err := chain.EstimateUnits(parser.Rules(time.Now().UnixMilli()), actions, factory)
+	if err != nil {
+		return err
+	}
+	maxFee, err := fees.MulSum(unitPrices, maxUnits)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now().UnixMilli()
+	rules := parser.Rules(now)
+
+	base := &chain.Base{
+		Timestamp: utils.UnixRMilli(now, rules.GetValidityWindow()),
+		ChainID:   chainId,
+		MaxFee:    maxFee,
+	}
+
+	// Build transaction
+	actionRegistry, authRegistry := parser.Registry()
+	tx := chain.NewTx(base, actions)
+	tx, err = tx.Sign(factory, actionRegistry, authRegistry)
+	if err != nil {
+		return fmt.Errorf("%w: failed to sign transaction", err)
+	}
 
 	msg, err := tx.Digest()
 	if err != nil {
@@ -249,92 +332,48 @@ func (j *JSONRPCServer) Balance(req *http.Request, args *BalanceArgs, reply *Bal
 	return err
 }
 
-type RelayerBalanceArgs struct {
-	RelayerID uint32 `json:"relayer_id"`
+type StorageSlotArgs struct {
+	AddressStr string `json:"address"`
+	Slot       []byte `json:"slot"`
 }
 
-func (j *JSONRPCServer) RelayerBalance(req *http.Request, args *RelayerBalanceArgs, reply *BalanceReply) error {
-	ctx, span := j.c.Tracer().Start(req.Context(), "Server.RelayerBalance")
-	defer span.End()
+type StorageSlotReply struct {
+	Data []byte `json:"data"`
+}
 
-	balance, err := j.c.GetRelayerBalanceFromState(ctx, args.RelayerID)
+// Returns data bytes `Data` stored at the storage slot `Slot` for contract address `Address`
+func (j *JSONRPCServer) StorageSlot(req *http.Request, args *StorageSlotArgs, reply *StorageSlotReply) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.StorageSlot")
+	defer span.End()
+	address, err := ids.FromString(args.AddressStr)
 	if err != nil {
 		return err
 	}
-	reply.Amount = balance
+	data, err := j.c.GetDataOfStorageSlotFromState(ctx, address, args.Slot)
+	if err != nil {
+		return err
+	}
+	reply.Data = data
 	return err
 }
 
-type BlockInfo struct {
-	BlockId   string `json:"id"`
-	Timestamp int64  `json:"timestamp"`
-	L1Head    uint64 `json:"l1_head"`
-	Height    uint64 `json:"height"`
+func (j *JSONRPCServer) Contract(req *http.Request, args *TxArgs, reply *StorageSlotReply) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.Contract")
+	defer span.End()
+	address, err := ids.FromString(args.TxID.String())
+	if err != nil {
+		return err
+	}
+	data, err := j.c.GetContractFromState(ctx, address)
+	if err != nil {
+		return err
+	}
+	reply.Data = data
+	return err
 }
 
-type BlockHeadersResponse struct {
-	From   uint64      `json:"from"`
-	Blocks []BlockInfo `json:"blocks"`
-	Prev   BlockInfo   `json:"prev"`
-	Next   BlockInfo   `json:"next"`
-}
-
-// TODO need to fix this. Tech debt
-type TransactionResponse struct {
-	Txs     []*chain.Transaction `json:"txs"`
-	BlockId string               `json:"id"`
-}
-
-type SEQTransactionResponse struct {
-	Txs     []*types.SEQTransaction `json:"txs"`
-	BlockId string                  `json:"id"`
-}
-
-type SequencerWarpBlockResponse struct {
-	Blocks []SequencerWarpBlock `json:"blocks"`
-}
-
-type SequencerWarpBlock struct {
-	BlockId    string   `json:"id"`
-	Timestamp  int64    `json:"timestamp"`
-	L1Head     uint64   `json:"l1_head"`
-	Height     *big.Int `json:"height"`
-	BlockRoot  *big.Int `json:"root"`
-	ParentRoot *big.Int `json:"parent"`
-}
-
-type GetBlockHeadersByHeightArgs struct {
-	Height uint64 `json:"height"`
-	End    int64  `json:"end"`
-}
-
-type GetBlockHeadersIDArgs struct {
-	ID  string `json:"id"`
-	End int64  `json:"end"`
-}
-
-type GetBlockHeadersByStartArgs struct {
-	Start int64 `json:"start"`
-	End   int64 `json:"end"`
-}
-
-type GetBlockTransactionsArgs struct {
-	ID string `json:"block_id"`
-}
-
-type GetBlockCommitmentArgs struct {
-	First         uint64 `json:"first"`
-	CurrentHeight uint64 `json:"current_height"`
-	MaxBlocks     int    `json:"max_blocks"`
-}
-
-type GetBlockTransactionsByNamespaceArgs struct {
-	Height    uint64 `json:"height"`
-	Namespace string `json:"namespace"`
-}
-
-func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBlockHeadersByHeightArgs, reply *BlockHeadersResponse) error {
-	Prev := BlockInfo{}
+func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *types.GetBlockHeadersByHeightArgs, reply *types.BlockHeadersResponse) error {
+	Prev := types.BlockInfo{}
 
 	if args.Height > 1 {
 		prevBlkId, success := j.idsByHeight.Get(args.Height - 1)
@@ -344,9 +383,7 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 				return errors.New("could not find Block")
 			}
 
-			// tmp := blk.Tmstmp / 1000
-
-			Prev = BlockInfo{
+			Prev = types.BlockInfo{
 				BlockId:   prevBlkId.String(),
 				Timestamp: blk.Tmstmp,
 				L1Head:    uint64(blk.L1Head),
@@ -355,9 +392,8 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 		}
 	}
 
-	blocks := make([]BlockInfo, 0)
-
-	Next := BlockInfo{}
+	blocks := make([]types.BlockInfo, 0)
+	Next := types.BlockInfo{}
 
 	j.idsByHeight.Ascend(args.Height, func(heightKey uint64, id ids.ID) bool {
 		// Does heightKey match the given block's height for the id
@@ -368,7 +404,7 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 
 		// tmp := blk.Tmstmp / 1000
 		if blk.Tmstmp >= args.End {
-			Next = BlockInfo{
+			Next = types.BlockInfo{
 				BlockId:   id.String(),
 				Timestamp: blk.Tmstmp,
 				L1Head:    uint64(blk.L1Head),
@@ -377,7 +413,7 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 			return false
 		}
 
-		blocks = append(blocks, BlockInfo{
+		blocks = append(blocks, types.BlockInfo{
 			BlockId:   id.String(),
 			Timestamp: blk.Tmstmp,
 			L1Head:    uint64(blk.L1Head),
@@ -395,11 +431,9 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *GetBloc
 	return nil
 }
 
-func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeadersIDArgs, reply *BlockHeadersResponse) error {
+func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *types.GetBlockHeadersIDArgs, reply *types.BlockHeadersResponse) error {
 	// Parse query parameters
-
 	var firstBlock uint64
-	// var prevBlkId ids.ID
 
 	if args.ID != "" {
 		id, err := ids.FromString(args.ID)
@@ -426,7 +460,7 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 
 	// prevBlkId, success := j.idsByHeight.Get(firstBlock - 1)
 
-	Prev := BlockInfo{}
+	Prev := types.BlockInfo{}
 	if firstBlock > 1 {
 		// j.idsByHeight.Descend(firstBlock, func(heightKey uint64, id ids.ID) bool {
 
@@ -441,7 +475,7 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 				return errors.New("could not find Previous Block")
 			}
 
-			Prev = BlockInfo{
+			Prev = types.BlockInfo{
 				BlockId:   prevBlkId.String(),
 				Timestamp: blk.Tmstmp,
 				L1Head:    uint64(blk.L1Head),
@@ -452,9 +486,9 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 		}
 	}
 
-	blocks := make([]BlockInfo, 0)
+	blocks := make([]types.BlockInfo, 0)
 
-	Next := BlockInfo{}
+	Next := types.BlockInfo{}
 
 	j.idsByHeight.Ascend(firstBlock, func(heightKey uint64, id ids.ID) bool {
 		// Does heightKey match the given block's height for the id
@@ -466,7 +500,7 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 		if blk.Tmstmp >= args.End {
 			// tmp := blk.Tmstmp / 1000
 
-			Next = BlockInfo{
+			Next = types.BlockInfo{
 				BlockId:   id.String(),
 				Timestamp: blk.Tmstmp,
 				L1Head:    uint64(blk.L1Head),
@@ -478,7 +512,7 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 		if blk.Hght == heightKey {
 			// tmp := blk.Tmstmp / 1000
 
-			blocks = append(blocks, BlockInfo{
+			blocks = append(blocks, types.BlockInfo{
 				BlockId:   id.String(),
 				Timestamp: blk.Tmstmp,
 				L1Head:    uint64(blk.L1Head),
@@ -501,7 +535,7 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *GetBlockHeade
 	return nil
 }
 
-func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlockHeadersByStartArgs, reply *BlockHeadersResponse) error {
+func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *types.GetBlockHeadersByStartArgs, reply *types.BlockHeadersResponse) error {
 	// Parse query parameters
 
 	var firstBlock uint64
@@ -511,7 +545,7 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 		return false
 	})
 
-	Prev := BlockInfo{}
+	Prev := types.BlockInfo{}
 	if firstBlock > 1 {
 		prevBlkId, success := j.idsByHeight.Get(firstBlock - 1)
 
@@ -522,7 +556,7 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 			}
 
 			// tmp := blk.Tmstmp / 1000
-			Prev = BlockInfo{
+			Prev = types.BlockInfo{
 				BlockId:   prevBlkId.String(),
 				Timestamp: blk.Tmstmp,
 				L1Head:    uint64(blk.L1Head),
@@ -533,9 +567,9 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 		}
 	}
 
-	blocks := make([]BlockInfo, 0)
+	blocks := make([]types.BlockInfo, 0)
 
-	Next := BlockInfo{}
+	Next := types.BlockInfo{}
 
 	j.idsByHeight.Ascend(firstBlock, func(heightKey uint64, id ids.ID) bool {
 		// Does heightKey match the given block's height for the id
@@ -549,7 +583,7 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 
 			// tmp := blk.Tmstmp / 1000
 
-			Next = BlockInfo{
+			Next = types.BlockInfo{
 				BlockId:   id.String(),
 				Timestamp: blk.Tmstmp,
 				L1Head:    uint64(blk.L1Head),
@@ -560,7 +594,7 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 
 		// tmp := blk.Tmstmp / 1000
 
-		blocks = append(blocks, BlockInfo{
+		blocks = append(blocks, types.BlockInfo{
 			BlockId:   id.String(),
 			Timestamp: blk.Tmstmp,
 			L1Head:    uint64(blk.L1Head),
@@ -594,7 +628,7 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *GetBlock
 	return nil
 }
 
-func (j *JSONRPCServer) GetBlockTransactions(req *http.Request, args *GetBlockTransactionsArgs, reply *TransactionResponse) error {
+func (j *JSONRPCServer) GetBlockTransactions(req *http.Request, args *types.GetBlockTransactionsArgs, reply *types.TransactionResponse) error {
 	// Parse query parameters
 
 	// TODO either the firstBlock height is equal to height or use the hash to get it or if none of the above work then use the btree to get it
@@ -619,7 +653,7 @@ func (j *JSONRPCServer) GetBlockTransactions(req *http.Request, args *GetBlockTr
 	return nil
 }
 
-func (j *JSONRPCServer) GetCommitmentBlocks(req *http.Request, args *GetBlockCommitmentArgs, reply *SequencerWarpBlockResponse) error {
+func (j *JSONRPCServer) GetCommitmentBlocks(req *http.Request, args *types.GetBlockCommitmentArgs, reply *types.SequencerWarpBlockResponse) error {
 	// Parse query parameters
 
 	// TODO either the firstBlock height is equal to height or use the hash to get it or if none of the above work then use the btree to get it
@@ -627,7 +661,7 @@ func (j *JSONRPCServer) GetCommitmentBlocks(req *http.Request, args *GetBlockCom
 		return nil
 	}
 
-	blocks := make([]SequencerWarpBlock, 0)
+	blocks := make([]types.SequencerWarpBlock, 0)
 
 	j.idsByHeight.Ascend(args.First, func(heightKey uint64, id ids.ID) bool {
 		// Does heightKey match the given block's height for the id
@@ -658,7 +692,7 @@ func (j *JSONRPCServer) GetCommitmentBlocks(req *http.Request, args *GetBlockCom
 			parentRoot := types.NewU256().SetBytes(blockTemp.Prnt)
 			bigParentRoot := parentRoot.Int
 
-			blocks = append(blocks, SequencerWarpBlock{
+			blocks = append(blocks, types.SequencerWarpBlock{
 				BlockId:    id.String(),
 				Timestamp:  blockTemp.Tmstmp,
 				L1Head:     uint64(blockTemp.L1Head),
@@ -675,7 +709,7 @@ func (j *JSONRPCServer) GetCommitmentBlocks(req *http.Request, args *GetBlockCom
 			parentRoot := types.NewU256().SetBytes(blockTemp.Prnt)
 			bigParentRoot := parentRoot.Int
 
-			blocks = append(blocks, SequencerWarpBlock{
+			blocks = append(blocks, types.SequencerWarpBlock{
 				BlockId:    id.String(),
 				Timestamp:  blockTemp.Tmstmp,
 				L1Head:     uint64(blockTemp.L1Head),
@@ -693,7 +727,7 @@ func (j *JSONRPCServer) GetCommitmentBlocks(req *http.Request, args *GetBlockCom
 	return nil
 }
 
-func (j *JSONRPCServer) GetBlockTransactionsByNamespace(req *http.Request, args *GetBlockTransactionsByNamespaceArgs, reply *SEQTransactionResponse) error {
+func (j *JSONRPCServer) GetBlockTransactionsByNamespace(req *http.Request, args *types.GetBlockTransactionsByNamespaceArgs, reply *types.SEQTransactionResponse) error {
 	BlkId, success := j.idsByHeight.Get(args.Height)
 
 	if !success {
@@ -778,6 +812,15 @@ func (j *JSONRPCServer) AcceptBlock(blk *chain.StatelessBlock) error {
 	return nil
 }
 
+type MessageNetPortReply struct {
+	Port string `json:"port"`
+}
+
+func (j *JSONRPCServer) MessageNetPort(_ *http.Request, _ *struct{}, reply *MessageNetPortReply) (err error) {
+	reply.Port = j.c.MessageNetPort()
+	return nil
+}
+
 var _ chain.Parser = (*ServerParser)(nil)
 
 type ServerParser struct {
@@ -791,7 +834,7 @@ func (p *ServerParser) ChainID() ids.ID {
 }
 
 func (p *ServerParser) Rules(t int64) chain.Rules {
-	return p.genesis.Rules(t, p.networkID, p.chainID)
+	return p.genesis.Rules(t, p.networkID, p.chainID, []codec.Address{})
 }
 
 func (*ServerParser) Registry() (chain.ActionRegistry, chain.AuthRegistry) {
