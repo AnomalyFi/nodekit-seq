@@ -169,6 +169,7 @@ type SubmitTransactTxArgs struct {
 	FunctionName    string `json:"function_name"`
 	ContractAddress string `json:"contract_address"`
 	Input           []byte `json:"input"`
+	DynamicStateSlots [][]byte `json:"dynamic_state_slots"`
 }
 
 type SubmitTransactTxReply struct {
@@ -204,6 +205,7 @@ func (j *JSONRPCServer) SubmitTransactTx(
 		FunctionName:    args.FunctionName,
 		ContractAddress: addr,
 		Input:           args.Input,
+		DynamicStateSlots: args.DynamicStateSlots,
 	}}
 
 	maxUnits, _, err := chain.EstimateUnits(parser.Rules(time.Now().UnixMilli()), actions, factory)

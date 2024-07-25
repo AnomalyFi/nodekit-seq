@@ -283,6 +283,24 @@ func (cli *JSONRPCClient) SubmitMsgTx(ctx context.Context, chainID string, netwo
 	return resp.TxID, err
 }
 
+func (cli *JSONRPCClient) SubmitTransactTx(ctx context.Context, chainID string, networkID uint32, functionName string, contractAddress string, input []byte, dynamicStateSlots [][]byte) (string, error) {
+	resp := new(SubmitTransactTxReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"submitTransactTx",
+		&SubmitTransactTxArgs{
+			ChainId:           chainID,
+			NetworkID:         networkID,
+			FunctionName:      functionName,
+			ContractAddress:   contractAddress,
+			Input:             input,
+			DynamicStateSlots: dynamicStateSlots,
+		},
+		resp,
+	)
+	return resp.TxID, err
+}
+
 // TODO add more methods
 func (cli *JSONRPCClient) WaitForBalance(
 	ctx context.Context,
