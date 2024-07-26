@@ -2,6 +2,7 @@ package archiver
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/big"
 	"strings"
@@ -26,10 +27,11 @@ type ORMArchiver struct {
 
 type DBBlock struct {
 	gorm.Model
-	BlockId   string `gorm:"index"`
+	BlockId   string `gorm:"index;unique"`
 	Parent    string
 	Timestamp int64
-	Height    uint64 `gorm:"index"`
+	Height    uint64 `gorm:"index;unique"`
+	L1Head    int64
 
 	Bytes []byte
 }
@@ -49,13 +51,13 @@ func NewORMArchiverFromConfigBytes(configBytes []byte) (*ORMArchiver, error) {
 		return nil, err
 	}
 
+	log.Printf("using %s as archiver\n", conf.ArchiverType)
 	switch strings.ToLower(conf.ArchiverType) {
 	case "postgresql":
 		db, err := gorm.Open(postgres.New(postgres.Config{
 			DSN:                  conf.DSN,
 			PreferSimpleProtocol: true,
 		}))
-		log.Println("using postgresql as archiver")
 		if err != nil {
 			return nil, err
 		}
@@ -108,6 +110,7 @@ func (oa *ORMArchiver) InsertBlock(block *chain.StatelessBlock) error {
 	if err != nil {
 		return err
 	}
+	fmt.Printf("inserting block(%d): %s\n", block.Hght, blkID.String())
 
 	//TODO need to add L1Head and real Id
 	newBlock := DBBlock{
@@ -115,6 +118,7 @@ func (oa *ORMArchiver) InsertBlock(block *chain.StatelessBlock) error {
 		Parent:    block.Prnt.String(),
 		Timestamp: block.Tmstmp,
 		Height:    block.Hght,
+		L1Head:    block.L1Head,
 		Bytes:     blkBytes,
 	}
 
@@ -132,7 +136,7 @@ func (oa *ORMArchiver) InsertBlock(block *chain.StatelessBlock) error {
 }
 
 func (oa *ORMArchiver) GetBlock(dbBlock *DBBlock, blockParser chain.Parser) (*chain.StatefulBlock, *ids.ID, error) {
-	tx := oa.db.Last(dbBlock)
+	tx := oa.db.First(dbBlock)
 	if tx.Error != nil {
 		return nil, nil, tx.Error
 	}
@@ -150,6 +154,35 @@ func (oa *ORMArchiver) GetBlock(dbBlock *DBBlock, blockParser chain.Parser) (*ch
 	return blk, &id, nil
 }
 
+func (oa *ORMArchiver) GetBlockByID(id string, parser chain.Parser) (*chain.StatefulBlock, error) {
+	var dbBlock DBBlock
+	tx := oa.db.Where("block_id = ?", id).Find(&dbBlock)
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+	fmt.Printf("block height id: %s, wanted: %s\n", dbBlock.BlockId, id)
+
+	blk, err := chain.UnmarshalBlock(dbBlock.Bytes, parser)
+	if err != nil {
+		return nil, err
+	}
+	return blk, nil
+}
+
+func (oa *ORMArchiver) GetBlockByHeight(height uint64, parser chain.Parser) (*chain.StatefulBlock, error) {
+	var dbBlock DBBlock
+	tx := oa.db.Where("height = ?", height).Find(&dbBlock)
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
+	blk, err := chain.UnmarshalBlock(dbBlock.Bytes, parser)
+	if err != nil {
+		return nil, err
+	}
+	return blk, nil
+}
+
 func (oa *ORMArchiver) DeleteBlock(dbBlock *DBBlock) (bool, error) {
 	tx := oa.db.Begin()
 	if err := tx.Delete(&dbBlock).Error; err != nil {
@@ -162,249 +195,233 @@ func (oa *ORMArchiver) DeleteBlock(dbBlock *DBBlock) (bool, error) {
 	return true, nil
 }
 
-func (oa *ORMArchiver) GetByHeight(height uint64, end int64, blockParser chain.Parser, reply *types.BlockHeadersResponse) error {
-	Prev := types.BlockInfo{}
+func (oa *ORMArchiver) GetBlockHeadersByHeight(args *types.GetBlockHeadersByHeightArgs) (*types.BlockHeadersResponse, error) {
+	ret := new(types.BlockHeadersResponse)
 
-	if height > 1 {
-		dbBlock := DBBlock{
-			BlockId: "",
-			Height:  height - 1,
-		}
-		tx := oa.db.Last(dbBlock)
+	if args.Height > 1 {
+		var dbBlock DBBlock
+		tx := oa.db.Where("height = ?", args.Height-1).Find(&dbBlock)
 		if tx.Error != nil {
-			return tx.Error
+			return nil, tx.Error
 		}
 
-		blk, err := chain.UnmarshalBlock(dbBlock.Bytes, blockParser)
-		if err != nil {
-			return err
-		}
-
-		Prev = types.BlockInfo{
+		ret.Prev = types.BlockInfo{
 			BlockId:   dbBlock.BlockId,
-			Timestamp: blk.Tmstmp,
-			L1Head:    uint64(blk.L1Head),
-			Height:    blk.Hght,
+			Timestamp: dbBlock.Timestamp,
+			L1Head:    uint64(dbBlock.L1Head),
+			Height:    dbBlock.Height,
 		}
-
 	}
 
-	var blocks []types.BlockInfo
-
-	if err := oa.db.Raw("SELECT BlockId, Timestamp, L1Head, Height FROM DBBlock WHERE Height >= ? AND Timestamp < ? ORDER BY Height", height, end).Scan(&blocks).Error; err != nil {
-		return err
+	var blocks []DBBlock
+	res := oa.db.Where("height >= ? AND timestamp < ?", args.Height, args.End).Order("height").Find(&blocks)
+	if res.Error != nil {
+		return nil, res.Error
 	}
 
-	var Next types.BlockInfo
-
-	if err := oa.db.Raw("SELECT BlockId, Timestamp, L1Head, Height FROM DBBlock WHERE Timestamp >= ? ORDER BY Height LIMIT 1", end).Scan(&Next).Error; err != nil {
-		return err
+	ret.Blocks = make([]types.BlockInfo, 0, len(blocks))
+	for _, block := range blocks {
+		blkInfo := types.BlockInfo{
+			BlockId:   block.BlockId,
+			Timestamp: block.Timestamp,
+			L1Head:    uint64(block.L1Head),
+			Height:    block.Height,
+		}
+		if len(ret.Blocks) > 0 && blkInfo.Height-1 != ret.Blocks[len(ret.Blocks)-1].Height {
+			return nil, fmt.Errorf("queried blocks aren't consecutive, prev: %d, current: %d", blkInfo.Height, ret.Blocks[len(ret.Blocks)-1].Height)
+		}
+		ret.Blocks = append(ret.Blocks, blkInfo)
 	}
-
-	//TODO return prev, next, blocks
-
-	reply.From = height
-	reply.Blocks = blocks
-	reply.Prev = Prev
-	reply.Next = Next
-
-	return nil
-}
-
-func (oa *ORMArchiver) GetByID(args *types.GetBlockHeadersIDArgs, reply *types.BlockHeadersResponse, blockParser chain.Parser) error {
-
-	var firstBlock uint64
-
-	if args.ID != "" {
-		dbBlock := DBBlock{
-			BlockId: args.ID,
+	var next DBBlock
+	res = oa.db.Where("timestamp >= ?", args.End).Order("height").First(&next)
+	if res.Error == nil {
+		ret.Next = types.BlockInfo{
+			BlockId:   next.BlockId,
+			Timestamp: next.Timestamp,
+			L1Head:    uint64(next.L1Head),
+			Height:    next.Height,
 		}
-		tx := oa.db.Last(dbBlock)
-		if tx.Error != nil {
-			return tx.Error
-		}
-
-		blk, err := chain.UnmarshalBlock(dbBlock.Bytes, blockParser)
-		if err != nil {
-			return err
-		}
-
-		firstBlock = blk.Hght
-		// Handle hash parameter
-		// ...
 	} else {
-		firstBlock = 1
+		ret.Next = types.BlockInfo{}
 	}
 
-	Prev := types.BlockInfo{}
-	if firstBlock > 1 {
-		dbBlock := DBBlock{
-			BlockId: "",
-			Height:  firstBlock - 1,
-		}
-		tx := oa.db.Last(dbBlock)
-		if tx.Error != nil {
-			return tx.Error
-		}
-
-		blk, err := chain.UnmarshalBlock(dbBlock.Bytes, blockParser)
-		if err != nil {
-			return err
-		}
-
-		Prev = types.BlockInfo{
-			BlockId:   dbBlock.BlockId,
-			Timestamp: blk.Tmstmp,
-			L1Head:    uint64(blk.L1Head),
-			Height:    blk.Hght,
-		}
-	}
-
-	var blocks []types.BlockInfo
-
-	if err := oa.db.Raw("SELECT BlockId, Timestamp, L1Head, Height FROM DBBlock WHERE Height >= ? AND Timestamp < ? ORDER BY Height", firstBlock, args.End).Scan(&blocks).Error; err != nil {
-		return err
-	}
-
-	var Next types.BlockInfo
-
-	if err := oa.db.Raw("SELECT BlockId, Timestamp, L1Head, Height FROM DBBlock WHERE Timestamp >= ? ORDER BY Height LIMIT 1", args.End).Scan(&Next).Error; err != nil {
-		return err
-	}
-
-	reply.From = firstBlock
-	reply.Blocks = blocks
-	reply.Prev = Prev
-	reply.Next = Next
-
-	return nil
+	return ret, nil
 }
 
-func (oa *ORMArchiver) GetByStart(args *types.GetBlockHeadersByStartArgs, reply *types.BlockHeadersResponse, blockParser chain.Parser) error {
-
-	var firstBlock uint64
-
-	Prev := types.BlockInfo{}
-
-	//TODO check if this works
-	dbBlock := DBBlock{
-		Timestamp: args.Start,
+func (oa *ORMArchiver) GetBlockHeadersByID(args *types.GetBlockHeadersIDArgs) (*types.BlockHeadersResponse, error) {
+	ret := new(types.BlockHeadersResponse)
+	if args.ID == "" {
+		return nil, fmt.Errorf("ID in args is not specified")
 	}
-	tx := oa.db.Last(dbBlock)
+
+	var firstBlock DBBlock
+	tx := oa.db.Where("block_id", args.ID).Find(&firstBlock)
 	if tx.Error != nil {
-		return tx.Error
+		return nil, tx.Error
 	}
 
-	blk, err := chain.UnmarshalBlock(dbBlock.Bytes, blockParser)
-	if err != nil {
-		return err
-	}
+	firstBlockHeight := firstBlock.Height
 
-	firstBlock = blk.Hght
-
-	if firstBlock > 1 {
-		dbBlock := DBBlock{
-			BlockId: "",
-			Height:  firstBlock - 1,
-		}
-		tx := oa.db.Last(dbBlock)
+	ret.Prev = types.BlockInfo{}
+	if firstBlockHeight > 1 {
+		var prevBlock DBBlock
+		tx := oa.db.Where("height = ?", firstBlockHeight-1).Find(&prevBlock)
 		if tx.Error != nil {
-			return tx.Error
+			return nil, tx.Error
 		}
 
-		blk, err := chain.UnmarshalBlock(dbBlock.Bytes, blockParser)
-		if err != nil {
-			return err
-		}
-
-		Prev = types.BlockInfo{
-			BlockId:   dbBlock.BlockId,
-			Timestamp: blk.Tmstmp,
-			L1Head:    uint64(blk.L1Head),
-			Height:    blk.Hght,
+		ret.Prev = types.BlockInfo{
+			BlockId:   prevBlock.BlockId,
+			Timestamp: prevBlock.Timestamp,
+			L1Head:    uint64(prevBlock.L1Head),
+			Height:    prevBlock.Height,
 		}
 	}
 
-	var blocks []types.BlockInfo
-
-	if err := oa.db.Raw("SELECT BlockId, Timestamp, L1Head, Height FROM DBBlock WHERE Height >= ? AND Timestamp < ? ORDER BY Height", firstBlock, args.End).Scan(&blocks).Error; err != nil {
-		return err
+	var blocks []DBBlock
+	res := oa.db.Where("height >= ? AND timestamp < ?", firstBlockHeight, args.End).Order("height").Find(&blocks)
+	if res.Error != nil {
+		return nil, res.Error
 	}
 
-	var Next types.BlockInfo
-
-	if err := oa.db.Raw("SELECT BlockId, Timestamp, L1Head, Height FROM DBBlock WHERE Timestamp >= ? ORDER BY Height LIMIT 1", args.End).Scan(&Next).Error; err != nil {
-		return err
+	ret.Blocks = make([]types.BlockInfo, 0, len(blocks))
+	for _, block := range blocks {
+		blkInfo := types.BlockInfo{
+			BlockId:   block.BlockId,
+			Timestamp: block.Timestamp,
+			L1Head:    uint64(block.L1Head),
+			Height:    block.Height,
+		}
+		if len(ret.Blocks) > 0 && blkInfo.Height-1 != ret.Blocks[len(ret.Blocks)-1].Height {
+			return nil, fmt.Errorf("queried blocks aren't consecutive")
+		}
+		ret.Blocks = append(ret.Blocks, blkInfo)
+	}
+	var next DBBlock
+	res = oa.db.Where("timestamp >= ?", args.End).Order("height").First(&next)
+	if res.Error == nil {
+		ret.Next = types.BlockInfo{
+			BlockId:   next.BlockId,
+			Timestamp: next.Timestamp,
+			L1Head:    uint64(next.L1Head),
+			Height:    next.Height,
+		}
+	} else {
+		ret.Next = types.BlockInfo{}
 	}
 
-	reply.From = firstBlock
-	reply.Blocks = blocks
-	reply.Prev = Prev
-	reply.Next = Next
-
-	return nil
+	return ret, nil
 }
 
-func (oa *ORMArchiver) GetByCommitment(args *types.GetBlockCommitmentArgs, reply *types.SequencerWarpBlockResponse, blockParser chain.Parser) error {
+func (oa *ORMArchiver) GetBlockHeadersAfterTimestamp(args *types.GetBlockHeadersByStartArgs) (*types.BlockHeadersResponse, error) {
+	ret := new(types.BlockHeadersResponse)
+
+	var startBlock DBBlock
+	tx := oa.db.Where("timestamp >= ?", args.Start).Order("timestamp").First(&startBlock)
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
+	firstBlockHeight := startBlock.Height
+
+	ret.Prev = types.BlockInfo{}
+	if firstBlockHeight > 1 {
+		var prevBlock DBBlock
+		tx := oa.db.Where("height = ?", firstBlockHeight-1).Find(&prevBlock)
+		if tx.Error != nil {
+			return nil, tx.Error
+		}
+
+		ret.Prev = types.BlockInfo{
+			BlockId:   prevBlock.BlockId,
+			Timestamp: prevBlock.Timestamp,
+			L1Head:    uint64(prevBlock.L1Head),
+			Height:    prevBlock.Height,
+		}
+	}
+
+	var blocks []DBBlock
+	res := oa.db.Where("height >= ? AND timestamp < ?", firstBlockHeight, args.End).Order("height").Find(&blocks)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+
+	ret.Blocks = make([]types.BlockInfo, 0, len(blocks))
+	for _, block := range blocks {
+		blkInfo := types.BlockInfo{
+			BlockId:   block.BlockId,
+			Timestamp: block.Timestamp,
+			L1Head:    uint64(block.L1Head),
+			Height:    block.Height,
+		}
+		if len(ret.Blocks) > 0 && blkInfo.Height-1 != ret.Blocks[len(ret.Blocks)-1].Height {
+			return nil, fmt.Errorf("queried blocks aren't consecutive")
+		}
+		ret.Blocks = append(ret.Blocks, blkInfo)
+	}
+	var next DBBlock
+	res = oa.db.Where("timestamp >= ?", args.End).Order("height").First(&next)
+	if res.Error == nil {
+		ret.Next = types.BlockInfo{
+			BlockId:   next.BlockId,
+			Timestamp: next.Timestamp,
+			L1Head:    uint64(next.L1Head),
+			Height:    next.Height,
+		}
+	} else {
+		ret.Next = types.BlockInfo{}
+	}
+
+	return ret, nil
+}
+
+func (oa *ORMArchiver) GetCommitmentBlocks(args *types.GetBlockCommitmentArgs, parser chain.Parser) (*types.SequencerWarpBlockResponse, error) {
+	ret := new(types.SequencerWarpBlockResponse)
 
 	if args.First < 1 {
-		return nil
-	}
-	type BlockInfoWithParent struct {
-		BlockId   string `json:"id"`
-		Parent    string `json:"parent"`
-		Timestamp int64  `json:"timestamp"`
-		L1Head    uint64 `json:"l1_head"`
-		Height    uint64 `json:"height"`
+		return nil, fmt.Errorf("the first block height is smaller than 1")
 	}
 
-	//TODO check if this works
-
-	var blocks []BlockInfoWithParent
-
-	if err := oa.db.Raw("SELECT BlockId, Timestamp, L1Head, Height FROM DBBlock WHERE Height >= ? AND Height < ? ORDER BY Height LIMIT ?", args.First, args.CurrentHeight, args.MaxBlocks).Scan(&blocks).Error; err != nil {
-		return err
+	var blocks []DBBlock
+	res := oa.db.Where("height >= ? AND height <= ?", args.First, args.CurrentHeight).Order("height").Limit(args.MaxBlocks).Find(&blocks)
+	if res.Error != nil {
+		return nil, res.Error
 	}
 
-	blocksCommitment := make([]types.SequencerWarpBlock, 0)
-
-	for _, blk := range blocks {
-
-		id, err := ids.FromString(blk.BlockId)
+	ret.Blocks = make([]types.SequencerWarpBlock, 0)
+	for _, dbBlock := range blocks {
+		blk, err := chain.UnmarshalBlock(dbBlock.Bytes, parser)
 		if err != nil {
-			return err
+			return nil, err
+		}
+		blkID, err := blk.ID()
+		if err != nil {
+			return nil, err
 		}
 
 		header := &types.Header{
-			Height:    blk.Height,
-			Timestamp: uint64(blk.Timestamp),
-			L1Head:    uint64(blk.L1Head),
+			Height:    dbBlock.Height,
+			Timestamp: uint64(dbBlock.Timestamp),
+			L1Head:    uint64(dbBlock.L1Head),
 			TransactionsRoot: types.NmtRoot{
-				Root: id[:],
+				Root: blkID[:],
 			},
 		}
 
 		comm := header.Commit()
 
-		idParent, err := ids.FromString(blk.Parent)
-		if err != nil {
-			return err
-		}
-
-		parentRoot := types.NewU256().SetBytes(idParent)
+		parentRoot := types.NewU256().SetBytes(blk.Prnt)
 		bigParentRoot := parentRoot.Int
 
-		blocksCommitment = append(blocksCommitment, types.SequencerWarpBlock{
-			BlockId:    id.String(),
-			Timestamp:  blk.Timestamp,
-			L1Head:     uint64(blk.L1Head),
-			Height:     big.NewInt(int64(blk.Height)),
+		ret.Blocks = append(ret.Blocks, types.SequencerWarpBlock{
+			BlockId:    dbBlock.BlockId,
+			Timestamp:  dbBlock.Timestamp,
+			L1Head:     uint64(dbBlock.L1Head),
+			Height:     big.NewInt(int64(dbBlock.Height)),
 			BlockRoot:  &comm.Uint256().Int,
 			ParentRoot: &bigParentRoot,
 		})
-
 	}
 
-	reply.Blocks = blocksCommitment
-	return nil
+	return ret, nil
 }

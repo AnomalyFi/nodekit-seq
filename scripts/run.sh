@@ -32,12 +32,16 @@ ETHL1RPC=${ETHL1RPC:-http://localhost:8545}
 ETHL1WS=${ETHL1WS:-ws://localhost:8546}
 ADDRESS=${ADDRESS:-token1qrzvk4zlwj9zsacqgtufx7zvapd3quufqpxk5rsdd4633m4wz2fdj73w34s}
 if [[ ${MODE} != "run" ]]; then
-  LOG_LEVEL=DEBUG
+  LOG_LEVEL=INFO
   AGO_LOG_DISPLAY_LEVEL=INFO
   STATESYNC_DELAY=100000000 # 100ms
   MIN_BLOCK_GAP=250 #ms
   STORE_TXS=true
   UNLIMITED_USAGE=true
+  DB_PATH="/tmp/default.db"
+  if [ -f "$DB_PATH" ] ; then
+    rm "$DB_PATH"
+  fi
 fi
 
 WINDOW_TARGET_UNITS="40000000,450000,450000,450000,450000"
@@ -216,7 +220,7 @@ ACK_GINKGO_RC=true ginkgo build ./tests/e2e
 # download avalanche-network-runner
 # https://github.com/ava-labs/avalanche-network-runner
 ANR_REPO_PATH=github.com/ava-labs/avalanche-network-runner
-ANR_VERSION=v1.8.0
+ANR_VERSION=v1.8.1
 # version set
 go install -v "${ANR_REPO_PATH}"@"${ANR_VERSION}"
 

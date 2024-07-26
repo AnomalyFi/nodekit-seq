@@ -138,7 +138,7 @@ func (cli *JSONRPCClient) GetBlockHeadersByHeight(
 	// TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,
-		"getblockheadersbyheight",
+		"getBlockHeadersByHeight",
 		&GetBlockHeadersByHeightArgs{
 			Height: height,
 			End:    end,
@@ -157,7 +157,7 @@ func (cli *JSONRPCClient) GetBlockHeadersID(
 	// TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,
-		"getblockheadersid",
+		"getBlockHeadersID",
 		&GetBlockHeadersIDArgs{
 			ID:  id,
 			End: end,
@@ -189,12 +189,12 @@ func (cli *JSONRPCClient) GetBlockHeadersByStart(
 func (cli *JSONRPCClient) GetBlockTransactions(
 	ctx context.Context,
 	id string,
-) (*TransactionResponse, error) {
-	resp := new(TransactionResponse)
+) (*SEQTransactionResponse, error) {
+	resp := new(SEQTransactionResponse)
 	// TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,
-		"getblocktransactions",
+		"getBlockTransactions",
 		&GetBlockTransactionsArgs{
 			ID: id,
 		},
@@ -212,7 +212,7 @@ func (cli *JSONRPCClient) GetBlockTransactionsByNamespace(
 	// TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,
-		"getblocktransactions",
+		"getBlockTransactionsByNamespace",
 		&GetBlockTransactionsByNamespaceArgs{
 			Height:    height,
 			Namespace: namespace,
@@ -253,7 +253,7 @@ func (cli *JSONRPCClient) GetAcceptedBlockWindow(ctx context.Context) (int, erro
 	return *resp, err
 }
 
-func (cli *JSONRPCClient) SubmitMsgTx(ctx context.Context, chainID string, networkID uint32, secondaryChainID []byte, data []byte) (string, error) {
+func (cli *JSONRPCClient) SubmitMsgTx(ctx context.Context, chainID string, networkID uint32, secondaryChainID []byte, data [][]byte) (string, error) {
 	resp := new(SubmitMsgTxReply)
 	err := cli.requester.SendRequest(
 		ctx,
