@@ -45,7 +45,7 @@ _By default, this allocates all funds on the network to
 `token1rvzhmceq997zntgvravfagsks6w0ryud3rylh4cdvayry0dl97nsjzf3yp`. The private
 key for this address is
 `0x323b1d8f4eed5f0da9da93071b034f2dce9d2d22692c172f3cb252a64ddfafd01b057de320297c29ad0c1f589ea216869cf1938d88c9fbd70d6748323dbf2fa7`.
-For convenience, this key has is also stored at `demo.pk`._
+For convenience, this key is also stored at `demo.pk`._
 
 _If you don't need 2 Subnets for your testing, you can run `MODE="run-single"
 ./scripts/run.sh`._
@@ -205,7 +205,7 @@ docker-compose -f trace/zipkin.yml down
 ## Deploying to a Devnet
 _In the world of Avalanche, we refer to short-lived, test Subnets as Devnets._
 
-To programaticaly deploy `SeqVM` to a distributed cluster of nodes running on
+To programmatically deploy `SeqVM` to a distributed cluster of nodes running on
 your own custom network or on Fuji, check out this [doc](DEVNETS.md).
 
 ## Future Work
