@@ -360,7 +360,7 @@ func (it *SequencerNewBlockIterator) Next() bool {
 	if it.fail != nil {
 		return false
 	}
-	// If the iterator completed, deliver directly whatever's available
+	// If the iterator is completed, deliver directly whatever's available
 	if it.done {
 		select {
 		case log := <-it.logs:
