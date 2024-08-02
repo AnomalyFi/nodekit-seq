@@ -42,7 +42,7 @@ type hashable interface {
 	~string | ~int | ~uint | ~int64 | ~uint64 | ~int32 | ~uint32 | ~int16 | ~uint16 | ~int8 | ~uint8
 }
 
-// NewShardedMap returns a new sharded map with `numShards` shards. Each of the shards are pre-allocated
+// NewShardedMap returns a new sharded map with `numShards` shards. Each of the shards is pre-allocated
 // with a length of `size` / `numShards`. `size` is not the max size by any means, but just an estimation.
 // hashFn is used to hash the key.
 func NewShardedMap[K comparable, V any](size, numShards int, hashFn HashFn[K]) *ShardedMap[K, V] {
