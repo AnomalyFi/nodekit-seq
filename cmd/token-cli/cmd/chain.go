@@ -158,3 +158,24 @@ var testHeaderCmd = &cobra.Command{
 		return nil
 	},
 }
+
+var anchorsCmd = &cobra.Command{
+	Use: "anchors",
+	RunE: func(_ *cobra.Command, args []string) error {
+		ctx := context.Background()
+		_, _, _, _, _, tcli, err := handler.DefaultActor()
+		if err != nil {
+			return err
+		}
+		namespaces, infos, err := tcli.RegisteredAnchors(ctx)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("num of anchors registered: %d\n", len(namespaces))
+		for i := 0; i < len(namespaces); i++ {
+			fmt.Printf("%s: %+v\n", string(namespaces[i]), infos[i])
+		}
+
+		return nil
+	},
+}

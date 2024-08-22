@@ -7,6 +7,7 @@ package cmd
 import (
 	"context"
 
+	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/consts"
@@ -276,6 +277,45 @@ var mintAssetCmd = &cobra.Command{
 			Asset: assetID,
 			To:    recipient,
 			Value: amount,
+		}}, cli, scli, tcli, factory, true)
+		return err
+	},
+}
+
+var anchorCmd = &cobra.Command{
+	Use: "anchor",
+	RunE: func(*cobra.Command, []string) error {
+		ctx := context.Background()
+		_, _, factory, cli, scli, tcli, err := handler.DefaultActor()
+		if err != nil {
+			return err
+		}
+
+		namespaceStr, err := handler.Root().PromptString("namespace", 0, 8)
+		if err != nil {
+			return err
+		}
+		namespace := []byte(namespaceStr)
+		feeRecipient, err := handler.Root().PromptAddress("feeRecipient")
+		if err != nil {
+			return err
+		}
+
+		op, err := handler.Root().PromptChoice("(0)create (1)delete (2)update", 3)
+		if err != nil {
+			return err
+		}
+
+		info := hactions.AnchorInfo{
+			FeeRecipient: feeRecipient,
+			Namespace:    namespace,
+		}
+
+		// Generate transaction
+		_, err = sendAndWait(ctx, []chain.Action{&actions.AnchorRegister{
+			Namespace: namespace,
+			Info:      info,
+			OpCode:    op,
 		}}, cli, scli, tcli, factory, true)
 		return err
 	},

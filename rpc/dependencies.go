@@ -6,6 +6,7 @@ package rpc
 import (
 	"context"
 
+	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/fees"
@@ -24,6 +25,7 @@ type Controller interface {
 	GetTransaction(context.Context, ids.ID) (bool, int64, bool, fees.Dimensions, uint64, error)
 	GetAssetFromState(context.Context, ids.ID) (bool, []byte, uint8, []byte, uint64, codec.Address, error)
 	GetBalanceFromState(context.Context, codec.Address, ids.ID) (uint64, error)
+	GetRegisteredAnchorsFromState(context.Context) ([][]byte, []*hactions.AnchorInfo, error)
 	UnitPrices(ctx context.Context) (fees.Dimensions, error)
 	GetAcceptedBlockWindow() int
 	Submit(

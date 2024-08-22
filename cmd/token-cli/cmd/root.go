@@ -148,6 +148,7 @@ func init() {
 		chainInfoCmd,
 		watchChainCmd,
 		testHeaderCmd,
+		anchorsCmd,
 	)
 
 	// actions
@@ -160,6 +161,7 @@ func init() {
 		mintAssetCmd,
 
 		sequencerMsgCmd,
+		anchorCmd,
 	)
 
 	// spam
