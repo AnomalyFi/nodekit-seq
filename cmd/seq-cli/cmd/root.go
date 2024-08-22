@@ -140,12 +140,14 @@ func init() {
 		chainInfoCmd,
 		watchChainCmd,
 		testHeaderCmd,
+		anchorsCmd,
 	)
 
 	// actions
 	actionCmd.AddCommand(
 		transferCmd,
 		sequencerMsgCmd,
+		anchorCmd,
 	)
 
 	// spam

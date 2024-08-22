@@ -12,6 +12,7 @@ import (
 
 	"github.com/ava-labs/avalanchego/ids"
 
+	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/fees"
@@ -352,6 +353,24 @@ func (j *JSONRPCServer) GetBlockTransactionsByNamespace(req *http.Request, args 
 	reply.BlockID = blkID.String()
 
 	return nil
+}
+
+type RegisteredAnchorReply struct {
+	Namespaces [][]byte               `json:"namespaces"`
+	Anchors    []*hactions.AnchorInfo `json:"anchors"`
+}
+
+func (j *JSONRPCServer) RegisteredAnchors(req *http.Request, args *struct{}, reply *RegisteredAnchorReply) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.Balance")
+	defer span.End()
+
+	namespaces, infos, err := j.c.GetRegisteredAnchorsFromState(ctx)
+	if err != nil {
+		return err
+	}
+	reply.Namespaces = namespaces
+	reply.Anchors = infos
+	return err
 }
 
 var _ chain.Parser = (*ServerParser)(nil)

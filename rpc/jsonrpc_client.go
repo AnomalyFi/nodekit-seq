@@ -9,6 +9,7 @@ import (
 
 	"github.com/ava-labs/avalanchego/ids"
 
+	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/requester"
 	"github.com/AnomalyFi/hypersdk/rpc"
@@ -263,6 +264,17 @@ func (cli *JSONRPCClient) WaitForTransaction(ctx context.Context, txID ids.ID) (
 		return false, 0, err
 	}
 	return success, fee, nil
+}
+
+func (cli *JSONRPCClient) RegisteredAnchors(ctx context.Context) ([][]byte, []*hactions.AnchorInfo, error) {
+	resp := new(RegisteredAnchorReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"registeredAnchors",
+		nil,
+		resp,
+	)
+	return resp.Namespaces, resp.Anchors, err
 }
 
 var _ chain.Parser = (*Parser)(nil)
