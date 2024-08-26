@@ -158,3 +158,29 @@ var anchorsCmd = &cobra.Command{
 		return nil
 	},
 }
+
+var replaceAnchorCmd = &cobra.Command{
+	Use: "replace-anchor",
+	RunE: func(_ *cobra.Command, args []string) error {
+		anchorURL, err := handler.Root().PromptString("anchor addr", 0, 500)
+		if err != nil {
+			return err
+		}
+
+		ctx := context.Background()
+		_, _, _, hcli, _, _, err := handler.DefaultActor()
+		if err != nil {
+			return err
+		}
+		replaced, err := hcli.ReplaceAnchor(ctx, anchorURL)
+		if err != nil {
+			return err
+		}
+		if replaced {
+			fmt.Printf("replaced anchor to %s", anchorURL)
+		} else {
+			fmt.Println("unable to replace anchor")
+		}
+		return nil
+	},
+}

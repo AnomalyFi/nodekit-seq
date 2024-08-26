@@ -141,6 +141,7 @@ func init() {
 		watchChainCmd,
 		testHeaderCmd,
 		anchorsCmd,
+		replaceAnchorCmd,
 	)
 
 	// actions
