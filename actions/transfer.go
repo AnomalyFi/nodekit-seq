@@ -45,10 +45,6 @@ func (*Transfer) StateKeysMaxChunks() []uint16 {
 	return []uint16{storage.BalanceChunks, storage.BalanceChunks}
 }
 
-func (*Transfer) OutputsWarpMessage() bool {
-	return false
-}
-
 func (t *Transfer) Execute(
 	ctx context.Context,
 	_ chain.Rules,
@@ -73,7 +69,7 @@ func (t *Transfer) Execute(
 	return nil, nil
 }
 
-func (*Transfer) ComputeUnits(chain.Rules) uint64 {
+func (*Transfer) ComputeUnits(codec.Address, chain.Rules) uint64 {
 	return TransferComputeUnits
 }
 
@@ -104,4 +100,8 @@ func (*Transfer) ValidRange(chain.Rules) (int64, int64) {
 
 func (*Transfer) NMTNamespace() []byte {
 	return DefaultNMTNamespace
+}
+
+func (*Transfer) UseFeeMarket() bool {
+	return false
 }

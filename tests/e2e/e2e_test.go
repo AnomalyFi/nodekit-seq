@@ -77,6 +77,8 @@ var (
 	trackSubnetsOpt runner_sdk.OpOption
 
 	numValidators uint
+
+	priorityFee uint64 = 0
 )
 
 func init() {
@@ -451,6 +453,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 					Value: sendAmount,
 				}},
 				factory,
+				priorityFee,
 			)
 			require.NoError(err)
 			hutils.Outf("{{yellow}}generated transaction{{/}}\n")
@@ -525,6 +528,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 					RelayerID:   0,
 				}},
 				factory,
+				priorityFee,
 			)
 			require.NoError(err)
 			hutils.Outf("{{yellow}}generated sequencer message transaction{{/}}\n")
@@ -1014,6 +1018,7 @@ func generateBlocks(
 				Value: 1,
 			}},
 			factory,
+			priorityFee,
 		)
 		if failOnError {
 			require.NoError(err)
@@ -1083,6 +1088,7 @@ func acceptTransaction(cli *rpc.JSONRPCClient, tcli *trpc.JSONRPCClient) {
 				Value: sendAmount,
 			}},
 			factory,
+			priorityFee,
 		)
 		require.NoError(err)
 		hutils.Outf("{{yellow}}generated transaction{{/}} prices: %+v maxFee: %d\n", unitPrices, maxFee)

@@ -58,6 +58,7 @@ const (
 	incomingWarpPrefix = 0x7
 	outgoingWarpPrefix = 0x8
 	blockPrefix        = 0x9
+	feeMarketPrefix    = 0xa
 )
 
 const (
@@ -73,6 +74,7 @@ var (
 	heightKey    = []byte{heightPrefix}
 	timestampKey = []byte{timestampPrefix}
 	feeKey       = []byte{feePrefix}
+	feeMarketKey = []byte{feeMarketPrefix}
 
 	balanceKeyPool = sync.Pool{
 		New: func() any {
@@ -496,4 +498,8 @@ func TimestampKey() (k []byte) {
 
 func FeeKey() (k []byte) {
 	return feeKey
+}
+
+func FeeMarketKey() (k []byte) {
+	return feeMarketKey
 }

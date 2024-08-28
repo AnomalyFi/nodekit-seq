@@ -108,6 +108,10 @@ func (*ED25519AuthEngine) GetBatchVerifier(cores int, count int) chain.AuthBatch
 	}
 }
 
+func (e *ED25519Factory) Address() codec.Address {
+	return NewED25519Address(e.priv.PublicKey())
+}
+
 func (*ED25519AuthEngine) Cache(chain.Auth) {
 	// TODO: add support for caching expanded public key to make batch verification faster
 }

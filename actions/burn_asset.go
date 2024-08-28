@@ -76,7 +76,7 @@ func (b *BurnAsset) Execute(
 	return nil, nil
 }
 
-func (*BurnAsset) ComputeUnits(chain.Rules) uint64 {
+func (*BurnAsset) ComputeUnits(codec.Address, chain.Rules) uint64 {
 	return BurnComputeUnits
 }
 
@@ -103,4 +103,8 @@ func (*BurnAsset) ValidRange(chain.Rules) (int64, int64) {
 
 func (*BurnAsset) NMTNamespace() []byte {
 	return DefaultNMTNamespace
+}
+
+func (*BurnAsset) UseFeeMarket() bool {
+	return false
 }

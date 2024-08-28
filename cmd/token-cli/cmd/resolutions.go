@@ -23,13 +23,13 @@ import (
 // sendAndWait may not be used concurrently
 func sendAndWait(
 	ctx context.Context, action []chain.Action, cli *rpc.JSONRPCClient,
-	scli *rpc.WebSocketClient, tcli *trpc.JSONRPCClient, factory chain.AuthFactory, printStatus bool,
+	scli *rpc.WebSocketClient, tcli *trpc.JSONRPCClient, factory chain.AuthFactory, priorityFee uint64, printStatus bool,
 ) (ids.ID, error) {
 	parser, err := tcli.Parser(ctx)
 	if err != nil {
 		return ids.Empty, err
 	}
-	_, tx, _, err := cli.GenerateTransaction(ctx, parser, action, factory)
+	_, tx, _, err := cli.GenerateTransaction(ctx, parser, action, factory, priorityFee)
 	if err != nil {
 		return ids.Empty, err
 	}

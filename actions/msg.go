@@ -46,7 +46,7 @@ func (t *SequencerMsg) Execute(
 	return nil, nil
 }
 
-func (*SequencerMsg) ComputeUnits(chain.Rules) uint64 {
+func (*SequencerMsg) ComputeUnits(codec.Address, chain.Rules) uint64 {
 	return MsgComputeUnits
 }
 
@@ -77,6 +77,10 @@ func (*SequencerMsg) ValidRange(chain.Rules) (int64, int64) {
 	return -1, -1
 }
 
-func (t *SequencerMsg) NMTNamespace() []byte {
-	return t.ChainId
+func (s *SequencerMsg) NMTNamespace() []byte {
+	return s.ChainId
+}
+
+func (*SequencerMsg) UseFeeMarket() bool {
+	return true
 }

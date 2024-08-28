@@ -36,10 +36,6 @@ func (*CreateAsset) StateKeysMaxChunks() []uint16 {
 	return []uint16{storage.AssetChunks}
 }
 
-func (*CreateAsset) OutputsWarpMessage() bool {
-	return false
-}
-
 func (c *CreateAsset) Execute(
 	ctx context.Context,
 	_ chain.Rules,
@@ -71,7 +67,7 @@ func (c *CreateAsset) Execute(
 	return nil, nil
 }
 
-func (*CreateAsset) ComputeUnits(chain.Rules) uint64 {
+func (*CreateAsset) ComputeUnits(codec.Address, chain.Rules) uint64 {
 	return CreateAssetComputeUnits
 }
 
@@ -101,4 +97,8 @@ func (*CreateAsset) ValidRange(chain.Rules) (int64, int64) {
 
 func (*CreateAsset) NMTNamespace() []byte {
 	return DefaultNMTNamespace
+}
+
+func (*CreateAsset) UseFeeMarket() bool {
+	return false
 }

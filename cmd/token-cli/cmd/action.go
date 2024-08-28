@@ -19,10 +19,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	dummyBlockAgeThreshold = 25
-	dummyHeightThreshold   = 3
-)
+var priorityFee uint64 = 0
 
 var actionCmd = &cobra.Command{
 	Use: "action",
@@ -80,7 +77,7 @@ var fundFaucetCmd = &cobra.Command{
 			To:    addr,
 			Asset: ids.Empty,
 			Value: amount,
-		}}, cli, scli, tcli, factory, true); err != nil {
+		}}, cli, scli, tcli, factory, priorityFee, true); err != nil {
 			return err
 		}
 		hutils.Outf("{{green}}funded faucet:{{/}} %s\n", faucetAddress)
@@ -130,7 +127,7 @@ var transferCmd = &cobra.Command{
 			To:    recipient,
 			Asset: assetID,
 			Value: amount,
-		}}, cli, scli, tcli, factory, true)
+		}}, cli, scli, tcli, factory, priorityFee, true)
 		return err
 	},
 }
@@ -173,7 +170,7 @@ var createAssetCmd = &cobra.Command{
 			Symbol:   []byte(symbol),
 			Decimals: uint8(decimals), // already constrain above to prevent overflow
 			Metadata: []byte(metadata),
-		}}, cli, scli, tcli, factory, true)
+		}}, cli, scli, tcli, factory, priorityFee, true)
 		if err != nil {
 			return err
 		}
@@ -209,7 +206,7 @@ var sequencerMsgCmd = &cobra.Command{
 			Data:        []byte{0x00, 0x01, 0x02},
 			ChainId:     []byte("nkit"),
 			FromAddress: recipient,
-		}}, cli, scli, tcli, factory, true)
+		}}, cli, scli, tcli, factory, priorityFee, true)
 
 		hutils.Outf("{{green}}txId:{{/}} %s\n", txId)
 
@@ -276,7 +273,7 @@ var mintAssetCmd = &cobra.Command{
 			Asset: assetID,
 			To:    recipient,
 			Value: amount,
-		}}, cli, scli, tcli, factory, true)
+		}}, cli, scli, tcli, factory, priorityFee, true)
 		return err
 	},
 }

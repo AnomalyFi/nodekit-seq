@@ -19,7 +19,6 @@ import (
 	"github.com/ava-labs/avalanchego/database/memdb"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/snow"
-	"github.com/ava-labs/avalanchego/snow/choices"
 	"github.com/ava-labs/avalanchego/snow/consensus/snowman"
 	"github.com/ava-labs/avalanchego/snow/engine/common"
 	"github.com/ava-labs/avalanchego/snow/validators"
@@ -95,6 +94,8 @@ var (
 
 	networkID uint32
 	gen       *genesis.Genesis
+
+	priorityFee uint64 = 0
 )
 
 func init() {
@@ -226,7 +227,7 @@ var _ = ginkgo.BeforeSuite(func() {
 			NodeID:         nodeID,
 			Log:            l,
 			ChainDataDir:   dname,
-			Metrics:        metrics.NewOptionalGatherer(),
+			Metrics:        metrics.NewPrefixGatherer(),
 			PublicKey:      bls.PublicFromSecretKey(sk),
 			ValidatorState: &validators.TestState{},
 		}
@@ -376,6 +377,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 					Value: 100_000, // must be more than StateLockup
 				}},
 				factory,
+				priorityFee,
 			)
 			transferTxRoot = transferTx
 			require.NoError(err)
@@ -444,13 +446,11 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 			require.NoError(err)
 
 			require.NoError(blk.Verify(ctx))
-			require.Equal(blk.Status(), choices.Processing)
 
 			err = instances[1].vm.SetPreference(ctx, blk.ID())
 			require.NoError(err)
 
 			require.NoError(blk.Accept(ctx))
-			require.Equal(blk.Status(), choices.Accepted)
 			blocks = append(blocks, blk)
 
 			lastAccepted, err := instances[1].vm.LastAccepted(ctx)
@@ -486,6 +486,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 					Value: 101,
 				}},
 				factory,
+				priorityFee,
 			)
 			require.NoError(err)
 			require.NoError(submit(context.Background()))
@@ -515,6 +516,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 					Value: 200,
 				}},
 				factory,
+				priorityFee,
 			)
 			require.NoError(err)
 			require.NoError(submit(context.Background()))
@@ -529,6 +531,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 					Value: 201,
 				}},
 				factory,
+				priorityFee,
 			)
 			require.NoError(err)
 			require.NoError(submit(context.Background()))
@@ -558,6 +561,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 					Value: 203,
 				}},
 				factory,
+				priorityFee,
 			)
 			require.NoError(err)
 			require.NoError(submit(context.Background()))
@@ -656,6 +660,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 			parser,
 			transfer,
 			factory,
+			priorityFee,
 		)
 		require.NoError(err)
 		require.NoError(submit(context.Background()))
@@ -703,6 +708,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 			parser,
 			transfer,
 			factory,
+			priorityFee,
 		)
 		require.NoError(err)
 
@@ -750,6 +756,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Memo:  []byte("hello"),
 			}},
 			factory,
+			priorityFee,
 		)
 		require.NoError(err)
 		require.NoError(submit(context.Background()))
@@ -808,6 +815,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Value: 10,
 			}},
 			factory,
+			priorityFee,
 		)
 		require.NoError(err)
 		require.NoError(submit(context.Background()))
@@ -926,6 +934,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Metadata: asset1,
 			}},
 			factory,
+			priorityFee,
 		)
 		require.NoError(err)
 		require.NoError(submit(context.Background()))
@@ -962,6 +971,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Value: 15,
 			}},
 			factory,
+			priorityFee,
 		)
 		require.NoError(err)
 		require.NoError(submit(context.Background()))
@@ -1002,6 +1012,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Value: 10,
 			}},
 			factory2,
+			priorityFee,
 		)
 		require.NoError(err)
 		require.NoError(submit(context.Background()))
@@ -1035,6 +1046,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Value: 5,
 			}},
 			factory2,
+			priorityFee,
 		)
 		require.NoError(err)
 		require.NoError(submit(context.Background()))
@@ -1072,6 +1084,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Value: 10,
 			}},
 			factory,
+			priorityFee,
 		)
 		require.NoError(err)
 		require.NoError(submit(context.Background()))
@@ -1136,6 +1149,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Value: consts.MaxUint64,
 			}},
 			factory,
+			priorityFee,
 		)
 		require.NoError(err)
 		require.NoError(submit(context.Background()))
@@ -1207,6 +1221,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Metadata: asset2,
 			}},
 			factory,
+			priorityFee,
 		)
 		require.NoError(err)
 		require.NoError(submit(context.Background()))
@@ -1226,6 +1241,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Value: 10,
 			}},
 			factory,
+			priorityFee,
 		)
 		require.NoError(err)
 		require.NoError(submit(context.Background()))
@@ -1252,6 +1268,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Metadata: asset3,
 			}},
 			factory2,
+			priorityFee,
 		)
 		require.NoError(err)
 		require.NoError(submit(context.Background()))
@@ -1271,6 +1288,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				Value: 10,
 			}},
 			factory2,
+			priorityFee,
 		)
 		require.NoError(err)
 		require.NoError(submit(context.Background()))
@@ -1304,6 +1322,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				},
 			},
 			factory,
+			priorityFee,
 		)
 		require.NoError(err)
 		require.NoError(submit(context.Background()))
@@ -1353,6 +1372,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				},
 			},
 			factory,
+			priorityFee,
 		)
 		require.NoError(err)
 		require.NoError(submit(context.Background()))
@@ -1414,6 +1434,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 				},
 			},
 			factory,
+			priorityFee,
 		)
 		require.NoError(err)
 		require.NoError(submit(context.Background()))
@@ -1458,14 +1479,12 @@ func expectBlk(i instance) func(bool) []*chain.Result {
 	require.NotNil(blk)
 
 	require.NoError(blk.Verify(ctx))
-	require.Equal(blk.Status(), choices.Processing)
 
 	err = i.vm.SetPreference(ctx, blk.ID())
 	require.NoError(err)
 
 	return func(add bool) []*chain.Result {
 		require.NoError(blk.Accept(ctx))
-		require.Equal(blk.Status(), choices.Accepted)
 
 		if add {
 			blocks = append(blocks, blk)

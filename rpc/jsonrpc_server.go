@@ -57,6 +57,7 @@ type SubmitMsgTxReply struct {
 	TxID string `json:"txId"`
 }
 
+// TODO: Fix fee estimation.
 // TODO need to update this to be compatible with new signature standards for codec.address
 func (j *JSONRPCServer) SubmitMsgTx(
 	req *http.Request,
@@ -104,7 +105,7 @@ func (j *JSONRPCServer) SubmitMsgTx(
 		acts = append(acts, &act)
 	}
 	// TODO need to define action, authFactory
-	maxUnits, err := chain.EstimateUnits(parser.Rules(time.Now().UnixMilli()), acts, factory)
+	maxUnits, _, err := chain.EstimateUnits(parser.Rules(time.Now().UnixMilli()), acts, factory)
 	if err != nil {
 		return err
 	}
