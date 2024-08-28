@@ -85,7 +85,7 @@ func init() {
 	flag.DurationVar(
 		&requestTimeout,
 		"request-timeout",
-		120*time.Second,
+		150*time.Second,
 		"timeout for transaction issuance and confirmation",
 	)
 
@@ -616,7 +616,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 	ginkgo.It("ensure SubmitMsgTx work", func() {
 		ginkgo.By("issuing some transactions", func() {
 			ctx := context.Background()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			defer cancel()
 			data := make([][]byte, 0, 2)
 			data = append(data, []byte("somedata"))

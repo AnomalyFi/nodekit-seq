@@ -110,7 +110,7 @@ func (oa *ORMArchiver) InsertBlock(block *chain.StatelessBlock) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("inserting block(%d): %s\n", block.Hght, blkID.String())
+	log.Println("inserting block(%d): %s", block.Hght, blkID.String())
 
 	//TODO need to add L1Head and real Id
 	newBlock := DBBlock{
@@ -160,7 +160,7 @@ func (oa *ORMArchiver) GetBlockByID(id string, parser chain.Parser) (*chain.Stat
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
-	fmt.Printf("block height id: %s, wanted: %s\n", dbBlock.BlockId, id)
+	log.Println("block height id: %s, wanted: %s", dbBlock.BlockId, id)
 
 	blk, err := chain.UnmarshalBlock(dbBlock.Bytes, parser)
 	if err != nil {

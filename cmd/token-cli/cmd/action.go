@@ -12,10 +12,8 @@ import (
 	"github.com/AnomalyFi/hypersdk/consts"
 	hutils "github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/actions"
-	frpc "github.com/AnomalyFi/nodekit-seq/cmd/token-faucet/rpc"
 	tconsts "github.com/AnomalyFi/nodekit-seq/consts"
 
-	"github.com/ava-labs/avalanchego/ids"
 	"github.com/spf13/cobra"
 )
 
@@ -25,63 +23,6 @@ var actionCmd = &cobra.Command{
 	Use: "action",
 	RunE: func(*cobra.Command, []string) error {
 		return ErrMissingSubcommand
-	},
-}
-
-var fundFaucetCmd = &cobra.Command{
-	Use: "fund-faucet",
-	RunE: func(*cobra.Command, []string) error {
-		ctx := context.Background()
-
-		// Get faucet
-		faucetURI, err := handler.Root().PromptString("faucet URI", 0, consts.MaxInt)
-		if err != nil {
-			return err
-		}
-		fcli := frpc.NewJSONRPCClient(faucetURI)
-		faucetAddress, err := fcli.FaucetAddress(ctx)
-		if err != nil {
-			return err
-		}
-
-		// Get clients
-		_, priv, factory, cli, scli, tcli, err := handler.DefaultActor()
-		if err != nil {
-			return err
-		}
-
-		// Get balance
-		_, decimals, balance, _, err := handler.GetAssetInfo(ctx, tcli, priv.Address, ids.Empty, true)
-		if balance == 0 || err != nil {
-			return err
-		}
-
-		// Select amount
-		amount, err := handler.Root().PromptAmount("amount", decimals, balance, nil)
-		if err != nil {
-			return err
-		}
-
-		// Confirm action
-		cont, err := handler.Root().PromptContinue()
-		if !cont || err != nil {
-			return err
-		}
-
-		// Generate transaction
-		addr, err := codec.ParseAddressBech32(tconsts.HRP, faucetAddress)
-		if err != nil {
-			return err
-		}
-		if _, err = sendAndWait(ctx, []chain.Action{&actions.Transfer{
-			To:    addr,
-			Asset: ids.Empty,
-			Value: amount,
-		}}, cli, scli, tcli, factory, priorityFee, true); err != nil {
-			return err
-		}
-		hutils.Outf("{{green}}funded faucet:{{/}} %s\n", faucetAddress)
-		return nil
 	},
 }
 
