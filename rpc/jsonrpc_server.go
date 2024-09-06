@@ -72,7 +72,6 @@ func (j *JSONRPCServer) Tx(req *http.Request, args *TxArgs, reply *TxReply) erro
 
 type BalanceArgs struct {
 	Address string `json:"address"`
-	Asset   ids.ID `json:"asset"`
 }
 
 type BalanceReply struct {
@@ -87,7 +86,7 @@ func (j *JSONRPCServer) Balance(req *http.Request, args *BalanceArgs, reply *Bal
 	if err != nil {
 		return err
 	}
-	balance, err := j.c.GetBalanceFromState(ctx, addr, args.Asset)
+	balance, err := j.c.GetBalanceFromState(ctx, addr)
 	if err != nil {
 		return err
 	}
@@ -96,6 +95,8 @@ func (j *JSONRPCServer) Balance(req *http.Request, args *BalanceArgs, reply *Bal
 }
 
 func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *types.GetBlockHeadersByHeightArgs, reply *types.BlockHeadersResponse) error {
+	_, span := j.c.Tracer().Start(req.Context(), "Server.GetBlockHeadersByHeight")
+	defer span.End()
 	headers, err := j.c.Archiver().GetBlockHeadersByHeight(args)
 	if err != nil {
 		return err
@@ -110,6 +111,9 @@ func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *types.G
 }
 
 func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *types.GetBlockHeadersIDArgs, reply *types.BlockHeadersResponse) error {
+	_, span := j.c.Tracer().Start(req.Context(), "Server.GetBlockHeadersID")
+	defer span.End()
+
 	headers, err := j.c.Archiver().GetBlockHeadersByID(args)
 	if err != nil {
 		return err
@@ -124,6 +128,8 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *types.GetBloc
 }
 
 func (j *JSONRPCServer) GetBlockHeadersByStartTimeStamp(req *http.Request, args *types.GetBlockHeadersByStartTimeStampArgs, reply *types.BlockHeadersResponse) error {
+	_, span := j.c.Tracer().Start(req.Context(), "Server.GetBlockHeadersByStartTimeStamp")
+	defer span.End()
 	// Parse query parameters
 	headers, err := j.c.Archiver().GetBlockHeadersAfterTimestamp(args)
 	if err != nil {
@@ -139,6 +145,8 @@ func (j *JSONRPCServer) GetBlockHeadersByStartTimeStamp(req *http.Request, args 
 }
 
 func (j *JSONRPCServer) GetBlockTransactions(req *http.Request, args *types.GetBlockTransactionsArgs, reply *types.SEQTransactionResponse) error {
+	_, span := j.c.Tracer().Start(req.Context(), "Server.GetBlockTransactions")
+	defer span.End()
 	// Parse query parameters
 
 	// TODO either the firstBlock height is equal to height or use the hash to get it or if none of the above work then use the btree to get it
@@ -156,25 +164,26 @@ func (j *JSONRPCServer) GetBlockTransactions(req *http.Request, args *types.GetB
 	// only append sequencer msg actions
 	for _, tx := range blk.Txs {
 		for k, action := range tx.Actions {
-			switch action := action.(type) {
-			case *actions.SequencerMsg:
+			if action.GetTypeID() == actions.MsgID {
 				ns := hex.EncodeToString(action.NMTNamespace())
 				reply.Txs = append(reply.Txs, &types.SEQTransaction{
 					Namespace:   ns,
-					Transaction: action.Data, // eth format tx binary
+					Transaction: action.(*actions.SequencerMsg).Data, // eth format tx binary
 					Index:       uint64(k),
-					Tx_id:       tx.ID().String(),
+					TxID:        tx.ID().String(),
 				})
 			}
 		}
 	}
 
-	reply.BlockId = args.ID
+	reply.BlockID = args.ID
 
 	return nil
 }
 
 func (j *JSONRPCServer) GetCommitmentBlocks(req *http.Request, args *types.GetBlockCommitmentArgs, reply *types.SequencerWarpBlockResponse) error {
+	_, span := j.c.Tracer().Start(req.Context(), "Server.GetCommitmentBlocks")
+	defer span.End()
 	parser := j.ServerParser(req.Context(), j.c.NetworkID(), j.c.ChainID())
 	warpResp, err := j.c.Archiver().GetCommitmentBlocks(args, parser)
 	if err != nil {
@@ -186,6 +195,8 @@ func (j *JSONRPCServer) GetCommitmentBlocks(req *http.Request, args *types.GetBl
 }
 
 func (j *JSONRPCServer) GetBlockTransactionsByNamespace(req *http.Request, args *types.GetBlockTransactionsByNamespaceArgs, reply *types.SEQTransactionResponse) error {
+	_, span := j.c.Tracer().Start(req.Context(), "Server.GetBlockTransactionsByNamespace")
+	defer span.End()
 	// TODO either the firstBlock height is equal to height or use the hash to get it or if none of the above work then use the btree to get it
 	parser := j.ServerParser(req.Context(), j.c.NetworkID(), j.c.ChainID())
 
@@ -201,23 +212,22 @@ func (j *JSONRPCServer) GetBlockTransactionsByNamespace(req *http.Request, args 
 	// only append sequencer msg actions
 	for _, tx := range blk.Txs {
 		for k, action := range tx.Actions {
-			switch action := action.(type) {
-			case *actions.SequencerMsg:
+			if action.GetTypeID() == actions.MsgID {
 				ns := hex.EncodeToString(action.NMTNamespace())
 				if args.Namespace != ns {
 					continue
 				}
 				reply.Txs = append(reply.Txs, &types.SEQTransaction{
 					Namespace:   ns,
-					Transaction: action.Data, // eth format tx binary
-					Index:       uint64(k),   // might be duplicate
-					Tx_id:       tx.ID().String(),
+					Transaction: action.(*actions.SequencerMsg).Data, // eth format tx binary
+					Index:       uint64(k),                           // might be duplicate
+					TxID:        tx.ID().String(),
 				})
 			}
 		}
 	}
 
-	reply.BlockId = blkID.String()
+	reply.BlockID = blkID.String()
 
 	return nil
 }
@@ -242,14 +252,16 @@ func (*ServerParser) Registry() (chain.ActionRegistry, chain.AuthRegistry) {
 	return seqconsts.ActionRegistry, seqconsts.AuthRegistry
 }
 
-func (j *JSONRPCServer) ServerParser(ctx context.Context, networkId uint32, chainId ids.ID) chain.Parser {
+func (j *JSONRPCServer) ServerParser(_ context.Context, networkID uint32, chainID ids.ID) chain.Parser {
 	g := j.c.Genesis()
 
 	// The only thing this is using is the ActionRegistry and AuthRegistry so this should be fine
-	return &ServerParser{networkId, chainId, g}
+	return &ServerParser{networkID, chainID, g}
 }
 
 func (j *JSONRPCServer) GetAcceptedBlockWindow(req *http.Request, _ *struct{}, reply *int) error {
+	_, span := j.c.Tracer().Start(req.Context(), "Server.GetAcceptedBlockWindow")
+	defer span.End()
 	*reply = j.c.GetAcceptedBlockWindow()
 	return nil
 }

@@ -28,7 +28,7 @@ type Transfer struct {
 }
 
 func (*Transfer) GetTypeID() uint8 {
-	return transferID
+	return TransferID
 }
 
 func (t *Transfer) StateKeys(actor codec.Address, _ ids.ID) state.Keys {

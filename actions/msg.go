@@ -16,17 +16,17 @@ import (
 var _ chain.Action = (*SequencerMsg)(nil)
 
 type SequencerMsg struct {
-	ChainId     []byte        `json:"chain_id"`
+	ChainID     []byte        `json:"chain_id"`
 	Data        []byte        `json:"data"`
 	FromAddress codec.Address `json:"from_address"`
 	RelayerID   int           `json:"relayer_id"`
 }
 
 func (*SequencerMsg) GetTypeID() uint8 {
-	return msgID
+	return MsgID
 }
 
-func (*SequencerMsg) StateKeys(_ codec.Address, actionID ids.ID) state.Keys {
+func (*SequencerMsg) StateKeys(_ codec.Address, _ ids.ID) state.Keys {
 	return state.Keys{}
 }
 
@@ -35,12 +35,12 @@ func (*SequencerMsg) StateKeysMaxChunks() []uint16 {
 	return []uint16{}
 }
 
-func (t *SequencerMsg) Execute(
-	ctx context.Context,
+func (*SequencerMsg) Execute(
+	_ context.Context,
 	_ chain.Rules,
-	mu state.Mutable,
+	_ state.Mutable,
 	_ int64,
-	actor codec.Address,
+	_ codec.Address,
 	_ ids.ID,
 ) ([][]byte, error) {
 	return nil, nil
@@ -51,14 +51,14 @@ func (*SequencerMsg) ComputeUnits(codec.Address, chain.Rules) uint64 {
 }
 
 func (msg *SequencerMsg) Size() int {
-	return codec.BytesLen(msg.ChainId) + codec.BytesLen(msg.Data) + codec.AddressLen + consts.IntLen
+	return codec.BytesLen(msg.ChainID) + codec.BytesLen(msg.Data) + codec.AddressLen + consts.IntLen
 }
 
-func (t *SequencerMsg) Marshal(p *codec.Packer) {
-	p.PackAddress(t.FromAddress)
-	p.PackBytes(t.Data)
-	p.PackBytes(t.ChainId)
-	p.PackInt(t.RelayerID)
+func (msg *SequencerMsg) Marshal(p *codec.Packer) {
+	p.PackAddress(msg.FromAddress)
+	p.PackBytes(msg.Data)
+	p.PackBytes(msg.ChainID)
+	p.PackInt(msg.RelayerID)
 }
 
 func UnmarshalSequencerMsg(p *codec.Packer) (chain.Action, error) {
@@ -66,7 +66,7 @@ func UnmarshalSequencerMsg(p *codec.Packer) (chain.Action, error) {
 	p.UnpackAddress(&sequencermsg.FromAddress)
 	// TODO need to correct this and check byte count
 	p.UnpackBytes(-1, true, &sequencermsg.Data)
-	p.UnpackBytes(-1, true, &sequencermsg.ChainId)
+	p.UnpackBytes(-1, true, &sequencermsg.ChainID)
 	// Note, required has to be false or RelayerID of 0 will report ID not populated
 	sequencermsg.RelayerID = p.UnpackInt(false)
 	return &sequencermsg, p.Err()
@@ -77,8 +77,8 @@ func (*SequencerMsg) ValidRange(chain.Rules) (int64, int64) {
 	return -1, -1
 }
 
-func (s *SequencerMsg) NMTNamespace() []byte {
-	return s.ChainId
+func (msg *SequencerMsg) NMTNamespace() []byte {
+	return msg.ChainID
 }
 
 func (*SequencerMsg) UseFeeMarket() bool {

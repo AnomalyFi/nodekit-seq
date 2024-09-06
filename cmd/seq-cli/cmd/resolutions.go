@@ -60,7 +60,7 @@ func sendAndWait(
 	return tx.ID(), nil
 }
 
-func handleTx(c *trpc.JSONRPCClient, tx *chain.Transaction, result *chain.Result) {
+func handleTx(tx *chain.Transaction, result *chain.Result) {
 	actor := tx.Auth.Actor()
 	if !result.Success {
 		utils.Outf(
@@ -86,6 +86,7 @@ func handleTx(c *trpc.JSONRPCClient, tx *chain.Transaction, result *chain.Result
 			if len(action.Memo) > 0 {
 				summaryStr += fmt.Sprintf(" (memo: %s)", action.Memo)
 			}
+		default:
 		}
 		utils.Outf(
 			"%s {{yellow}}%s{{/}} {{yellow}}actor:{{/}} %s {{yellow}}summary (%s):{{/}} [%s] {{yellow}}fee (max %.2f%%):{{/}} %s %s {{yellow}}consumed:{{/}} [%s]\n",

@@ -86,13 +86,13 @@ var sequencerMsgCmd = &cobra.Command{
 		}
 
 		// Generate transaction
-		txId, err := sendAndWait(ctx, []chain.Action{&actions.SequencerMsg{
+		txID, err := sendAndWait(ctx, []chain.Action{&actions.SequencerMsg{
 			Data:        []byte{0x00, 0x01, 0x02},
-			ChainId:     []byte("nkit"),
+			ChainID:     []byte("nkit"),
 			FromAddress: recipient,
 		}}, cli, scli, tcli, factory, priorityFee, true)
 
-		hutils.Outf("{{green}}txId:{{/}} %s\n", txId)
+		hutils.Outf("{{green}}txId:{{/}} %s\n", txID)
 
 		return err
 	},

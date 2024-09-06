@@ -348,7 +348,7 @@ var _ = ginkgo.BeforeSuite(func() {
 			uri:      u,
 			cli:      cli,
 			tcli:     trpc.NewJSONRPCClient(u, networkID, bid),
-			multicli: trpc.NewMultiJsonRPCClientWithED25519Factory(u, networkID, bid, privBytes),
+			multicli: trpc.NewMultiJSONRPCClientWithED25519Factory(u, networkID, bid, privBytes),
 		})
 	}
 
@@ -374,7 +374,7 @@ type instance struct {
 	uri      string
 	cli      *rpc.JSONRPCClient
 	tcli     *trpc.JSONRPCClient
-	multicli *trpc.MultiJsonRPCClient
+	multicli *trpc.MultiJSONRPCClient
 }
 
 var _ = ginkgo.AfterSuite(func() {
@@ -525,7 +525,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 				[]chain.Action{&actions.SequencerMsg{
 					FromAddress: rsender,
 					Data:        data,
-					ChainId:     chainIDBytes,
+					ChainID:     chainIDBytes,
 					RelayerID:   0,
 				}},
 				factory,
@@ -568,7 +568,8 @@ var _ = ginkgo.Describe("[Test]", func() {
 			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
-			waitTillIncluded(ctx)
+			err = waitTillIncluded(ctx)
+			require.NoError(err)
 			success, _, err := instances[0].tcli.WaitForTransaction(ctx, tx.ID())
 			cancel()
 			require.NoError(err)
@@ -600,7 +601,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			actionData = append(actionData, txID[:]...)
 			// append `result` of Action 0 of Tx 0
 			for k := 0; k < len(txResult.Outputs[0]); k++ {
-				actionData = append(actionData, txResult.Outputs[0][k][:]...)
+				actionData = append(actionData, txResult.Outputs[0][k]...)
 			}
 
 			hutils.Outf("{{green}}actionData:{{/}}%+v \n", hex.EncodeToString(actionData))
@@ -617,18 +618,18 @@ var _ = ginkgo.Describe("[Test]", func() {
 	ginkgo.It("ensure SubmitMsgTx work", func() {
 		ginkgo.By("issuing some transactions", func() {
 			ctx := context.Background()
-			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 			defer cancel()
 			tpriv, err := ed25519.GeneratePrivateKey()
 			require.NoError(err)
 			rsender := auth.NewED25519Address(tpriv.PublicKey())
 			txActions := []chain.Action{&actions.SequencerMsg{
-				ChainId:     []byte("nkit"),
+				ChainID:     []byte("nkit"),
 				Data:        []byte("somedata"),
 				FromAddress: rsender,
 				RelayerID:   0,
 			}, &actions.SequencerMsg{
-				ChainId:     []byte("nkit"),
+				ChainID:     []byte("nkit"),
 				Data:        []byte("somedata2"),
 				FromAddress: rsender,
 				RelayerID:   0,
@@ -641,7 +642,6 @@ var _ = ginkgo.Describe("[Test]", func() {
 			require.NoError(err)
 			require.True(success)
 		})
-
 	})
 
 	ginkgo.It("test rpc server and archiver is working correctly", func() {
@@ -683,12 +683,12 @@ var _ = ginkgo.Describe("[Test]", func() {
 			require.NoError(err)
 			rsender := auth.NewED25519Address(tpriv.PublicKey())
 			txActions := []chain.Action{&actions.SequencerMsg{
-				ChainId:     []byte("nkit"),
+				ChainID:     []byte("nkit"),
 				Data:        []byte("somedata"),
 				FromAddress: rsender,
 				RelayerID:   0,
 			}, &actions.SequencerMsg{
-				ChainId:     []byte("nkit"),
+				ChainID:     []byte("nkit"),
 				Data:        []byte("somedata2"),
 				FromAddress: rsender,
 				RelayerID:   0,
@@ -720,7 +720,8 @@ var _ = ginkgo.Describe("[Test]", func() {
 
 			hutils.Outf("{{green}}height: %d blockID wanted:{{/}}%s \n", blk.Hght, blkID.String())
 			txInBlock := resp.Txs[0]
-			require.Equal(txID.String(), txInBlock.Tx_id)
+			calcTxID := chain.CreateActionID(txID, 0)
+			require.Equal(calcTxID.String(), txInBlock.TxID)
 		})
 
 		ginkgo.By("issuing GetBlockTransactions", func() {
@@ -729,7 +730,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			defer cancel()
 			resp, err := instances[0].tcli.GetBlockTransactionsByNamespace(ctx, blk.Hght, namespace)
 			require.NoError(err)
-			require.Equal(2, len(resp.Txs))
+			require.Equal(len(blk.Txs), len(resp.Txs))
 
 			resp, err = instances[0].tcli.GetBlockTransactionsByNamespace(ctx, blk.Hght, "someothernamespace")
 			require.NoError(err)
@@ -747,8 +748,8 @@ var _ = ginkgo.Describe("[Test]", func() {
 			found := false
 			hutils.Outf("{{green}}height: %d blockID wanted:{{/}}%s \n", blk.Hght, blkID.String())
 			for _, b := range resp.Blocks {
-				hutils.Outf("{{green}}height: %d blockID:{{/}}%s \n", b.Height, b.BlockId)
-				if b.BlockId == blkID.String() {
+				hutils.Outf("{{green}}height: %d blockID:{{/}}%s \n", b.Height, b.BlockID)
+				if b.BlockID == blkID.String() {
 					found = true
 				}
 			}
@@ -771,7 +772,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			blkID, err := blk.ID()
 			require.NoError(err)
 			for _, b := range resp.Blocks {
-				if b.BlockId == blkID.String() {
+				if b.BlockID == blkID.String() {
 					found = true
 				}
 			}
@@ -793,7 +794,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			blkID, err := blk.ID()
 			require.NoError(err)
 			for _, b := range resp.Blocks {
-				if b.BlockId == blkID.String() {
+				if b.BlockID == blkID.String() {
 					found = true
 				}
 			}

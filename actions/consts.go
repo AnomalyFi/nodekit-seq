@@ -5,19 +5,13 @@ package actions
 
 // Note: Registry will error during initialization if a duplicate ID is assigned. We explicitly assign IDs to avoid accidental remapping.
 const (
-	burnAssetID   uint8 = 0
-	createAssetID uint8 = 1
-	mintAssetID   uint8 = 2
-	transferID    uint8 = 3
-	msgID         uint8 = 4
+	TransferID uint8 = 0
+	MsgID      uint8 = 1
 )
 
 const (
 	// TODO: tune this
-	BurnComputeUnits        = 2
-	CreateAssetComputeUnits = 10
-	MintAssetComputeUnits   = 2
-	TransferComputeUnits    = 1
+	TransferComputeUnits = 1
 
 	MsgComputeUnits = 15
 

@@ -15,29 +15,29 @@ import (
 	"github.com/ava-labs/avalanchego/ids"
 )
 
-// MultiJsonRPCClient holds SEQ and HyperSDK json rpc clients together along with authFactory.
-type MultiJsonRPCClient struct {
+// MultiJSONRPCClient holds SEQ and HyperSDK json rpc clients together along with authFactory.
+type MultiJSONRPCClient struct {
 	SeqCli  *JSONRPCClient
 	HCli    *hrpc.JSONRPCClient
 	AuthFac chain.AuthFactory
 }
 
-// NewMultiJsonRPCClientWithED25519Factory creates a new MultiJsonRPCClient object with ED25519 auth factory.
-func NewMultiJsonRPCClientWithED25519Factory(uri string, networkID uint32, chainID ids.ID, privBytes []byte) *MultiJsonRPCClient {
+// NewMultiJSONRPCClientWithED25519Factory creates a new MultiJsonRPCClient object with ED25519 auth factory.
+func NewMultiJSONRPCClientWithED25519Factory(uri string, networkID uint32, chainID ids.ID, privBytes []byte) *MultiJSONRPCClient {
 	priv := ed25519.PrivateKey(privBytes)
 	factory := auth.NewED25519Factory(priv)
-	return &MultiJsonRPCClient{
+	return &MultiJSONRPCClient{
 		SeqCli:  NewJSONRPCClient(uri, networkID, chainID),
 		HCli:    hrpc.NewJSONRPCClient(uri),
 		AuthFac: factory,
 	}
 }
 
-// NewMultiJsonRPCClientWithBLSFactory creates a new MultiJsonRPCClient object with BLS auth factory.
-func NewMultiJsonRPCClientWithBLSFactory(uri string, networkID uint32, chainID ids.ID, privBytes []byte) *MultiJsonRPCClient {
+// NewMultiJSONRPCClientWithBLSFactory creates a new MultiJsonRPCClient object with BLS auth factory.
+func NewMultiJSONRPCClientWithBLSFactory(uri string, networkID uint32, chainID ids.ID, privBytes []byte) *MultiJSONRPCClient {
 	priv, _ := bls.PrivateKeyFromBytes(privBytes)
 	factory := auth.NewBLSFactory(priv)
-	return &MultiJsonRPCClient{
+	return &MultiJSONRPCClient{
 		SeqCli:  NewJSONRPCClient(uri, networkID, chainID),
 		HCli:    hrpc.NewJSONRPCClient(uri),
 		AuthFac: factory,
@@ -45,7 +45,7 @@ func NewMultiJsonRPCClientWithBLSFactory(uri string, networkID uint32, chainID i
 }
 
 // GenerateAndSubmitTx generates and submits a transaction with the given actions and priority fee.
-func (multi *MultiJsonRPCClient) GenerateAndSubmitTx(ctx context.Context, actions []chain.Action, priorityFee uint64) (ids.ID, error) {
+func (multi *MultiJSONRPCClient) GenerateAndSubmitTx(ctx context.Context, actions []chain.Action, priorityFee uint64) (ids.ID, error) {
 	parser, err := multi.SeqCli.Parser(ctx)
 	if err != nil {
 		return ids.Empty, err
@@ -85,7 +85,7 @@ func (multi *MultiJsonRPCClient) GenerateAndSubmitTx(ctx context.Context, action
 	// set max fee 20% higher than the pessimistic estimation.
 	fee += (fee / 5)
 
-	now := time.Now().Unix()
+	now := time.Now().UnixMilli()
 	rules := parser.Rules(now)
 
 	base := &chain.Base{

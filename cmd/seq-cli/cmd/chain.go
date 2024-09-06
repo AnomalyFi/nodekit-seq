@@ -97,9 +97,6 @@ var watchChainCmd = &cobra.Command{
 
 		var cli *trpc.JSONRPCClient
 		return handler.Root().WatchChain(hideTxs, pastBlocks, startBlock, func(uri string, networkID uint32, chainID ids.ID) (chain.Parser, error) {
-			fmt.Println("Here is network Id: %d", networkID)
-			fmt.Println("Here is uri: %s", uri)
-
 			cli = trpc.NewJSONRPCClient(uri, networkID, chainID)
 			return cli.Parser(context.TODO())
 		}, func(tx *chain.Transaction, result *chain.Result) {
@@ -107,7 +104,7 @@ var watchChainCmd = &cobra.Command{
 				// Should never happen
 				return
 			}
-			handleTx(cli, tx, result)
+			handleTx(tx, result)
 		})
 	},
 }
@@ -124,11 +121,11 @@ var testHeaderCmd = &cobra.Command{
 		start := int64(1702502928)
 		end := int64(1702502930)
 
-		start_time := start * 1000
+		startTime := start * 1000
 
-		end_time := end * 1000
+		endTime := end * 1000
 
-		res, err := tcli.GetBlockHeadersByStartTimeStamp(ctx, start_time, end_time)
+		res, err := tcli.GetBlockHeadersByStartTimeStamp(ctx, startTime, endTime)
 		if err != nil {
 			return err
 		}

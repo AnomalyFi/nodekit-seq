@@ -43,6 +43,7 @@ awscpu
 *.fls
 *.gz
 *.pdf
+*.db
 
 .coverage
 

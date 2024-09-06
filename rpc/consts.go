@@ -4,5 +4,5 @@
 package rpc
 
 const (
-	JSONRPCEndpoint = "/tokenapi"
+	JSONRPCEndpoint = "/seqapi"
 )

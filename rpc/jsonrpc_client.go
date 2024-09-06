@@ -84,7 +84,6 @@ func (cli *JSONRPCClient) Balance(ctx context.Context, addr string) (uint64, err
 		"balance",
 		&BalanceArgs{
 			Address: addr,
-			Asset:   ids.Empty,
 		},
 		resp,
 	)

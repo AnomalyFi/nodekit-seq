@@ -11,14 +11,14 @@ import (
 
 type SEQTransaction struct {
 	Namespace   string `json:"namespace"`
-	Tx_id       string `json:"tx_id"`
+	TxID        string `json:"tx_id"`
 	Index       uint64 `json:"tx_index"`
 	Transaction []byte `json:"transaction"`
 }
 
 type SEQTransactionResponse struct {
 	Txs     []*SEQTransaction `json:"txs"`
-	BlockId string            `json:"id"`
+	BlockID string            `json:"id"`
 }
 
 type SequencerBlock struct {
@@ -111,12 +111,12 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (header *Header) Commit() Commitment {
+func (h *Header) Commit() Commitment {
 	return NewRawCommitmentBuilder("BLOCK").
-		Uint64Field("height", header.Height).
-		Uint64Field("timestamp", header.Timestamp).
-		Uint64Field("l1_head", header.L1Head).
-		Field("transactions_root", header.TransactionsRoot.Commit()).
+		Uint64Field("height", h.Height).
+		Uint64Field("timestamp", h.Timestamp).
+		Uint64Field("l1_head", h.L1Head).
+		Field("transactions_root", h.TransactionsRoot.Commit()).
 		Finalize()
 }
 
@@ -143,16 +143,16 @@ func (r *NmtRoot) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (root *NmtRoot) Commit() Commitment {
+func (r *NmtRoot) Commit() Commitment {
 	return NewRawCommitmentBuilder("NMTROOT").
-		VarSizeField("root", root.Root).
+		VarSizeField("root", r.Root).
 		Finalize()
 }
 
 type Bytes []byte
 
 type BlockInfo struct {
-	BlockId   string `json:"id"`
+	BlockID   string `json:"id"`
 	Timestamp int64  `json:"timestamp"`
 	L1Head    uint64 `json:"l1_head"`
 	Height    uint64 `json:"height"`
@@ -191,7 +191,7 @@ type SequencerWarpBlockResponse struct {
 }
 
 type SequencerWarpBlock struct {
-	BlockId    string   `json:"id"`
+	BlockID    string   `json:"id"`
 	Timestamp  int64    `json:"timestamp"`
 	L1Head     uint64   `json:"l1_head"`
 	Height     *big.Int `json:"height"`
@@ -205,7 +205,7 @@ type GetBlockTransactionsArgs struct {
 
 type TransactionResponse struct {
 	Txs     []*chain.Transaction `json:"txs"`
-	BlockId string               `json:"id"`
+	BlockID string               `json:"id"`
 }
 
 type GetBlockTransactionsByNamespaceArgs struct {
