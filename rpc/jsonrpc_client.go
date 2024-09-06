@@ -5,9 +5,7 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 	"strings"
-	"sync"
 
 	"github.com/ava-labs/avalanchego/ids"
 
@@ -27,8 +25,6 @@ type JSONRPCClient struct {
 	networkID uint32
 	chainID   ids.ID
 	g         *genesis.Genesis
-	assetsL   sync.Mutex
-	assets    map[ids.ID]*AssetReply
 }
 
 // New creates a new client object.
@@ -40,7 +36,6 @@ func NewJSONRPCClient(uri string, networkID uint32, chainID ids.ID) *JSONRPCClie
 		requester: req,
 		networkID: networkID,
 		chainID:   chainID,
-		assets:    map[ids.ID]*AssetReply{},
 	}
 }
 
@@ -82,48 +77,14 @@ func (cli *JSONRPCClient) Tx(ctx context.Context, id ids.ID) (bool, bool, int64,
 	return true, resp.Success, resp.Timestamp, resp.Fee, nil
 }
 
-func (cli *JSONRPCClient) Asset(
-	ctx context.Context,
-	asset ids.ID,
-	useCache bool,
-) (bool, []byte, uint8, []byte, uint64, string, error) {
-	cli.assetsL.Lock()
-	r, ok := cli.assets[asset]
-	cli.assetsL.Unlock()
-	if ok && useCache {
-		return true, r.Symbol, r.Decimals, r.Metadata, r.Supply, r.Owner, nil
-	}
-	resp := new(AssetReply)
-	err := cli.requester.SendRequest(
-		ctx,
-		"asset",
-		&AssetArgs{
-			Asset: asset,
-		},
-		resp,
-	)
-	switch {
-	// We use string parsing here because the JSON-RPC library we use may not
-	// allows us to perform errors.Is.
-	case err != nil && strings.Contains(err.Error(), ErrAssetNotFound.Error()):
-		return false, nil, 0, nil, 0, "", nil
-	case err != nil:
-		return false, nil, 0, nil, 0, "", err
-	}
-	cli.assetsL.Lock()
-	cli.assets[asset] = resp
-	cli.assetsL.Unlock()
-	return true, resp.Symbol, resp.Decimals, resp.Metadata, resp.Supply, resp.Owner, nil
-}
-
-func (cli *JSONRPCClient) Balance(ctx context.Context, addr string, asset ids.ID) (uint64, error) {
+func (cli *JSONRPCClient) Balance(ctx context.Context, addr string) (uint64, error) {
 	resp := new(BalanceReply)
 	err := cli.requester.SendRequest(
 		ctx,
 		"balance",
 		&BalanceArgs{
 			Address: addr,
-			Asset:   asset,
+			Asset:   ids.Empty,
 		},
 		resp,
 	)
@@ -255,28 +216,18 @@ func (cli *JSONRPCClient) GetAcceptedBlockWindow(ctx context.Context) (int, erro
 func (cli *JSONRPCClient) WaitForBalance(
 	ctx context.Context,
 	addr string,
-	asset ids.ID,
 	min uint64,
 ) error {
-	exists, symbol, decimals, _, _, _, err := cli.Asset(ctx, asset, true)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return fmt.Errorf("%s does not exist", asset)
-	}
-
 	return rpc.Wait(ctx, func(ctx context.Context) (bool, error) {
-		balance, err := cli.Balance(ctx, addr, asset)
+		balance, err := cli.Balance(ctx, addr)
 		if err != nil {
 			return false, err
 		}
 		shouldExit := balance >= min
 		if !shouldExit {
 			utils.Outf(
-				"{{yellow}}waiting for %s %s on %s{{/}}\n",
-				utils.FormatBalance(min, decimals),
-				symbol,
+				"{{yellow}}waiting for %s balance: %s{{/}}\n",
+				utils.FormatBalance(min, consts.Decimals),
 				addr,
 			)
 		}

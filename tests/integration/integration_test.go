@@ -283,7 +283,7 @@ var _ = ginkgo.BeforeSuite(func() {
 
 		csupply := uint64(0)
 		for _, alloc := range g.CustomAllocation {
-			balance, err := cli.Balance(context.Background(), alloc.Address, ids.Empty)
+			balance, err := cli.Balance(context.Background(), alloc.Address)
 			require.NoError(err)
 			require.Equal(balance, alloc.Balance)
 			csupply += alloc.Balance
@@ -465,10 +465,10 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 		})
 
 		ginkgo.By("ensure balance is updated", func() {
-			balance, err := instances[1].tcli.Balance(context.Background(), sender, ids.Empty)
+			balance, err := instances[1].tcli.Balance(context.Background(), sender)
 			require.NoError(err)
 			require.Equal(balance, uint64(9_899_679))
-			balance2, err := instances[1].tcli.Balance(context.Background(), sender2, ids.Empty)
+			balance2, err := instances[1].tcli.Balance(context.Background(), sender2)
 			require.NoError(err)
 			require.Equal(balance2, uint64(100_000))
 		})
@@ -496,7 +496,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 			require.Len(results, 1)
 			require.True(results[0].Success)
 
-			balance2, err := instances[1].tcli.Balance(context.Background(), sender2, ids.Empty)
+			balance2, err := instances[1].tcli.Balance(context.Background(), sender2)
 			require.NoError(err)
 			require.Equal(balance2, uint64(100_101))
 		})
@@ -642,7 +642,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 		time.Sleep(2 * pubsub.MaxMessageWait)
 
 		// Fetch balances
-		balance, err := instances[0].tcli.Balance(context.TODO(), sender, ids.Empty)
+		balance, err := instances[0].tcli.Balance(context.TODO(), sender)
 		require.NoError(err)
 
 		// Send tx
@@ -675,13 +675,12 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 		require.NoError(err)
 		require.Len(blk.Txs, 1)
 		tx := blk.Txs[0].Actions[0].(*actions.Transfer)
-		require.Equal(tx.Asset, ids.Empty)
 		require.Equal(tx.Value, uint64(1))
 		require.Equal(lresults, results)
 		require.Equal(prices, fees.Dimensions{1, 1, 1, 1, 1})
 
 		// Check balance modifications are correct
-		balancea, err := instances[0].tcli.Balance(context.TODO(), sender, ids.Empty)
+		balancea, err := instances[0].tcli.Balance(context.TODO(), sender)
 		require.NoError(err)
 		require.Equal(balance, balancea+lresults[0].Fee+1)
 

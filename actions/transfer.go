@@ -20,9 +20,6 @@ type Transfer struct {
 	// To is the recipient of the [Value].
 	To codec.Address `json:"to"`
 
-	// Asset to transfer to [To].
-	Asset ids.ID `json:"asset"`
-
 	// Amount are transferred to [To].
 	Value uint64 `json:"value"`
 
@@ -36,8 +33,8 @@ func (*Transfer) GetTypeID() uint8 {
 
 func (t *Transfer) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
 	return state.Keys{
-		string(storage.BalanceKey(actor, t.Asset)): state.Read | state.Write,
-		string(storage.BalanceKey(t.To, t.Asset)):  state.All,
+		string(storage.BalanceKey(actor)): state.Read | state.Write,
+		string(storage.BalanceKey(t.To)):  state.All,
 	}
 }
 
@@ -59,11 +56,11 @@ func (t *Transfer) Execute(
 	if len(t.Memo) > MaxMemoSize {
 		return nil, ErrOutputMemoTooLarge
 	}
-	if err := storage.SubBalance(ctx, mu, actor, t.Asset, t.Value); err != nil {
+	if err := storage.SubBalance(ctx, mu, actor, t.Value); err != nil {
 		return nil, err
 	}
 	// TODO: allow sender to configure whether they will pay to create
-	if err := storage.AddBalance(ctx, mu, t.To, t.Asset, t.Value, true); err != nil {
+	if err := storage.AddBalance(ctx, mu, t.To, t.Value, true); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -74,12 +71,11 @@ func (*Transfer) ComputeUnits(codec.Address, chain.Rules) uint64 {
 }
 
 func (t *Transfer) Size() int {
-	return codec.AddressLen + ids.IDLen + consts.Uint64Len + codec.BytesLen(t.Memo)
+	return codec.AddressLen + consts.Uint64Len + codec.BytesLen(t.Memo)
 }
 
 func (t *Transfer) Marshal(p *codec.Packer) {
 	p.PackAddress(t.To)
-	p.PackID(t.Asset)
 	p.PackUint64(t.Value)
 	p.PackBytes(t.Memo)
 }
@@ -87,7 +83,6 @@ func (t *Transfer) Marshal(p *codec.Packer) {
 func UnmarshalTransfer(p *codec.Packer) (chain.Action, error) {
 	var transfer Transfer
 	p.UnpackAddress(&transfer.To)
-	p.UnpackID(false, &transfer.Asset) // empty ID is the native asset
 	transfer.Value = p.UnpackUint64(true)
 	p.UnpackBytes(MaxMemoSize, false, &transfer.Memo)
 	return &transfer, p.Err()

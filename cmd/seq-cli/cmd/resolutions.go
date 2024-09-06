@@ -15,6 +15,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/rpc"
 	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/actions"
+
 	tconsts "github.com/AnomalyFi/nodekit-seq/consts"
 	trpc "github.com/AnomalyFi/nodekit-seq/rpc"
 	"github.com/ava-labs/avalanchego/ids"
@@ -76,30 +77,12 @@ func handleTx(c *trpc.JSONRPCClient, tx *chain.Transaction, result *chain.Result
 		return
 	}
 
-	for i, act := range tx.Actions {
-		actionID := chain.CreateActionID(tx.ID(), uint8(i))
+	for _, act := range tx.Actions {
 		var summaryStr string
 		switch action := act.(type) {
-		case *actions.CreateAsset:
-			summaryStr = fmt.Sprintf("assetID: %s symbol: %s decimals: %d metadata: %s", actionID, action.Symbol, action.Decimals, action.Metadata)
-		case *actions.MintAsset:
-			_, symbol, decimals, _, _, _, err := c.Asset(context.TODO(), action.Asset, true)
-			if err != nil {
-				utils.Outf("{{red}}could not fetch asset info:{{/}} %v", err)
-				return
-			}
-			amountStr := utils.FormatBalance(action.Value, decimals)
-			summaryStr = fmt.Sprintf("%s %s -> %s", amountStr, symbol, codec.MustAddressBech32(tconsts.HRP, action.To))
-		case *actions.BurnAsset:
-			summaryStr = fmt.Sprintf("%d %s -> 🔥", action.Value, action.Asset)
 		case *actions.Transfer:
-			_, symbol, decimals, _, _, _, err := c.Asset(context.TODO(), action.Asset, true)
-			if err != nil {
-				utils.Outf("{{red}}could not fetch asset info:{{/}} %v", err)
-				return
-			}
-			amountStr := utils.FormatBalance(action.Value, decimals)
-			summaryStr = fmt.Sprintf("%s %s -> %s", amountStr, symbol, codec.MustAddressBech32(tconsts.HRP, action.To))
+			amountStr := utils.FormatBalance(action.Value, tconsts.Decimals)
+			summaryStr = fmt.Sprintf("%s %s -> %s", amountStr, tconsts.Symbol, codec.MustAddressBech32(tconsts.HRP, action.To))
 			if len(action.Memo) > 0 {
 				summaryStr += fmt.Sprintf(" (memo: %s)", action.Memo)
 			}

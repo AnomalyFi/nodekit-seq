@@ -70,37 +70,6 @@ func (j *JSONRPCServer) Tx(req *http.Request, args *TxArgs, reply *TxReply) erro
 	return nil
 }
 
-type AssetArgs struct {
-	Asset ids.ID `json:"asset"`
-}
-
-type AssetReply struct {
-	Symbol   []byte `json:"symbol"`
-	Decimals uint8  `json:"decimals"`
-	Metadata []byte `json:"metadata"`
-	Supply   uint64 `json:"supply"`
-	Owner    string `json:"owner"`
-}
-
-func (j *JSONRPCServer) Asset(req *http.Request, args *AssetArgs, reply *AssetReply) error {
-	ctx, span := j.c.Tracer().Start(req.Context(), "Server.Asset")
-	defer span.End()
-
-	exists, symbol, decimals, metadata, supply, owner, err := j.c.GetAssetFromState(ctx, args.Asset)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return ErrAssetNotFound
-	}
-	reply.Symbol = symbol
-	reply.Decimals = decimals
-	reply.Metadata = metadata
-	reply.Supply = supply
-	reply.Owner = codec.MustAddressBech32(seqconsts.HRP, owner)
-	return err
-}
-
 type BalanceArgs struct {
 	Address string `json:"address"`
 	Asset   ids.ID `json:"asset"`
@@ -277,7 +246,7 @@ func (j *JSONRPCServer) ServerParser(ctx context.Context, networkId uint32, chai
 	g := j.c.Genesis()
 
 	// The only thing this is using is the ActionRegistry and AuthRegistry so this should be fine
-	return &Parser{networkId, chainId, g}
+	return &ServerParser{networkId, chainId, g}
 }
 
 func (j *JSONRPCServer) GetAcceptedBlockWindow(req *http.Request, _ *struct{}, reply *int) error {

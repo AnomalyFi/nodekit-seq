@@ -12,7 +12,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/pubsub"
 	"github.com/AnomalyFi/hypersdk/rpc"
-	hutils "github.com/AnomalyFi/hypersdk/utils"
+	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	trpc "github.com/AnomalyFi/nodekit-seq/rpc"
@@ -32,57 +32,6 @@ func NewHandler(h *cli.Handler) *Handler {
 
 func (h *Handler) Root() *cli.Handler {
 	return h.h
-}
-
-func (*Handler) GetAssetInfo(
-	ctx context.Context,
-	cli *trpc.JSONRPCClient,
-	addr codec.Address,
-	assetID ids.ID,
-	checkBalance bool,
-) ([]byte, uint8, uint64, ids.ID, error) {
-	var sourceChainID ids.ID
-	exists, symbol, decimals, metadata, supply, _, err := cli.Asset(ctx, assetID, false)
-	if err != nil {
-		return nil, 0, 0, ids.Empty, err
-	}
-	if assetID != ids.Empty {
-		if !exists {
-			hutils.Outf("{{red}}%s does not exist{{/}}\n", assetID)
-			hutils.Outf("{{red}}exiting...{{/}}\n")
-			return nil, 0, 0, ids.Empty, nil
-		}
-		hutils.Outf(
-			"{{yellow}}symbol:{{/}} %s {{yellow}}decimals:{{/}} %d {{yellow}}metadata:{{/}} %s {{yellow}}supply:{{/}} %d\n",
-			symbol,
-			decimals,
-			metadata,
-			supply,
-		)
-	}
-	if !checkBalance {
-		return symbol, decimals, 0, sourceChainID, nil
-	}
-	saddr, err := codec.AddressBech32(consts.HRP, addr)
-	if err != nil {
-		return nil, 0, 0, ids.Empty, err
-	}
-	balance, err := cli.Balance(ctx, saddr, assetID)
-	if err != nil {
-		return nil, 0, 0, ids.Empty, err
-	}
-	if balance == 0 {
-		hutils.Outf("{{red}}balance:{{/}} 0 %s\n", assetID)
-		hutils.Outf("{{red}}please send funds to %s{{/}}\n", addr)
-		hutils.Outf("{{red}}exiting...{{/}}\n")
-	} else {
-		hutils.Outf(
-			"{{yellow}}balance:{{/}} %s %s\n",
-			hutils.FormatBalance(balance, decimals),
-			symbol,
-		)
-	}
-	return symbol, decimals, balance, sourceChainID, nil
 }
 
 func (h *Handler) DefaultActor() (
@@ -118,6 +67,33 @@ func (h *Handler) DefaultActor() (
 			networkID,
 			chainID,
 		), nil
+}
+
+func (*Handler) GetBalance(
+	ctx context.Context,
+	cli *trpc.JSONRPCClient,
+	addr codec.Address,
+) (uint64, error) {
+	saddr, err := codec.AddressBech32(consts.HRP, addr)
+	if err != nil {
+		return 0, err
+	}
+	balance, err := cli.Balance(ctx, saddr)
+	if err != nil {
+		return 0, err
+	}
+	if balance == 0 {
+		utils.Outf("{{red}}balance:{{/}} 0 %s\n", consts.Symbol)
+		utils.Outf("{{red}}please send funds to %s{{/}}\n", saddr)
+		utils.Outf("{{red}}exiting...{{/}}\n")
+		return 0, nil
+	}
+	utils.Outf(
+		"{{yellow}}balance:{{/}} %s %s\n",
+		utils.FormatBalance(balance, consts.Decimals),
+		consts.Symbol,
+	)
+	return balance, nil
 }
 
 type Controller struct {

@@ -216,12 +216,6 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 		if result.Success {
 			for _, act := range tx.Actions {
 				switch act.(type) {
-				case *actions.CreateAsset:
-					c.metrics.createAsset.Inc()
-				case *actions.MintAsset:
-					c.metrics.mintAsset.Inc()
-				case *actions.BurnAsset:
-					c.metrics.burnAsset.Inc()
 				case *actions.Transfer:
 					c.metrics.transfer.Inc()
 				case *actions.SequencerMsg:

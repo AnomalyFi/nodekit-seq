@@ -434,7 +434,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 	}
 
 	ginkgo.It("transfer in a single node (raw)", func() {
-		nativeBalance, err := instances[0].tcli.Balance(context.TODO(), sender, ids.Empty)
+		nativeBalance, err := instances[0].tcli.Balance(context.TODO(), sender)
 		require.NoError(err)
 		require.Equal(nativeBalance, startAmount)
 
@@ -470,7 +470,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			hutils.Outf("{{yellow}}found transaction{{/}}\n")
 
 			// Check sender balance
-			balance, err := instances[0].tcli.Balance(context.Background(), sender, ids.Empty)
+			balance, err := instances[0].tcli.Balance(context.Background(), sender)
 			require.NoError(err)
 			hutils.Outf(
 				"{{yellow}}start=%d fee=%d send=%d balance=%d{{/}}\n",
@@ -498,7 +498,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 				}
 
 				// Check balance of recipient
-				balance, err := inst.tcli.Balance(context.Background(), codec.MustAddressBech32(consts.HRP, aother), ids.Empty)
+				balance, err := inst.tcli.Balance(context.Background(), codec.MustAddressBech32(consts.HRP, aother))
 				require.NoError(err)
 				require.Equal(balance, sendAmount)
 			}

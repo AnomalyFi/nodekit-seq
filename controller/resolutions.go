@@ -36,19 +36,12 @@ func (c *Controller) GetTransaction(
 	return storage.GetTransaction(ctx, c.metaDB, txID)
 }
 
-func (c *Controller) GetAssetFromState(
-	ctx context.Context,
-	asset ids.ID,
-) (bool, []byte, uint8, []byte, uint64, codec.Address, error) {
-	return storage.GetAssetFromState(ctx, c.inner.ReadState, asset)
-}
-
 func (c *Controller) GetBalanceFromState(
 	ctx context.Context,
 	addr codec.Address,
 	asset ids.ID,
 ) (uint64, error) {
-	return storage.GetBalanceFromState(ctx, c.inner.ReadState, addr, asset)
+	return storage.GetBalanceFromState(ctx, c.inner.ReadState, addr)
 }
 
 func (c *Controller) GetAcceptedBlockWindow() int {

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/AnomalyFi/nodekit-seq/cmd/tokenvm/version"
+	"github.com/AnomalyFi/nodekit-seq/cmd/seqvm/version"
 	"github.com/AnomalyFi/nodekit-seq/controller"
 	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/ava-labs/avalanchego/utils/ulimit"
@@ -17,9 +17,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:        "tokenvm",
-	Short:      "TokenVM agent",
-	SuggestFor: []string{"tokenvm"},
+	Use:        "seqvm",
+	Short:      "SeqVM agent",
+	SuggestFor: []string{"seqvm"},
 	RunE:       runFunc,
 }
 
@@ -35,7 +35,7 @@ func init() {
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "tokenvm failed %v\n", err)
+		fmt.Fprintf(os.Stderr, "seqvm failed %v\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)
