@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
-	"time"
 
 	"github.com/ava-labs/avalanchego/ids"
 
@@ -18,11 +17,8 @@ import (
 	seqconsts "github.com/AnomalyFi/nodekit-seq/consts"
 
 	"github.com/AnomalyFi/hypersdk/codec"
-	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 
-	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/actions"
-	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	"github.com/AnomalyFi/nodekit-seq/types"
 )
@@ -44,115 +40,6 @@ type GenesisReply struct {
 func (j *JSONRPCServer) Genesis(_ *http.Request, _ *struct{}, reply *GenesisReply) (err error) {
 	reply.Genesis = j.c.Genesis()
 	return nil
-}
-
-type SubmitMsgTxArgs struct {
-	ChainId          string   `json:"chain_id"`
-	NetworkID        uint32   `json:"network_id"`
-	SecondaryChainId []byte   `json:"secondary_chain_id"`
-	Data             [][]byte `json:"data"`
-}
-
-type SubmitMsgTxReply struct {
-	TxID string `json:"txId"`
-}
-
-// TODO: Fix fee estimation.
-// TODO need to update this to be compatible with new signature standards for codec.address
-func (j *JSONRPCServer) SubmitMsgTx(
-	req *http.Request,
-	args *SubmitMsgTxArgs,
-	reply *SubmitMsgTxReply,
-) error {
-	ctx := context.Background()
-
-	chainId, err := ids.FromString(args.ChainId)
-	if err != nil {
-		return err
-	}
-
-	unitPrices, err := j.c.UnitPrices(ctx)
-	if err != nil {
-		return err
-	}
-
-	parser := j.ServerParser(ctx, args.NetworkID, chainId)
-
-	privBytes, err := codec.LoadHex(
-		"323b1d8f4eed5f0da9da93071b034f2dce9d2d22692c172f3cb252a64ddfafd01b057de320297c29ad0c1f589ea216869cf1938d88c9fbd70d6748323dbf2fa7", //nolint:lll
-		ed25519.PrivateKeyLen,
-	)
-
-	priv := ed25519.PrivateKey(privBytes)
-	factory := auth.NewED25519Factory(priv)
-
-	tpriv, err := ed25519.GeneratePrivateKey()
-	if err != nil {
-		return err
-	}
-
-	rsender := auth.NewED25519Address(tpriv.PublicKey())
-
-	acts := make([]chain.Action, 0, len(args.Data))
-	for _, data := range args.Data {
-		act := actions.SequencerMsg{
-			FromAddress: rsender,
-			Data:        data,
-			ChainId:     args.SecondaryChainId,
-			// TODO: update this
-			RelayerID: 0,
-		}
-		acts = append(acts, &act)
-	}
-	// TODO need to define action, authFactory
-	maxUnits, _, err := chain.EstimateUnits(parser.Rules(time.Now().UnixMilli()), acts, factory)
-	if err != nil {
-		return err
-	}
-	maxFee, err := fees.MulSum(unitPrices, maxUnits)
-	if err != nil {
-		return err
-	}
-
-	// TODO above is generateTransaction below is generateTransactionManual
-
-	now := time.Now().UnixMilli()
-	rules := parser.Rules(now)
-
-	base := &chain.Base{
-		Timestamp: utils.UnixRMilli(now, rules.GetValidityWindow()),
-		ChainID:   chainId,
-		MaxFee:    maxFee,
-	}
-
-	// Build transaction
-	actionRegistry, authRegistry := parser.Registry()
-	tx := chain.NewTx(base, acts)
-	tx, err = tx.Sign(factory, actionRegistry, authRegistry)
-	if err != nil {
-		return fmt.Errorf("%w: failed to sign transaction", err)
-	}
-
-	// TODO above is new!
-
-	msg, err := tx.Digest()
-	if err != nil {
-		// Should never occur because populated during unmarshal
-		return err
-	}
-	if err := tx.Auth.Verify(ctx, msg); err != nil {
-		return err
-	}
-	txID := tx.ID()
-	reply.TxID = txID.String()
-	return j.c.Submit(ctx, false, []*chain.Transaction{tx})[0]
-}
-
-type account struct {
-	priv    ed25519.PrivateKey
-	factory *auth.ED25519Factory
-	rsender ed25519.PublicKey
-	sender  string
 }
 
 type TxArgs struct {
