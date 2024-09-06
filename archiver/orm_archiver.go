@@ -214,7 +214,7 @@ func (oa *ORMArchiver) GetBlockHeadersByHeight(args *types.GetBlockHeadersByHeig
 	}
 
 	var blocks []DBBlock
-	res := oa.db.Where("height >= ? AND timestamp < ?", args.Height, args.End).Order("height").Find(&blocks)
+	res := oa.db.Where("height >= ? AND timestamp < ?", args.Height, args.EndTimeStamp).Order("height").Find(&blocks)
 	if res.Error != nil {
 		return nil, res.Error
 	}
@@ -233,7 +233,7 @@ func (oa *ORMArchiver) GetBlockHeadersByHeight(args *types.GetBlockHeadersByHeig
 		ret.Blocks = append(ret.Blocks, blkInfo)
 	}
 	var next DBBlock
-	res = oa.db.Where("timestamp >= ?", args.End).Order("height").First(&next)
+	res = oa.db.Where("timestamp >= ?", args.EndTimeStamp).Order("height").First(&next)
 	if res.Error == nil {
 		ret.Next = types.BlockInfo{
 			BlockId:   next.BlockId,
@@ -313,11 +313,11 @@ func (oa *ORMArchiver) GetBlockHeadersByID(args *types.GetBlockHeadersIDArgs) (*
 	return ret, nil
 }
 
-func (oa *ORMArchiver) GetBlockHeadersAfterTimestamp(args *types.GetBlockHeadersByStartArgs) (*types.BlockHeadersResponse, error) {
+func (oa *ORMArchiver) GetBlockHeadersAfterTimestamp(args *types.GetBlockHeadersByStartTimeStampArgs) (*types.BlockHeadersResponse, error) {
 	ret := new(types.BlockHeadersResponse)
 
 	var startBlock DBBlock
-	tx := oa.db.Where("timestamp >= ?", args.Start).Order("timestamp").First(&startBlock)
+	tx := oa.db.Where("timestamp >= ?", args.StartTimeStamp).Order("timestamp").First(&startBlock)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
@@ -341,7 +341,7 @@ func (oa *ORMArchiver) GetBlockHeadersAfterTimestamp(args *types.GetBlockHeaders
 	}
 
 	var blocks []DBBlock
-	res := oa.db.Where("height >= ? AND timestamp < ?", firstBlockHeight, args.End).Order("height").Find(&blocks)
+	res := oa.db.Where("height >= ? AND timestamp < ?", firstBlockHeight, args.EndTimeStamp).Order("height").Find(&blocks)
 	if res.Error != nil {
 		return nil, res.Error
 	}
@@ -360,7 +360,7 @@ func (oa *ORMArchiver) GetBlockHeadersAfterTimestamp(args *types.GetBlockHeaders
 		ret.Blocks = append(ret.Blocks, blkInfo)
 	}
 	var next DBBlock
-	res = oa.db.Where("timestamp >= ?", args.End).Order("height").First(&next)
+	res = oa.db.Where("timestamp >= ?", args.EndTimeStamp).Order("height").First(&next)
 	if res.Error == nil {
 		ret.Next = types.BlockInfo{
 			BlockId:   next.BlockId,

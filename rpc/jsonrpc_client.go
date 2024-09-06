@@ -18,6 +18,7 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	_ "github.com/AnomalyFi/nodekit-seq/registry" // ensure registry populated
+	"github.com/AnomalyFi/nodekit-seq/types"
 )
 
 type JSONRPCClient struct {
@@ -132,16 +133,15 @@ func (cli *JSONRPCClient) Balance(ctx context.Context, addr string, asset ids.ID
 func (cli *JSONRPCClient) GetBlockHeadersByHeight(
 	ctx context.Context,
 	height uint64,
-	end int64,
-) (*BlockHeadersResponse, error) {
-	resp := new(BlockHeadersResponse)
-	// TODO does this need to be lowercase for the string?
+	endTimeStamp int64,
+) (*types.BlockHeadersResponse, error) {
+	resp := new(types.BlockHeadersResponse)
 	err := cli.requester.SendRequest(
 		ctx,
 		"getBlockHeadersByHeight",
-		&GetBlockHeadersByHeightArgs{
-			Height: height,
-			End:    end,
+		&types.GetBlockHeadersByHeightArgs{
+			Height:       height,
+			EndTimeStamp: endTimeStamp,
 		},
 		resp,
 	)
@@ -152,13 +152,12 @@ func (cli *JSONRPCClient) GetBlockHeadersID(
 	ctx context.Context,
 	id string,
 	end int64,
-) (*BlockHeadersResponse, error) {
-	resp := new(BlockHeadersResponse)
-	// TODO does this need to be lowercase for the string?
+) (*types.BlockHeadersResponse, error) {
+	resp := new(types.BlockHeadersResponse)
 	err := cli.requester.SendRequest(
 		ctx,
 		"getBlockHeadersID",
-		&GetBlockHeadersIDArgs{
+		&types.GetBlockHeadersIDArgs{
 			ID:  id,
 			End: end,
 		},
@@ -167,19 +166,18 @@ func (cli *JSONRPCClient) GetBlockHeadersID(
 	return resp, err
 }
 
-func (cli *JSONRPCClient) GetBlockHeadersByStart(
+func (cli *JSONRPCClient) GetBlockHeadersByStartTimeStamp(
 	ctx context.Context,
-	start int64,
-	end int64,
-) (*BlockHeadersResponse, error) {
-	resp := new(BlockHeadersResponse)
-	// TODO does this need to be lowercase for the string?
+	startTimeStamp int64,
+	endTimeStamp int64,
+) (*types.BlockHeadersResponse, error) {
+	resp := new(types.BlockHeadersResponse)
 	err := cli.requester.SendRequest(
 		ctx,
-		"getBlockHeadersByStart",
-		&GetBlockHeadersByStartArgs{
-			Start: start,
-			End:   end,
+		"getBlockHeadersByStartTimeStamp",
+		&types.GetBlockHeadersByStartTimeStampArgs{
+			StartTimeStamp: startTimeStamp,
+			EndTimeStamp:   endTimeStamp,
 		},
 		resp,
 	)
@@ -189,13 +187,13 @@ func (cli *JSONRPCClient) GetBlockHeadersByStart(
 func (cli *JSONRPCClient) GetBlockTransactions(
 	ctx context.Context,
 	id string,
-) (*SEQTransactionResponse, error) {
-	resp := new(SEQTransactionResponse)
+) (*types.SEQTransactionResponse, error) {
+	resp := new(types.SEQTransactionResponse)
 	// TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,
 		"getBlockTransactions",
-		&GetBlockTransactionsArgs{
+		&types.GetBlockTransactionsArgs{
 			ID: id,
 		},
 		resp,
@@ -207,13 +205,13 @@ func (cli *JSONRPCClient) GetBlockTransactionsByNamespace(
 	ctx context.Context,
 	height uint64,
 	namespace string,
-) (*SEQTransactionResponse, error) {
-	resp := new(SEQTransactionResponse)
+) (*types.SEQTransactionResponse, error) {
+	resp := new(types.SEQTransactionResponse)
 	// TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,
 		"getBlockTransactionsByNamespace",
-		&GetBlockTransactionsByNamespaceArgs{
+		&types.GetBlockTransactionsByNamespaceArgs{
 			Height:    height,
 			Namespace: namespace,
 		},
@@ -227,12 +225,12 @@ func (cli *JSONRPCClient) GetCommitmentBlocks(
 	first uint64,
 	height uint64,
 	maxBlocks int,
-) (*SequencerWarpBlockResponse, error) {
-	resp := new(SequencerWarpBlockResponse)
+) (*types.SequencerWarpBlockResponse, error) {
+	resp := new(types.SequencerWarpBlockResponse)
 	err := cli.requester.SendRequest(
 		ctx,
 		"getCommitmentBlocks",
-		&GetBlockCommitmentArgs{
+		&types.GetBlockCommitmentArgs{
 			First:         first,
 			CurrentHeight: height,
 			MaxBlocks:     maxBlocks,

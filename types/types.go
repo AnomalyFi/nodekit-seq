@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
-	// "github.com/AnomalyFi/hypersdk/chain"
-
+	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/ava-labs/avalanchego/ids"
 )
 
@@ -172,13 +171,13 @@ type GetBlockHeadersIDArgs struct {
 }
 
 type GetBlockHeadersByHeightArgs struct {
-	Height uint64 `json:"height"`
-	End    int64  `json:"end"`
+	Height       uint64 `json:"height"`
+	EndTimeStamp int64  `json:"end"`
 }
 
-type GetBlockHeadersByStartArgs struct {
-	Start int64 `json:"start"`
-	End   int64 `json:"end"`
+type GetBlockHeadersByStartTimeStampArgs struct {
+	StartTimeStamp int64 `json:"start"`
+	EndTimeStamp   int64 `json:"end"`
 }
 
 type GetBlockCommitmentArgs struct {
@@ -198,4 +197,18 @@ type SequencerWarpBlock struct {
 	Height     *big.Int `json:"height"`
 	BlockRoot  *big.Int `json:"root"`
 	ParentRoot *big.Int `json:"parent"`
+}
+
+type GetBlockTransactionsArgs struct {
+	ID string `json:"block_id"`
+}
+
+type TransactionResponse struct {
+	Txs     []*chain.Transaction `json:"txs"`
+	BlockId string               `json:"id"`
+}
+
+type GetBlockTransactionsByNamespaceArgs struct {
+	Height    uint64 `json:"height"`
+	Namespace string `json:"namespace"`
 }

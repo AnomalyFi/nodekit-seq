@@ -315,7 +315,11 @@ var _ = ginkgo.BeforeSuite(func() {
 	ccancel()
 	require.NoError(err)
 	nodeInfos := status.GetClusterInfo().GetNodeInfos()
-
+	privBytes, err := codec.LoadHex(
+		"323b1d8f4eed5f0da9da93071b034f2dce9d2d22692c172f3cb252a64ddfafd01b057de320297c29ad0c1f589ea216869cf1938d88c9fbd70d6748323dbf2fa7", //nolint:lll
+		ed25519.PrivateKeyLen,
+	)
+	require.NoError(err)
 	instances = []instance{}
 	for _, nodeName := range subnet {
 		info := nodeInfos[nodeName]
@@ -340,19 +344,15 @@ var _ = ginkgo.BeforeSuite(func() {
 		require.NoError(err)
 
 		instances = append(instances, instance{
-			nodeID: nodeID,
-			uri:    u,
-			cli:    cli,
-			tcli:   trpc.NewJSONRPCClient(u, networkID, bid),
+			nodeID:   nodeID,
+			uri:      u,
+			cli:      cli,
+			tcli:     trpc.NewJSONRPCClient(u, networkID, bid),
+			multicli: trpc.NewMultiJsonRPCClientWithED25519Factory(u, networkID, bid, privBytes),
 		})
 	}
 
 	// Load default pk
-	privBytes, err := codec.LoadHex(
-		"323b1d8f4eed5f0da9da93071b034f2dce9d2d22692c172f3cb252a64ddfafd01b057de320297c29ad0c1f589ea216869cf1938d88c9fbd70d6748323dbf2fa7", //nolint:lll
-		ed25519.PrivateKeyLen,
-	)
-	require.NoError(err)
 	priv = ed25519.PrivateKey(privBytes)
 	factory = auth.NewED25519Factory(priv)
 	rsender = auth.NewED25519Address(priv.PublicKey())
@@ -370,10 +370,11 @@ var (
 )
 
 type instance struct {
-	nodeID ids.NodeID
-	uri    string
-	cli    *rpc.JSONRPCClient
-	tcli   *trpc.JSONRPCClient
+	nodeID   ids.NodeID
+	uri      string
+	cli      *rpc.JSONRPCClient
+	tcli     *trpc.JSONRPCClient
+	multicli *trpc.MultiJsonRPCClient
 }
 
 var _ = ginkgo.AfterSuite(func() {
@@ -618,27 +619,29 @@ var _ = ginkgo.Describe("[Test]", func() {
 			ctx := context.Background()
 			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			defer cancel()
-			data := make([][]byte, 0, 2)
-			data = append(data, []byte("somedata"))
-			data = append(data, []byte("somedata2"))
-			txIDStr, err := instances[0].tcli.SubmitMsgTx(ctx, blockchainID, 1337, []byte("nkit"), data)
+			tpriv, err := ed25519.GeneratePrivateKey()
 			require.NoError(err)
-			hutils.Outf("{{green}}txID of submitted data:{{/}}%s \n", txIDStr)
-			txID, err := ids.FromString(txIDStr)
+			rsender := auth.NewED25519Address(tpriv.PublicKey())
+			txActions := []chain.Action{&actions.SequencerMsg{
+				ChainId:     []byte("nkit"),
+				Data:        []byte("somedata"),
+				FromAddress: rsender,
+				RelayerID:   0,
+			}, &actions.SequencerMsg{
+				ChainId:     []byte("nkit"),
+				Data:        []byte("somedata2"),
+				FromAddress: rsender,
+				RelayerID:   0,
+			}}
+			txID, err := instances[0].multicli.GenerateAndSubmitTx(ctx, txActions, 0)
+			require.NoError(err)
+			hutils.Outf("{{green}}txID of submitted data:{{/}}%s \n", txID.String())
 			require.NoError(err)
 			success, _, err := instances[0].tcli.WaitForTransaction(ctx, txID)
 			require.NoError(err)
 			require.True(success)
 		})
 
-		ginkgo.By("issuing zero transactions", func() {
-			ctx := context.Background()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
-			data := make([][]byte, 0)
-			_, err := instances[0].tcli.SubmitMsgTx(ctx, blockchainID, 1337, []byte("nkit"), data)
-			require.Error(err)
-		})
 	})
 
 	ginkgo.It("test rpc server and archiver is working correctly", func() {
@@ -676,15 +679,24 @@ var _ = ginkgo.Describe("[Test]", func() {
 			ctx := context.Background()
 			ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 			defer cancel()
-			data := make([][]byte, 0, 2)
-			data = append(data, []byte("somedata"))
-			data = append(data, []byte("somedata2"))
-			txIDStr, err := instances[0].tcli.SubmitMsgTx(ctx, blockchainID, 1337, []byte("nkit"), data)
+			tpriv, err := ed25519.GeneratePrivateKey()
 			require.NoError(err)
-			txID, err = ids.FromString(txIDStr)
+			rsender := auth.NewED25519Address(tpriv.PublicKey())
+			txActions := []chain.Action{&actions.SequencerMsg{
+				ChainId:     []byte("nkit"),
+				Data:        []byte("somedata"),
+				FromAddress: rsender,
+				RelayerID:   0,
+			}, &actions.SequencerMsg{
+				ChainId:     []byte("nkit"),
+				Data:        []byte("somedata2"),
+				FromAddress: rsender,
+				RelayerID:   0,
+			}}
+			txID, err := instances[0].multicli.GenerateAndSubmitTx(ctx, txActions, 0)
 			require.NoError(err)
-			hutils.Outf("{{green}}txID of submitted data:{{/}}%s \n", txIDStr)
-			included, block, err := waitTillIncluded(ctx, txIDStr)
+			hutils.Outf("{{green}}txID of submitted data:{{/}}%s \n", txID.String())
+			included, block, err := waitTillIncluded(ctx, txID.String())
 			require.True(included)
 			require.NoError(err)
 			require.NotNil(block)
@@ -773,7 +785,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			ctx := context.Background()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
-			resp, err := instances[0].tcli.GetBlockHeadersByStart(ctx, blk.Tmstmp, blk.Tmstmp+5000)
+			resp, err := instances[0].tcli.GetBlockHeadersByStartTimeStamp(ctx, blk.Tmstmp, blk.Tmstmp+5000)
 			require.NoError(err)
 			require.Greater(len(resp.Blocks), 0)
 

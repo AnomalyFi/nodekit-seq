@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"math/big"
 	"net/http"
 
 	"github.com/ava-labs/avalanchego/ids"
@@ -127,74 +126,6 @@ func (j *JSONRPCServer) Balance(req *http.Request, args *BalanceArgs, reply *Bal
 	return err
 }
 
-type BlockInfo struct {
-	BlockId   string `json:"id"`
-	Timestamp int64  `json:"timestamp"`
-	L1Head    uint64 `json:"l1_head"`
-	Height    uint64 `json:"height"`
-}
-
-type BlockHeadersResponse struct {
-	From   uint64      `json:"from"`
-	Blocks []BlockInfo `json:"blocks"`
-	Prev   BlockInfo   `json:"prev"`
-	Next   BlockInfo   `json:"next"`
-}
-
-// TODO need to fix this. Tech debt
-type TransactionResponse struct {
-	Txs     []*chain.Transaction `json:"txs"`
-	BlockId string               `json:"id"`
-}
-
-type SEQTransactionResponse struct {
-	Txs     []*types.SEQTransaction `json:"txs"`
-	BlockId string                  `json:"id"`
-}
-
-type SequencerWarpBlockResponse struct {
-	Blocks []SequencerWarpBlock `json:"blocks"`
-}
-
-type SequencerWarpBlock struct {
-	BlockId    string   `json:"id"`
-	Timestamp  int64    `json:"timestamp"`
-	L1Head     uint64   `json:"l1_head"`
-	Height     *big.Int `json:"height"`
-	BlockRoot  *big.Int `json:"root"`
-	ParentRoot *big.Int `json:"parent"`
-}
-
-type GetBlockHeadersByHeightArgs struct {
-	Height uint64 `json:"height"`
-	End    int64  `json:"end"`
-}
-
-type GetBlockHeadersIDArgs struct {
-	ID  string `json:"id"`
-	End int64  `json:"end"`
-}
-
-type GetBlockHeadersByStartArgs struct {
-	Start int64 `json:"start"`
-	End   int64 `json:"end"`
-}
-
-type GetBlockTransactionsArgs struct {
-	ID string `json:"block_id"`
-}
-
-type GetBlockCommitmentArgs struct {
-	First         uint64 `json:"first"`
-	CurrentHeight uint64 `json:"current_height"`
-	MaxBlocks     int    `json:"max_blocks"`
-}
-
-type GetBlockTransactionsByNamespaceArgs struct {
-	Height    uint64 `json:"height"`
-	Namespace string `json:"namespace"`
-}
-
 func (j *JSONRPCServer) GetBlockHeadersByHeight(req *http.Request, args *types.GetBlockHeadersByHeightArgs, reply *types.BlockHeadersResponse) error {
 	headers, err := j.c.Archiver().GetBlockHeadersByHeight(args)
 	if err != nil {
@@ -223,7 +154,7 @@ func (j *JSONRPCServer) GetBlockHeadersID(req *http.Request, args *types.GetBloc
 	return nil
 }
 
-func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *types.GetBlockHeadersByStartArgs, reply *types.BlockHeadersResponse) error {
+func (j *JSONRPCServer) GetBlockHeadersByStartTimeStamp(req *http.Request, args *types.GetBlockHeadersByStartTimeStampArgs, reply *types.BlockHeadersResponse) error {
 	// Parse query parameters
 	headers, err := j.c.Archiver().GetBlockHeadersAfterTimestamp(args)
 	if err != nil {
@@ -238,7 +169,7 @@ func (j *JSONRPCServer) GetBlockHeadersByStart(req *http.Request, args *types.Ge
 	return nil
 }
 
-func (j *JSONRPCServer) GetBlockTransactions(req *http.Request, args *GetBlockTransactionsArgs, reply *types.SEQTransactionResponse) error {
+func (j *JSONRPCServer) GetBlockTransactions(req *http.Request, args *types.GetBlockTransactionsArgs, reply *types.SEQTransactionResponse) error {
 	// Parse query parameters
 
 	// TODO either the firstBlock height is equal to height or use the hash to get it or if none of the above work then use the btree to get it
@@ -285,7 +216,7 @@ func (j *JSONRPCServer) GetCommitmentBlocks(req *http.Request, args *types.GetBl
 	return nil
 }
 
-func (j *JSONRPCServer) GetBlockTransactionsByNamespace(req *http.Request, args *GetBlockTransactionsByNamespaceArgs, reply *SEQTransactionResponse) error {
+func (j *JSONRPCServer) GetBlockTransactionsByNamespace(req *http.Request, args *types.GetBlockTransactionsByNamespaceArgs, reply *types.SEQTransactionResponse) error {
 	// TODO either the firstBlock height is equal to height or use the hash to get it or if none of the above work then use the btree to get it
 	parser := j.ServerParser(req.Context(), j.c.NetworkID(), j.c.ChainID())
 
