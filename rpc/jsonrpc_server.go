@@ -170,7 +170,7 @@ func (j *JSONRPCServer) GetBlockTransactions(req *http.Request, args *types.GetB
 					Namespace:   ns,
 					Transaction: action.(*actions.SequencerMsg).Data, // eth format tx binary
 					Index:       uint64(k),
-					TxID:        tx.ID().String(),
+					TxID:        tx.ID().String(), // TODO: what should be the TxID for multi action tx?
 				})
 			}
 		}

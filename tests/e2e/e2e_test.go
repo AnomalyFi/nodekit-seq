@@ -720,8 +720,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 
 			hutils.Outf("{{green}}height: %d blockID wanted:{{/}}%s \n", blk.Hght, blkID.String())
 			txInBlock := resp.Txs[0]
-			calcTxID := chain.CreateActionID(txID, 0)
-			require.Equal(calcTxID.String(), txInBlock.TxID)
+			require.Equal(txID.String(), txInBlock.TxID)
 		})
 
 		ginkgo.By("issuing GetBlockTransactions", func() {
