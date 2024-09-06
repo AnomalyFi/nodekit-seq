@@ -47,7 +47,7 @@ const (
 )
 
 func TestE2e(t *testing.T) {
-	ginkgo.RunSpecs(t, "tokenvm e2e test suites")
+	ginkgo.RunSpecs(t, "seqvm e2e test suites")
 }
 
 var (
