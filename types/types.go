@@ -166,18 +166,18 @@ type BlockHeadersResponse struct {
 }
 
 type GetBlockHeadersIDArgs struct {
-	ID  string `json:"id"`
-	End int64  `json:"end"`
+	ID           string `json:"id"`
+	EndTimeStamp int64  `json:"end_timestamp"`
 }
 
 type GetBlockHeadersByHeightArgs struct {
 	Height       uint64 `json:"height"`
-	EndTimeStamp int64  `json:"end"`
+	EndTimeStamp int64  `json:"end_timestamp"`
 }
 
 type GetBlockHeadersByStartTimeStampArgs struct {
-	StartTimeStamp int64 `json:"start"`
-	EndTimeStamp   int64 `json:"end"`
+	StartTimeStamp int64 `json:"start_timestamp"`
+	EndTimeStamp   int64 `json:"end_timestamp"`
 }
 
 type GetBlockCommitmentArgs struct {

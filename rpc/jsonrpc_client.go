@@ -39,6 +39,22 @@ func NewJSONRPCClient(uri string, networkID uint32, chainID ids.ID) *JSONRPCClie
 	}
 }
 
+func (cli *JSONRPCClient) SubmitMsgTx(ctx context.Context, chainID string, networkID uint32, secondaryChainID []byte, data [][]byte) (string, error) {
+	resp := new(SubmitMsgTxReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"submitMsgTx",
+		&SubmitMsgTxArgs{
+			ChainId:          chainID,
+			NetworkID:        networkID,
+			SecondaryChainId: secondaryChainID,
+			Data:             data,
+		},
+		resp,
+	)
+	return resp.TxID, err
+}
+
 func (cli *JSONRPCClient) Genesis(ctx context.Context) (*genesis.Genesis, error) {
 	if cli.g != nil {
 		return cli.g, nil
@@ -111,15 +127,15 @@ func (cli *JSONRPCClient) GetBlockHeadersByHeight(
 func (cli *JSONRPCClient) GetBlockHeadersID(
 	ctx context.Context,
 	id string,
-	end int64,
+	endTimeStamp int64,
 ) (*types.BlockHeadersResponse, error) {
 	resp := new(types.BlockHeadersResponse)
 	err := cli.requester.SendRequest(
 		ctx,
 		"getBlockHeadersID",
 		&types.GetBlockHeadersIDArgs{
-			ID:  id,
-			End: end,
+			ID:           id,
+			EndTimeStamp: endTimeStamp,
 		},
 		resp,
 	)
@@ -149,7 +165,6 @@ func (cli *JSONRPCClient) GetBlockTransactions(
 	id string,
 ) (*types.SEQTransactionResponse, error) {
 	resp := new(types.SEQTransactionResponse)
-	// TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,
 		"getBlockTransactions",
@@ -167,7 +182,6 @@ func (cli *JSONRPCClient) GetBlockTransactionsByNamespace(
 	namespace string,
 ) (*types.SEQTransactionResponse, error) {
 	resp := new(types.SEQTransactionResponse)
-	// TODO does this need to be lowercase for the string?
 	err := cli.requester.SendRequest(
 		ctx,
 		"getBlockTransactionsByNamespace",

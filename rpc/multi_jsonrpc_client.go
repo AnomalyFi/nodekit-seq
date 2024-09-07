@@ -89,9 +89,10 @@ func (multi *MultiJSONRPCClient) GenerateAndSubmitTx(ctx context.Context, action
 	rules := parser.Rules(now)
 
 	base := &chain.Base{
-		Timestamp: utils.UnixRMilli(now, rules.GetValidityWindow()),
-		ChainID:   multi.SeqCli.chainID,
-		MaxFee:    fee,
+		Timestamp:   utils.UnixRMilli(now, rules.GetValidityWindow()),
+		ChainID:     multi.SeqCli.chainID,
+		PriorityFee: priorityFee,
+		MaxFee:      fee,
 	}
 
 	// Build transaction

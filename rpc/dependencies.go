@@ -24,6 +24,7 @@ type Controller interface {
 	GetTransaction(context.Context, ids.ID) (bool, int64, bool, fees.Dimensions, uint64, error)
 	GetBalanceFromState(context.Context, codec.Address) (uint64, error)
 	UnitPrices(ctx context.Context) (fees.Dimensions, error)
+	NameSpacesPrice(ctx context.Context, namespaces []string) ([]uint64, error)
 	GetAcceptedBlockWindow() int
 	Submit(
 		ctx context.Context,
