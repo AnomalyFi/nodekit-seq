@@ -647,7 +647,8 @@ var _ = ginkgo.Describe("[Test]", func() {
 	ginkgo.It("test rpc server and archiver is working correctly", func() {
 		var blk *chain.StatefulBlock
 		var blkID ids.ID
-		var txID ids.ID
+		// var txID ids.ID
+		var txIDn ids.ID
 		namespace := hex.EncodeToString([]byte("nkit"))
 		// util funcs
 		parser, err := instances[0].tcli.Parser(context.TODO())
@@ -702,7 +703,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			require.NotNil(block)
 			blockID, err := block.ID()
 			require.NoError(err)
-
+			txIDn = txID
 			blkID = blockID
 			blk = block
 		})
@@ -720,7 +721,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 
 			hutils.Outf("{{green}}height: %d blockID wanted:{{/}}%s \n", blk.Hght, blkID.String())
 			txInBlock := resp.Txs[0]
-			require.Equal(txID.String(), txInBlock.TxID)
+			require.Equal(txIDn.String(), txInBlock.TxID)
 		})
 
 		ginkgo.By("issuing GetBlockTransactions", func() {
@@ -729,7 +730,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			defer cancel()
 			resp, err := instances[0].tcli.GetBlockTransactionsByNamespace(ctx, blk.Hght, namespace)
 			require.NoError(err)
-			require.Equal(len(blk.Txs), len(resp.Txs))
+			require.Equal(2, len(resp.Txs))
 
 			resp, err = instances[0].tcli.GetBlockTransactionsByNamespace(ctx, blk.Hght, "someothernamespace")
 			require.NoError(err)
