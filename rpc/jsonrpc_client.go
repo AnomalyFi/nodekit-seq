@@ -45,9 +45,9 @@ func (cli *JSONRPCClient) SubmitMsgTx(ctx context.Context, chainID string, netwo
 		ctx,
 		"submitMsgTx",
 		&SubmitMsgTxArgs{
-			ChainId:          chainID,
+			ChainID:          chainID,
 			NetworkID:        networkID,
-			SecondaryChainId: secondaryChainID,
+			SecondaryChainID: secondaryChainID,
 			Data:             data,
 		},
 		resp,

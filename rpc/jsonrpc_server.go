@@ -46,9 +46,9 @@ func (j *JSONRPCServer) Genesis(_ *http.Request, _ *struct{}, reply *GenesisRepl
 }
 
 type SubmitMsgTxArgs struct {
-	ChainId          string   `json:"chain_id"`
+	ChainID          string   `json:"chain_id"`
 	NetworkID        uint32   `json:"network_id"`
-	SecondaryChainId []byte   `json:"secondary_chain_id"`
+	SecondaryChainID []byte   `json:"secondary_chain_id"`
 	Data             [][]byte `json:"data"`
 }
 
@@ -57,14 +57,16 @@ type SubmitMsgTxReply struct {
 }
 
 // This method submits SequencerMsg actions to the chain, without any priority fee.
+// Note: This method will be removed in the future, as it is only used for testing.
 func (j *JSONRPCServer) SubmitMsgTx(
 	req *http.Request,
 	args *SubmitMsgTxArgs,
 	reply *SubmitMsgTxReply,
 ) error {
-	ctx := context.Background()
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.SubmitMsgTx")
+	defer span.End()
 
-	chainId, err := ids.FromString(args.ChainId)
+	chainID, err := ids.FromString(args.ChainID)
 	if err != nil {
 		return err
 	}
@@ -74,7 +76,7 @@ func (j *JSONRPCServer) SubmitMsgTx(
 		return err
 	}
 
-	parser := j.ServerParser(ctx, args.NetworkID, chainId)
+	parser := j.ServerParser(ctx, args.NetworkID, chainID)
 
 	privBytes, err := codec.LoadHex(
 		"323b1d8f4eed5f0da9da93071b034f2dce9d2d22692c172f3cb252a64ddfafd01b057de320297c29ad0c1f589ea216869cf1938d88c9fbd70d6748323dbf2fa7", //nolint:lll
@@ -99,7 +101,7 @@ func (j *JSONRPCServer) SubmitMsgTx(
 		act := actions.SequencerMsg{
 			FromAddress: rsender,
 			Data:        data,
-			ChainID:     args.SecondaryChainId,
+			ChainID:     args.SecondaryChainID,
 			RelayerID:   0,
 		}
 		acts = append(acts, &act)
@@ -128,6 +130,7 @@ func (j *JSONRPCServer) SubmitMsgTx(
 		maxFee += nsPrices[i] * feeMarketUnits[ns]
 	}
 
+	// Add 20% to the max fee
 	maxFee += (maxFee / 5)
 
 	now := time.Now().UnixMilli()
@@ -135,7 +138,7 @@ func (j *JSONRPCServer) SubmitMsgTx(
 
 	base := &chain.Base{
 		Timestamp: utils.UnixRMilli(now, rules.GetValidityWindow()),
-		ChainID:   chainId,
+		ChainID:   chainID,
 		MaxFee:    maxFee,
 	}
 
