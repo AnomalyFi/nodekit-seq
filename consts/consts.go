@@ -12,7 +12,7 @@ import (
 const (
 	HRP      = "seq"
 	Name     = "seqvm"
-	Symbol   = "DSEQ"
+	Symbol   = "SEQ"
 	Decimals = 9
 )
 
