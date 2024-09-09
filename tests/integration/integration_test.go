@@ -70,23 +70,6 @@ var (
 	rsender3 codec.Address
 	sender3  string
 
-	asset1         []byte
-	asset1Symbol   []byte
-	asset1Decimals uint8
-	asset1ID       ids.ID
-	asset2         []byte
-	asset2Symbol   []byte
-	asset2Decimals uint8
-	asset2ID       ids.ID
-	asset3         []byte
-	asset3Symbol   []byte
-	asset3Decimals uint8
-	asset3ID       ids.ID
-	asset4         []byte
-	asset4Symbol   []byte
-	asset4Decimals uint8
-	asset4ID       ids.ID
-
 	// when used with embedded VMs
 	genesisBytes []byte
 	instances    []instance
@@ -179,19 +162,6 @@ var _ = ginkgo.BeforeSuite(func() {
 		zap.String("pk", hex.EncodeToString(priv3[:])),
 	)
 
-	asset1 = []byte("1")
-	asset1Symbol = []byte("s1")
-	asset1Decimals = uint8(1)
-	asset2 = []byte("2")
-	asset2Symbol = []byte("s2")
-	asset2Decimals = uint8(2)
-	asset3 = []byte("3")
-	asset3Symbol = []byte("s3")
-	asset3Decimals = uint8(3)
-	asset4 = []byte("4")
-	asset4Symbol = []byte("s4")
-	asset4Decimals = uint8(4)
-
 	// create embedded VMs
 	instances = make([]instance, vms)
 
@@ -283,19 +253,11 @@ var _ = ginkgo.BeforeSuite(func() {
 
 		csupply := uint64(0)
 		for _, alloc := range g.CustomAllocation {
-			balance, err := cli.Balance(context.Background(), alloc.Address, ids.Empty)
+			balance, err := cli.Balance(context.Background(), alloc.Address)
 			require.NoError(err)
 			require.Equal(balance, alloc.Balance)
 			csupply += alloc.Balance
 		}
-		exists, symbol, decimals, metadata, supply, owner, err := cli.Asset(context.Background(), ids.Empty, false)
-		require.NoError(err)
-		require.True(exists)
-		require.Equal(string(symbol), tconsts.Symbol)
-		require.Equal(decimals, uint8(tconsts.Decimals))
-		require.Equal(string(metadata), tconsts.Name)
-		require.Equal(supply, csupply)
-		require.Equal(owner, codec.MustAddressBech32(tconsts.HRP, codec.EmptyAddress))
 	}
 	blocks = []snowman.Block{}
 
@@ -353,8 +315,8 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 	// read: 2 keys reads
 	// allocate: 1 key created with 1 chunk
 	// write: 2 keys modified
-	transferTxUnits := fees.Dimensions{224, 7, 14, 50, 26}
-	transferTxFee := uint64(321)
+	transferTxUnits := fees.Dimensions{200, 7, 14, 50, 26}
+	transferTxFee := uint64(297)
 
 	ginkgo.It("get currently accepted block ID", func() {
 		for _, inst := range instances {
@@ -465,10 +427,10 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 		})
 
 		ginkgo.By("ensure balance is updated", func() {
-			balance, err := instances[1].tcli.Balance(context.Background(), sender, ids.Empty)
+			balance, err := instances[1].tcli.Balance(context.Background(), sender)
 			require.NoError(err)
-			require.Equal(balance, uint64(9_899_679))
-			balance2, err := instances[1].tcli.Balance(context.Background(), sender2, ids.Empty)
+			require.Equal(balance, uint64(9_899_703))
+			balance2, err := instances[1].tcli.Balance(context.Background(), sender2)
 			require.NoError(err)
 			require.Equal(balance2, uint64(100_000))
 		})
@@ -496,7 +458,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 			require.Len(results, 1)
 			require.True(results[0].Success)
 
-			balance2, err := instances[1].tcli.Balance(context.Background(), sender2, ids.Empty)
+			balance2, err := instances[1].tcli.Balance(context.Background(), sender2)
 			require.NoError(err)
 			require.Equal(balance2, uint64(100_101))
 		})
@@ -642,7 +604,7 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 		time.Sleep(2 * pubsub.MaxMessageWait)
 
 		// Fetch balances
-		balance, err := instances[0].tcli.Balance(context.TODO(), sender, ids.Empty)
+		balance, err := instances[0].tcli.Balance(context.TODO(), sender)
 		require.NoError(err)
 
 		// Send tx
@@ -675,13 +637,12 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 		require.NoError(err)
 		require.Len(blk.Txs, 1)
 		tx := blk.Txs[0].Actions[0].(*actions.Transfer)
-		require.Equal(tx.Asset, ids.Empty)
 		require.Equal(tx.Value, uint64(1))
 		require.Equal(lresults, results)
 		require.Equal(prices, fees.Dimensions{1, 1, 1, 1, 1})
 
 		// Check balance modifications are correct
-		balancea, err := instances[0].tcli.Balance(context.TODO(), sender, ids.Empty)
+		balancea, err := instances[0].tcli.Balance(context.TODO(), sender)
 		require.NoError(err)
 		require.Equal(balance, balancea+lresults[0].Fee+1)
 
@@ -800,509 +761,6 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 		require.ErrorContains(err, "size is larger than limit")
 	})
 
-	ginkgo.It("mint an asset that doesn't exist", func() {
-		other, err := ed25519.GeneratePrivateKey()
-		require.NoError(err)
-		assetID := ids.GenerateTestID()
-		parser, err := instances[0].tcli.Parser(context.Background())
-		require.NoError(err)
-		submit, _, _, err := instances[0].cli.GenerateTransaction(
-			context.Background(),
-			parser,
-			[]chain.Action{&actions.MintAsset{
-				To:    auth.NewED25519Address(other.PublicKey()),
-				Asset: assetID,
-				Value: 10,
-			}},
-			factory,
-			priorityFee,
-		)
-		require.NoError(err)
-		require.NoError(submit(context.Background()))
-
-		accept := expectBlk(instances[0])
-		results := accept(false)
-		require.Len(results, 1)
-		result := results[0]
-		require.False(result.Success)
-		require.Contains(string(result.Error), "asset missing")
-
-		exists, _, _, _, _, _, err := instances[0].tcli.Asset(context.TODO(), assetID, false)
-		require.NoError(err)
-		require.False(exists)
-	})
-
-	ginkgo.It("create a new asset (no metadata)", func() {
-		tx := chain.NewTx(
-			&chain.Base{
-				ChainID:   instances[0].chainID,
-				Timestamp: hutils.UnixRMilli(-1, 5*consts.MillisecondsPerSecond),
-				MaxFee:    1001,
-			},
-			[]chain.Action{&actions.CreateAsset{
-				Symbol:   []byte("s0"),
-				Decimals: 0,
-				Metadata: nil,
-			}},
-		)
-		// Must do manual construction to avoid `tx.Sign` error (would fail with
-		// too large)
-		msg, err := tx.Digest()
-		require.NoError(err)
-		auth, err := factory.Sign(msg)
-		require.NoError(err)
-		tx.Auth = auth
-		p := codec.NewWriter(0, consts.MaxInt) // test codec growth
-		require.NoError(tx.Marshal(p))
-		require.NoError(p.Err())
-		_, err = instances[0].cli.SubmitTx(
-			context.Background(),
-			p.Bytes(),
-		)
-		require.ErrorContains(err, "Bytes field is not populated")
-	})
-
-	ginkgo.It("create a new asset (no symbol)", func() {
-		tx := chain.NewTx(
-			&chain.Base{
-				ChainID:   instances[0].chainID,
-				Timestamp: hutils.UnixRMilli(-1, 5*consts.MillisecondsPerSecond),
-				MaxFee:    1001,
-			},
-			[]chain.Action{&actions.CreateAsset{
-				Symbol:   nil,
-				Decimals: 0,
-				Metadata: []byte("m"),
-			}},
-		)
-		// Must do manual construction to avoid `tx.Sign` error (would fail with
-		// too large)
-		msg, err := tx.Digest()
-		require.NoError(err)
-		auth, err := factory.Sign(msg)
-		require.NoError(err)
-		tx.Auth = auth
-		p := codec.NewWriter(0, consts.MaxInt) // test codec growth
-		require.NoError(tx.Marshal(p))
-		require.NoError(p.Err())
-		_, err = instances[0].cli.SubmitTx(
-			context.Background(),
-			p.Bytes(),
-		)
-		require.ErrorContains(err, "Bytes field is not populated")
-	})
-
-	ginkgo.It("create asset with too long of metadata", func() {
-		tx := chain.NewTx(
-			&chain.Base{
-				ChainID:   instances[0].chainID,
-				Timestamp: hutils.UnixRMilli(-1, 5*consts.MillisecondsPerSecond),
-				MaxFee:    1000,
-			},
-			[]chain.Action{&actions.CreateAsset{
-				Symbol:   []byte("s0"),
-				Decimals: 0,
-				Metadata: make([]byte, actions.MaxMetadataSize*2),
-			}},
-		)
-		// Must do manual construction to avoid `tx.Sign` error (would fail with
-		// too large)
-		msg, err := tx.Digest()
-		require.NoError(err)
-		auth, err := factory.Sign(msg)
-		require.NoError(err)
-		tx.Auth = auth
-		p := codec.NewWriter(0, consts.MaxInt) // test codec growth
-		require.NoError(tx.Marshal(p))
-		require.NoError(p.Err())
-		_, err = instances[0].cli.SubmitTx(
-			context.Background(),
-			p.Bytes(),
-		)
-		require.ErrorContains(err, "size is larger than limit")
-	})
-
-	ginkgo.It("create a new asset (simple metadata)", func() {
-		parser, err := instances[0].tcli.Parser(context.Background())
-		require.NoError(err)
-		submit, tx, _, err := instances[0].cli.GenerateTransaction(
-			context.Background(),
-			parser,
-			[]chain.Action{&actions.CreateAsset{
-				Symbol:   asset1Symbol,
-				Decimals: asset1Decimals,
-				Metadata: asset1,
-			}},
-			factory,
-			priorityFee,
-		)
-		require.NoError(err)
-		require.NoError(submit(context.Background()))
-
-		accept := expectBlk(instances[0])
-		results := accept(false)
-		require.Len(results, 1)
-		require.True(results[0].Success)
-
-		asset1ID = chain.CreateActionID(tx.ID(), 0)
-		balance, err := instances[0].tcli.Balance(context.TODO(), sender, asset1ID)
-		require.NoError(err)
-		require.Zero(balance)
-
-		exists, symbol, decimals, metadata, supply, owner, err := instances[0].tcli.Asset(context.TODO(), asset1ID, false)
-		require.NoError(err)
-		require.True(exists)
-		require.Equal(symbol, asset1Symbol)
-		require.Equal(decimals, asset1Decimals)
-		require.Equal(metadata, asset1)
-		require.Zero(supply)
-		require.Equal(owner, sender)
-	})
-
-	ginkgo.It("mint a new asset", func() {
-		parser, err := instances[0].tcli.Parser(context.Background())
-		require.NoError(err)
-		submit, _, _, err := instances[0].cli.GenerateTransaction(
-			context.Background(),
-			parser,
-			[]chain.Action{&actions.MintAsset{
-				To:    rsender2,
-				Asset: asset1ID,
-				Value: 15,
-			}},
-			factory,
-			priorityFee,
-		)
-		require.NoError(err)
-		require.NoError(submit(context.Background()))
-
-		accept := expectBlk(instances[0])
-		results := accept(false)
-		require.Len(results, 1)
-		require.True(results[0].Success)
-
-		balance, err := instances[0].tcli.Balance(context.TODO(), sender2, asset1ID)
-		require.NoError(err)
-		require.Equal(balance, uint64(15))
-		balance, err = instances[0].tcli.Balance(context.TODO(), sender, asset1ID)
-		require.NoError(err)
-		require.Zero(balance)
-
-		exists, symbol, decimals, metadata, supply, owner, err := instances[0].tcli.Asset(context.TODO(), asset1ID, false)
-		require.NoError(err)
-		require.True(exists)
-		require.Equal(symbol, asset1Symbol)
-		require.Equal(decimals, asset1Decimals)
-		require.Equal(metadata, asset1)
-		require.Equal(supply, uint64(15))
-		require.Equal(owner, sender)
-	})
-
-	ginkgo.It("mint asset from wrong owner", func() {
-		other, err := ed25519.GeneratePrivateKey()
-		require.NoError(err)
-		parser, err := instances[0].tcli.Parser(context.Background())
-		require.NoError(err)
-		submit, _, _, err := instances[0].cli.GenerateTransaction(
-			context.Background(),
-			parser,
-			[]chain.Action{&actions.MintAsset{
-				To:    auth.NewED25519Address(other.PublicKey()),
-				Asset: asset1ID,
-				Value: 10,
-			}},
-			factory2,
-			priorityFee,
-		)
-		require.NoError(err)
-		require.NoError(submit(context.Background()))
-
-		accept := expectBlk(instances[0])
-		results := accept(false)
-		require.Len(results, 1)
-		result := results[0]
-
-		require.False(result.Success)
-		require.Contains(string(result.Error), "wrong owner")
-
-		exists, symbol, decimals, metadata, supply, owner, err := instances[0].tcli.Asset(context.TODO(), asset1ID, false)
-		require.NoError(err)
-		require.True(exists)
-		require.Equal(symbol, asset1Symbol)
-		require.Equal(decimals, asset1Decimals)
-		require.Equal(metadata, asset1)
-		require.Equal(supply, uint64(15))
-		require.Equal(owner, sender)
-	})
-
-	ginkgo.It("burn new asset", func() {
-		parser, err := instances[0].tcli.Parser(context.Background())
-		require.NoError(err)
-		submit, _, _, err := instances[0].cli.GenerateTransaction(
-			context.Background(),
-			parser,
-			[]chain.Action{&actions.BurnAsset{
-				Asset: asset1ID,
-				Value: 5,
-			}},
-			factory2,
-			priorityFee,
-		)
-		require.NoError(err)
-		require.NoError(submit(context.Background()))
-
-		accept := expectBlk(instances[0])
-		results := accept(false)
-		require.Len(results, 1)
-		require.True(results[0].Success)
-
-		balance, err := instances[0].tcli.Balance(context.TODO(), sender2, asset1ID)
-		require.NoError(err)
-		require.Equal(balance, uint64(10))
-		balance, err = instances[0].tcli.Balance(context.TODO(), sender, asset1ID)
-		require.NoError(err)
-		require.Zero(balance)
-
-		exists, symbol, decimals, metadata, supply, owner, err := instances[0].tcli.Asset(context.TODO(), asset1ID, false)
-		require.NoError(err)
-		require.True(exists)
-		require.Equal(symbol, asset1Symbol)
-		require.Equal(decimals, asset1Decimals)
-		require.Equal(metadata, asset1)
-		require.Equal(supply, uint64(10))
-		require.Equal(owner, sender)
-	})
-
-	ginkgo.It("burn missing asset", func() {
-		parser, err := instances[0].tcli.Parser(context.Background())
-		require.NoError(err)
-		submit, _, _, err := instances[0].cli.GenerateTransaction(
-			context.Background(),
-			parser,
-			[]chain.Action{&actions.BurnAsset{
-				Asset: asset1ID,
-				Value: 10,
-			}},
-			factory,
-			priorityFee,
-		)
-		require.NoError(err)
-		require.NoError(submit(context.Background()))
-
-		accept := expectBlk(instances[0])
-		results := accept(false)
-		require.Len(results, 1)
-		result := results[0]
-		require.False(result.Success)
-		require.Contains(string(result.Error), "invalid balance")
-
-		exists, symbol, decimals, metadata, supply, owner, err := instances[0].tcli.Asset(context.TODO(), asset1ID, false)
-		require.NoError(err)
-		require.True(exists)
-		require.Equal(symbol, asset1Symbol)
-		require.Equal(decimals, asset1Decimals)
-		require.Equal(metadata, asset1)
-		require.Equal(supply, uint64(10))
-		require.Equal(owner, sender)
-	})
-
-	ginkgo.It("rejects empty mint", func() {
-		other, err := ed25519.GeneratePrivateKey()
-		require.NoError(err)
-		tx := chain.NewTx(
-			&chain.Base{
-				ChainID:   instances[0].chainID,
-				Timestamp: hutils.UnixRMilli(-1, 5*consts.MillisecondsPerSecond),
-				MaxFee:    1000,
-			},
-			[]chain.Action{&actions.MintAsset{
-				To:    auth.NewED25519Address(other.PublicKey()),
-				Asset: asset1ID,
-			}},
-		)
-		// Must do manual construction to avoid `tx.Sign` error (would fail with
-		// bad codec)
-		msg, err := tx.Digest()
-		require.NoError(err)
-		auth, err := factory.Sign(msg)
-		require.NoError(err)
-		tx.Auth = auth
-		p := codec.NewWriter(0, consts.MaxInt) // test codec growth
-		require.NoError(tx.Marshal(p))
-		require.NoError(p.Err())
-		_, err = instances[0].cli.SubmitTx(
-			context.Background(),
-			p.Bytes(),
-		)
-		require.ErrorContains(err, "Uint64 field is not populated")
-	})
-
-	ginkgo.It("reject max mint", func() {
-		parser, err := instances[0].tcli.Parser(context.Background())
-		require.NoError(err)
-		submit, _, _, err := instances[0].cli.GenerateTransaction(
-			context.Background(),
-			parser,
-			[]chain.Action{&actions.MintAsset{
-				To:    rsender2,
-				Asset: asset1ID,
-				Value: consts.MaxUint64,
-			}},
-			factory,
-			priorityFee,
-		)
-		require.NoError(err)
-		require.NoError(submit(context.Background()))
-
-		accept := expectBlk(instances[0])
-		results := accept(false)
-		require.Len(results, 1)
-		result := results[0]
-		require.False(result.Success)
-		require.Contains(string(result.Error), "overflow")
-
-		balance, err := instances[0].tcli.Balance(context.TODO(), sender2, asset1ID)
-		require.NoError(err)
-		require.Equal(balance, uint64(10))
-		balance, err = instances[0].tcli.Balance(context.TODO(), sender, asset1ID)
-		require.NoError(err)
-		require.Zero(balance)
-
-		exists, symbol, decimals, metadata, supply, owner, err := instances[0].tcli.Asset(context.TODO(), asset1ID, false)
-		require.NoError(err)
-		require.True(exists)
-		require.Equal(symbol, asset1Symbol)
-		require.Equal(decimals, asset1Decimals)
-		require.Equal(metadata, asset1)
-		require.Equal(supply, uint64(10))
-		require.Equal(owner, sender)
-	})
-
-	ginkgo.It("rejects mint of native token", func() {
-		other, err := ed25519.GeneratePrivateKey()
-		require.NoError(err)
-		tx := chain.NewTx(
-			&chain.Base{
-				ChainID:   instances[0].chainID,
-				Timestamp: hutils.UnixRMilli(-1, 5*consts.MillisecondsPerSecond),
-				MaxFee:    1000,
-			},
-			[]chain.Action{&actions.MintAsset{
-				To:    auth.NewED25519Address(other.PublicKey()),
-				Value: 10,
-			}},
-		)
-		// Must do manual construction to avoid `tx.Sign` error (would fail with
-		// bad codec)
-		msg, err := tx.Digest()
-		require.NoError(err)
-		auth, err := factory.Sign(msg)
-		require.NoError(err)
-		tx.Auth = auth
-		p := codec.NewWriter(0, consts.MaxInt) // test codec growth
-		require.NoError(tx.Marshal(p))
-		require.NoError(p.Err())
-		_, err = instances[0].cli.SubmitTx(
-			context.Background(),
-			p.Bytes(),
-		)
-		require.ErrorContains(err, "ID field is not populated")
-	})
-
-	ginkgo.It("mints another new asset (to self)", func() {
-		parser, err := instances[0].tcli.Parser(context.Background())
-		require.NoError(err)
-		submit, tx, _, err := instances[0].cli.GenerateTransaction(
-			context.Background(),
-			parser,
-			[]chain.Action{&actions.CreateAsset{
-				Symbol:   asset2Symbol,
-				Decimals: asset2Decimals,
-				Metadata: asset2,
-			}},
-			factory,
-			priorityFee,
-		)
-		require.NoError(err)
-		require.NoError(submit(context.Background()))
-
-		accept := expectBlk(instances[0])
-		results := accept(false)
-		require.Len(results, 1)
-		require.True(results[0].Success)
-		asset2ID = chain.CreateActionID(tx.ID(), 0)
-
-		submit, _, _, err = instances[0].cli.GenerateTransaction(
-			context.Background(),
-			parser,
-			[]chain.Action{&actions.MintAsset{
-				To:    rsender,
-				Asset: asset2ID,
-				Value: 10,
-			}},
-			factory,
-			priorityFee,
-		)
-		require.NoError(err)
-		require.NoError(submit(context.Background()))
-
-		accept = expectBlk(instances[0])
-		results = accept(false)
-		require.Len(results, 1)
-		require.True(results[0].Success)
-
-		balance, err := instances[0].tcli.Balance(context.TODO(), sender, asset2ID)
-		require.NoError(err)
-		require.Equal(balance, uint64(10))
-	})
-
-	ginkgo.It("mints another new asset (to self) on another account", func() {
-		parser, err := instances[0].tcli.Parser(context.Background())
-		require.NoError(err)
-		submit, tx, _, err := instances[0].cli.GenerateTransaction(
-			context.Background(),
-			parser,
-			[]chain.Action{&actions.CreateAsset{
-				Symbol:   asset3Symbol,
-				Decimals: asset3Decimals,
-				Metadata: asset3,
-			}},
-			factory2,
-			priorityFee,
-		)
-		require.NoError(err)
-		require.NoError(submit(context.Background()))
-
-		accept := expectBlk(instances[0])
-		results := accept(false)
-		require.Len(results, 1)
-		require.True(results[0].Success)
-		asset3ID = chain.CreateActionID(tx.ID(), 0)
-
-		submit, _, _, err = instances[0].cli.GenerateTransaction(
-			context.Background(),
-			parser,
-			[]chain.Action{&actions.MintAsset{
-				To:    rsender2,
-				Asset: asset3ID,
-				Value: 10,
-			}},
-			factory2,
-			priorityFee,
-		)
-		require.NoError(err)
-		require.NoError(submit(context.Background()))
-
-		accept = expectBlk(instances[0])
-		results = accept(false)
-		require.Len(results, 1)
-		require.True(results[0].Success)
-
-		balance, err := instances[0].tcli.Balance(context.TODO(), sender2, asset3ID)
-		require.NoError(err)
-		require.Equal(balance, uint64(10))
-	})
-
 	// Use new instance to make balance checks easier (note, instances are in different
 	// states and would never agree)
 	ginkgo.It("transfer to multiple accounts in a single tx", func() {
@@ -1333,135 +791,14 @@ var _ = ginkgo.Describe("[Tx Processing]", func() {
 		require.Len(results, 1)
 		require.True(results[0].Success)
 
-		balance2, err := instances[3].tcli.Balance(context.Background(), sender2, ids.Empty)
+		balance2, err := instances[3].tcli.Balance(context.Background(), sender2)
 		require.NoError(err)
 		require.Equal(balance2, uint64(10000))
 
-		balance3, err := instances[3].tcli.Balance(context.Background(), sender3, ids.Empty)
+		balance3, err := instances[3].tcli.Balance(context.Background(), sender3)
 		require.NoError(err)
 		require.Equal(balance3, uint64(5000))
 	})
-
-	ginkgo.It("create and mint multiple of assets in a single tx", func() {
-		// Create asset
-		parser, err := instances[3].tcli.Parser(context.Background())
-		require.NoError(err)
-		submit, tx, _, err := instances[3].cli.GenerateTransaction(
-			context.Background(),
-			parser,
-			[]chain.Action{
-				&actions.CreateAsset{
-					Symbol:   asset1Symbol,
-					Decimals: asset1Decimals,
-					Metadata: asset1,
-				},
-				&actions.CreateAsset{
-					Symbol:   asset2Symbol,
-					Decimals: asset2Decimals,
-					Metadata: asset2,
-				},
-				&actions.CreateAsset{
-					Symbol:   asset3Symbol,
-					Decimals: asset3Decimals,
-					Metadata: asset3,
-				},
-				&actions.CreateAsset{
-					Symbol:   asset4Symbol,
-					Decimals: asset4Decimals,
-					Metadata: asset4,
-				},
-			},
-			factory,
-			priorityFee,
-		)
-		require.NoError(err)
-		require.NoError(submit(context.Background()))
-
-		accept := expectBlk(instances[3])
-		results := accept(true)
-		require.Len(results, 1)
-		require.True(results[0].Success)
-
-		asset1ID = chain.CreateActionID(tx.ID(), 0)
-		asset2ID = chain.CreateActionID(tx.ID(), 1)
-		asset3ID = chain.CreateActionID(tx.ID(), 2)
-		asset4ID = chain.CreateActionID(tx.ID(), 3)
-
-		// Mint multiple
-		submit, _, _, err = instances[3].cli.GenerateTransaction(
-			context.Background(),
-			parser,
-			[]chain.Action{
-				&actions.MintAsset{
-					To:    rsender2,
-					Asset: asset1ID,
-					Value: 10,
-				},
-				&actions.MintAsset{
-					To:    rsender2,
-					Asset: asset2ID,
-					Value: 10,
-				},
-				&actions.MintAsset{
-					To:    rsender2,
-					Asset: asset3ID,
-					Value: 10,
-				},
-				&actions.MintAsset{
-					To:    rsender2,
-					Asset: asset4ID,
-					Value: 10,
-				},
-				&actions.MintAsset{
-					To:    rsender,
-					Asset: asset1ID,
-					Value: 10,
-				},
-				&actions.MintAsset{
-					To:    rsender,
-					Asset: asset2ID,
-					Value: 10,
-				},
-				&actions.MintAsset{
-					To:    rsender,
-					Asset: asset3ID,
-					Value: 10,
-				},
-				&actions.MintAsset{
-					To:    rsender,
-					Asset: asset4ID,
-					Value: 10,
-				},
-			},
-			factory,
-			priorityFee,
-		)
-		require.NoError(err)
-		require.NoError(submit(context.Background()))
-
-		accept = expectBlk(instances[3])
-		results = accept(true)
-		require.Len(results, 1)
-		require.True(results[0].Success)
-
-		// check sender2 assets
-		balance1, err := instances[3].tcli.Balance(context.TODO(), sender2, asset1ID)
-		require.NoError(err)
-		require.Equal(balance1, uint64(10))
-
-		balance2, err := instances[3].tcli.Balance(context.TODO(), sender2, asset2ID)
-		require.NoError(err)
-		require.Equal(balance2, uint64(10))
-
-		balance3, err := instances[3].tcli.Balance(context.TODO(), sender2, asset3ID)
-		require.NoError(err)
-		require.Equal(balance3, uint64(10))
-
-		balance4, err := instances[3].tcli.Balance(context.TODO(), sender2, asset4ID)
-		require.NoError(err)
-		require.Equal(balance4, uint64(10))
-	})
-
 })
 
 func expectBlk(i instance) func(bool) []*chain.Result {

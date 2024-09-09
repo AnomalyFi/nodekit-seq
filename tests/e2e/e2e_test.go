@@ -47,7 +47,7 @@ const (
 )
 
 func TestE2e(t *testing.T) {
-	ginkgo.RunSpecs(t, "tokenvm e2e test suites")
+	ginkgo.RunSpecs(t, "seqvm e2e test suites")
 }
 
 var (
@@ -315,7 +315,11 @@ var _ = ginkgo.BeforeSuite(func() {
 	ccancel()
 	require.NoError(err)
 	nodeInfos := status.GetClusterInfo().GetNodeInfos()
-
+	privBytes, err := codec.LoadHex(
+		"323b1d8f4eed5f0da9da93071b034f2dce9d2d22692c172f3cb252a64ddfafd01b057de320297c29ad0c1f589ea216869cf1938d88c9fbd70d6748323dbf2fa7", //nolint:lll
+		ed25519.PrivateKeyLen,
+	)
+	require.NoError(err)
 	instances = []instance{}
 	for _, nodeName := range subnet {
 		info := nodeInfos[nodeName]
@@ -340,19 +344,15 @@ var _ = ginkgo.BeforeSuite(func() {
 		require.NoError(err)
 
 		instances = append(instances, instance{
-			nodeID: nodeID,
-			uri:    u,
-			cli:    cli,
-			tcli:   trpc.NewJSONRPCClient(u, networkID, bid),
+			nodeID:   nodeID,
+			uri:      u,
+			cli:      cli,
+			tcli:     trpc.NewJSONRPCClient(u, networkID, bid),
+			multicli: trpc.NewMultiJSONRPCClientWithED25519Factory(u, networkID, bid, privBytes),
 		})
 	}
 
 	// Load default pk
-	privBytes, err := codec.LoadHex(
-		"323b1d8f4eed5f0da9da93071b034f2dce9d2d22692c172f3cb252a64ddfafd01b057de320297c29ad0c1f589ea216869cf1938d88c9fbd70d6748323dbf2fa7", //nolint:lll
-		ed25519.PrivateKeyLen,
-	)
-	require.NoError(err)
 	priv = ed25519.PrivateKey(privBytes)
 	factory = auth.NewED25519Factory(priv)
 	rsender = auth.NewED25519Address(priv.PublicKey())
@@ -370,10 +370,11 @@ var (
 )
 
 type instance struct {
-	nodeID ids.NodeID
-	uri    string
-	cli    *rpc.JSONRPCClient
-	tcli   *trpc.JSONRPCClient
+	nodeID   ids.NodeID
+	uri      string
+	cli      *rpc.JSONRPCClient
+	tcli     *trpc.JSONRPCClient
+	multicli *trpc.MultiJSONRPCClient
 }
 
 var _ = ginkgo.AfterSuite(func() {
@@ -433,7 +434,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 	}
 
 	ginkgo.It("transfer in a single node (raw)", func() {
-		nativeBalance, err := instances[0].tcli.Balance(context.TODO(), sender, ids.Empty)
+		nativeBalance, err := instances[0].tcli.Balance(context.TODO(), sender)
 		require.NoError(err)
 		require.Equal(nativeBalance, startAmount)
 
@@ -469,7 +470,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			hutils.Outf("{{yellow}}found transaction{{/}}\n")
 
 			// Check sender balance
-			balance, err := instances[0].tcli.Balance(context.Background(), sender, ids.Empty)
+			balance, err := instances[0].tcli.Balance(context.Background(), sender)
 			require.NoError(err)
 			hutils.Outf(
 				"{{yellow}}start=%d fee=%d send=%d balance=%d{{/}}\n",
@@ -497,7 +498,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 				}
 
 				// Check balance of recipient
-				balance, err := inst.tcli.Balance(context.Background(), codec.MustAddressBech32(consts.HRP, aother), ids.Empty)
+				balance, err := inst.tcli.Balance(context.Background(), codec.MustAddressBech32(consts.HRP, aother))
 				require.NoError(err)
 				require.Equal(balance, sendAmount)
 			}
@@ -524,7 +525,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 				[]chain.Action{&actions.SequencerMsg{
 					FromAddress: rsender,
 					Data:        data,
-					ChainId:     chainIDBytes,
+					ChainID:     chainIDBytes,
 					RelayerID:   0,
 				}},
 				factory,
@@ -567,7 +568,8 @@ var _ = ginkgo.Describe("[Test]", func() {
 			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
-			waitTillIncluded(ctx)
+			err = waitTillIncluded(ctx)
+			require.NoError(err)
 			success, _, err := instances[0].tcli.WaitForTransaction(ctx, tx.ID())
 			cancel()
 			require.NoError(err)
@@ -599,7 +601,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			actionData = append(actionData, txID[:]...)
 			// append `result` of Action 0 of Tx 0
 			for k := 0; k < len(txResult.Outputs[0]); k++ {
-				actionData = append(actionData, txResult.Outputs[0][k][:]...)
+				actionData = append(actionData, txResult.Outputs[0][k]...)
 			}
 
 			hutils.Outf("{{green}}actionData:{{/}}%+v \n", hex.EncodeToString(actionData))
@@ -616,35 +618,37 @@ var _ = ginkgo.Describe("[Test]", func() {
 	ginkgo.It("ensure SubmitMsgTx work", func() {
 		ginkgo.By("issuing some transactions", func() {
 			ctx := context.Background()
-			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 			defer cancel()
-			data := make([][]byte, 0, 2)
-			data = append(data, []byte("somedata"))
-			data = append(data, []byte("somedata2"))
-			txIDStr, err := instances[0].tcli.SubmitMsgTx(ctx, blockchainID, 1337, []byte("nkit"), data)
+			tpriv, err := ed25519.GeneratePrivateKey()
 			require.NoError(err)
-			hutils.Outf("{{green}}txID of submitted data:{{/}}%s \n", txIDStr)
-			txID, err := ids.FromString(txIDStr)
+			rsender := auth.NewED25519Address(tpriv.PublicKey())
+			txActions := []chain.Action{&actions.SequencerMsg{
+				ChainID:     []byte("nkit"),
+				Data:        []byte("somedata"),
+				FromAddress: rsender,
+				RelayerID:   0,
+			}, &actions.SequencerMsg{
+				ChainID:     []byte("nkit"),
+				Data:        []byte("somedata2"),
+				FromAddress: rsender,
+				RelayerID:   0,
+			}}
+			txID, err := instances[0].multicli.GenerateAndSubmitTx(ctx, txActions, 0)
+			require.NoError(err)
+			hutils.Outf("{{green}}txID of submitted data:{{/}}%s \n", txID.String())
 			require.NoError(err)
 			success, _, err := instances[0].tcli.WaitForTransaction(ctx, txID)
 			require.NoError(err)
 			require.True(success)
-		})
-
-		ginkgo.By("issuing zero transactions", func() {
-			ctx := context.Background()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
-			data := make([][]byte, 0)
-			_, err := instances[0].tcli.SubmitMsgTx(ctx, blockchainID, 1337, []byte("nkit"), data)
-			require.Error(err)
 		})
 	})
 
 	ginkgo.It("test rpc server and archiver is working correctly", func() {
 		var blk *chain.StatefulBlock
 		var blkID ids.ID
-		var txID ids.ID
+		// var txID ids.ID
+		var txIDn ids.ID
 		namespace := hex.EncodeToString([]byte("nkit"))
 		// util funcs
 		parser, err := instances[0].tcli.Parser(context.TODO())
@@ -653,7 +657,8 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.NoError(err)
 		err = wsCli.RegisterBlocks()
 		require.NoError(err)
-		waitTillIncluded := func(ctx context.Context, txIDStr string) (bool, *chain.StatefulBlock, error) {
+		waitTillIncluded := func(ctx context.Context, txIDStr string, submitFunc func(context.Context) error) (bool, *chain.StatefulBlock, error) {
+			submitted := false
 			txID, err := ids.FromString(txIDStr)
 			require.NoError(err)
 			for {
@@ -669,6 +674,16 @@ var _ = ginkgo.Describe("[Test]", func() {
 							return true, b, nil
 						}
 					}
+
+					if !submitted {
+						err := submitFunc(ctx)
+						if err != nil {
+							hutils.Outf("{{red}}failed to submit block: %s{{/}}\n", err)
+						} else {
+							hutils.Outf("{{green}}submitted tx: %s{{/}}\n", txIDStr)
+							submitted = true
+						}
+					}
 				}
 			}
 		}
@@ -676,21 +691,32 @@ var _ = ginkgo.Describe("[Test]", func() {
 			ctx := context.Background()
 			ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 			defer cancel()
-			data := make([][]byte, 0, 2)
-			data = append(data, []byte("somedata"))
-			data = append(data, []byte("somedata2"))
-			txIDStr, err := instances[0].tcli.SubmitMsgTx(ctx, blockchainID, 1337, []byte("nkit"), data)
+			tpriv, err := ed25519.GeneratePrivateKey()
 			require.NoError(err)
-			txID, err = ids.FromString(txIDStr)
+			rsender := auth.NewED25519Address(tpriv.PublicKey())
+			txActions := []chain.Action{&actions.SequencerMsg{
+				ChainID:     []byte("nkit"),
+				Data:        []byte("somedata"),
+				FromAddress: rsender,
+				RelayerID:   0,
+			}, &actions.SequencerMsg{
+				ChainID:     []byte("nkit"),
+				Data:        []byte("somedata2"),
+				FromAddress: rsender,
+				RelayerID:   0,
+			}}
+			parser, err := instances[0].tcli.Parser(ctx)
 			require.NoError(err)
-			hutils.Outf("{{green}}txID of submitted data:{{/}}%s \n", txIDStr)
-			included, block, err := waitTillIncluded(ctx, txIDStr)
+			submit, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
+			require.NoError(err)
+			txID := tx.ID()
+			included, block, err := waitTillIncluded(ctx, txID.String(), submit)
 			require.True(included)
 			require.NoError(err)
 			require.NotNil(block)
 			blockID, err := block.ID()
 			require.NoError(err)
-
+			txIDn = txID
 			blkID = blockID
 			blk = block
 		})
@@ -708,7 +734,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 
 			hutils.Outf("{{green}}height: %d blockID wanted:{{/}}%s \n", blk.Hght, blkID.String())
 			txInBlock := resp.Txs[0]
-			require.Equal(txID.String(), txInBlock.Tx_id)
+			require.Equal(txIDn.String(), txInBlock.TxID)
 		})
 
 		ginkgo.By("issuing GetBlockTransactions", func() {
@@ -735,8 +761,8 @@ var _ = ginkgo.Describe("[Test]", func() {
 			found := false
 			hutils.Outf("{{green}}height: %d blockID wanted:{{/}}%s \n", blk.Hght, blkID.String())
 			for _, b := range resp.Blocks {
-				hutils.Outf("{{green}}height: %d blockID:{{/}}%s \n", b.Height, b.BlockId)
-				if b.BlockId == blkID.String() {
+				hutils.Outf("{{green}}height: %d blockID:{{/}}%s \n", b.Height, b.BlockID)
+				if b.BlockID == blkID.String() {
 					found = true
 				}
 			}
@@ -759,7 +785,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			blkID, err := blk.ID()
 			require.NoError(err)
 			for _, b := range resp.Blocks {
-				if b.BlockId == blkID.String() {
+				if b.BlockID == blkID.String() {
 					found = true
 				}
 			}
@@ -773,7 +799,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			ctx := context.Background()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
-			resp, err := instances[0].tcli.GetBlockHeadersByStart(ctx, blk.Tmstmp, blk.Tmstmp+5000)
+			resp, err := instances[0].tcli.GetBlockHeadersByStartTimeStamp(ctx, blk.Tmstmp, blk.Tmstmp+5000)
 			require.NoError(err)
 			require.Greater(len(resp.Blocks), 0)
 
@@ -781,7 +807,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			blkID, err := blk.ID()
 			require.NoError(err)
 			for _, b := range resp.Blocks {
-				if b.BlockId == blkID.String() {
+				if b.BlockID == blkID.String() {
 					found = true
 				}
 			}

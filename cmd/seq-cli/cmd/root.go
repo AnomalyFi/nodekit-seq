@@ -14,7 +14,7 @@ import (
 
 const (
 	fsModeWrite     = 0o600
-	defaultDatabase = ".token-cli"
+	defaultDatabase = ".seq-cli"
 	defaultGenesis  = "genesis.json"
 )
 
@@ -39,9 +39,9 @@ var (
 	maxFee                int64
 
 	rootCmd = &cobra.Command{
-		Use:        "token-cli",
-		Short:      "TokenVM CLI",
-		SuggestFor: []string{"token-cli", "tokencli"},
+		Use:        "seq-cli",
+		Short:      "SEQVM CLI",
+		SuggestFor: []string{"seq-cli", "seq-cli"},
 	}
 )
 
@@ -144,12 +144,7 @@ func init() {
 
 	// actions
 	actionCmd.AddCommand(
-
 		transferCmd,
-
-		createAssetCmd,
-		mintAssetCmd,
-
 		sequencerMsgCmd,
 	)
 
@@ -174,7 +169,6 @@ func init() {
 	)
 	spamCmd.AddCommand(
 		runSpamCmd,
-		//runSpamSequencerMsgCmd,
 	)
 
 	// prometheus

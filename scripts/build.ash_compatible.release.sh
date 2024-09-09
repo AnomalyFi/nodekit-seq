@@ -13,7 +13,7 @@ set -o pipefail
 export CGO_CFLAGS="-O -D__BLST_PORTABLE__"
 
 # Root directory
-TOKENVM_PATH=$(
+SEQVM_PATH=$(
     cd "$(dirname "${BASH_SOURCE[0]}")"
     cd .. && pwd
 )
@@ -26,38 +26,28 @@ if [[ $# -eq 1 ]]; then
     BINARY_PATH=$(realpath $1)
 elif [[ $# -eq 0 ]]; then
     # Set default binary directory location
-    name="tokenvm"
-    BINARY_PATH=$TOKENVM_PATH/build/$name
+    name="seqvm"
+    BINARY_PATH=$SEQVM_PATH/build/$name
 else
-    echo "Invalid arguments to build tokenvm. Requires zero (default location) or one argument to specify binary location."
+    echo "Invalid arguments to build seqvm. Requires zero (default location) or one argument to specify binary location."
     exit 1
 fi
 
-cd $TOKENVM_PATH
+cd $SEQVM_PATH
 
-echo "Building tokenvm in $BINARY_PATH"
+echo "Building seqvm in $BINARY_PATH"
 mkdir -p $(dirname $BINARY_PATH)
-go build -o $BINARY_PATH ./cmd/tokenvm
+go build -o $BINARY_PATH ./cmd/seqvm
 
-CLI_PATH=$TOKENVM_PATH/build/token-cli
-echo "Building token-cli in $CLI_PATH"
+CLI_PATH=$SEQVM_PATH/build/seq-cli
+echo "Building seq-cli in $CLI_PATH"
 mkdir -p $(dirname $CLI_PATH)
-go build -o $CLI_PATH ./cmd/token-cli
-
-FAUCET_PATH=$TOKENVM_PATH/build/token-faucet
-echo "Building token-faucet in $FAUCET_PATH"
-mkdir -p $(dirname $FAUCET_PATH)
-go build -o $FAUCET_PATH ./cmd/token-faucet
-
-FEED_PATH=$TOKENVM_PATH/build/token-feed
-echo "Building token-feed in $FEED_PATH"
-mkdir -p $(dirname $FEED_PATH)
-go build -o $FEED_PATH ./cmd/token-feed
+go build -o $CLI_PATH ./cmd/seq-cli
 
 # Pack the binaries into a Ash-compatible tarball
 AVALANCHEGO_VM_VERSION=${AVALANCHEGO_VM_VERSION:-0.0.999}
-echo "Packing binaries into a Ash-compatible tarball tokenvm_"$AVALANCHEGO_VM_VERSION"_linux_amd64.tar.gz"
-cd "$TOKENVM_PATH/build"
-tar -czf tokenvm_"$AVALANCHEGO_VM_VERSION"_linux_amd64.tar.gz *
-echo "Creating checksums file tokenvm_"$AVALANCHEGO_VM_VERSION"_checksums.txt"
-sha256sum tokenvm_"$AVALANCHEGO_VM_VERSION"_linux_amd64.tar.gz > tokenvm_"$AVALANCHEGO_VM_VERSION"_checksums.txt
+echo "Packing binaries into a Ash-compatible tarball seqvm_"$AVALANCHEGO_VM_VERSION"_linux_amd64.tar.gz"
+cd "$SEQVM_PATH/build"
+tar -czf seqvm_"$AVALANCHEGO_VM_VERSION"_linux_amd64.tar.gz *
+echo "Creating checksums file seqvm_"$AVALANCHEGO_VM_VERSION"_checksums.txt"
+sha256sum seqvm_"$AVALANCHEGO_VM_VERSION"_linux_amd64.tar.gz > seqvm_"$AVALANCHEGO_VM_VERSION"_checksums.txt

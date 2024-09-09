@@ -89,13 +89,17 @@ type ED25519Factory struct {
 	priv ed25519.PrivateKey
 }
 
-func (d *ED25519Factory) Sign(msg []byte) (chain.Auth, error) {
-	sig := ed25519.Sign(msg, d.priv)
-	return &ED25519{Signer: d.priv.PublicKey(), Signature: sig}, nil
+func (e *ED25519Factory) Sign(msg []byte) (chain.Auth, error) {
+	sig := ed25519.Sign(msg, e.priv)
+	return &ED25519{Signer: e.priv.PublicKey(), Signature: sig}, nil
 }
 
 func (*ED25519Factory) MaxUnits() (uint64, uint64) {
 	return ED25519Size, ED25519ComputeUnits
+}
+
+func (e *ED25519Factory) Address() codec.Address {
+	return NewED25519Address(e.priv.PublicKey())
 }
 
 type ED25519AuthEngine struct{}
@@ -106,10 +110,6 @@ func (*ED25519AuthEngine) GetBatchVerifier(cores int, count int) chain.AuthBatch
 		batchSize: batchSize,
 		total:     count,
 	}
-}
-
-func (e *ED25519Factory) Address() codec.Address {
-	return NewED25519Address(e.priv.PublicKey())
 }
 
 func (*ED25519AuthEngine) Cache(chain.Auth) {

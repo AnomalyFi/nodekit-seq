@@ -30,7 +30,7 @@ UNLIMITED_USAGE=${UNLIMITED_USAGE:-false}
 STORE_BLOCK_RESULTS_ON_DISK=${STORE_BLOCK_RESULTS_ON_DISK:-true}
 ETHL1RPC=${ETHL1RPC:-http://localhost:8545}
 ETHL1WS=${ETHL1WS:-ws://localhost:8546}
-ADDRESS=${ADDRESS:-token1qrzvk4zlwj9zsacqgtufx7zvapd3quufqpxk5rsdd4633m4wz2fdj73w34s}
+ADDRESS=${ADDRESS:-seq1qrzvk4zlwj9zsacqgtufx7zvapd3quufqpxk5rsdd4633m4wz2fdjlydh3t}
 if [[ ${MODE} != "run" ]]; then
   LOG_LEVEL=INFO
   AGO_LOG_DISPLAY_LEVEL=INFO
@@ -103,18 +103,18 @@ fi
 ############################
 
 ############################
-echo "building tokenvm"
+echo "building seqvm"
 
 # delete previous (if exists)
-rm -f "${TMPDIR}"/avalanchego-"${VERSION}"/plugins/tHBYNu8ikqo4MWMHehC9iKB9mR5tB3DWzbkYmTfe9buWQ5GZ8
+rm -f "${TMPDIR}"/avalanchego-"${VERSION}"/plugins/speGsUhsx6qC4P2vCCcneVKm57DJNxWgGdGydxAZW53jzaNHj
 
 # rebuild with latest code
 go build \
--o "${TMPDIR}"/avalanchego-"${VERSION}"/plugins/tHBYNu8ikqo4MWMHehC9iKB9mR5tB3DWzbkYmTfe9buWQ5GZ8 \
-./cmd/tokenvm
+-o "${TMPDIR}"/avalanchego-"${VERSION}"/plugins/speGsUhsx6qC4P2vCCcneVKm57DJNxWgGdGydxAZW53jzaNHj \
+./cmd/seqvm
 
-echo "building token-cli"
-go build -v -o "${TMPDIR}"/token-cli ./cmd/token-cli
+echo "building seq-cli"
+go build -v -o "${TMPDIR}"/seq-cli ./cmd/seq-cli
 
 # log everything in the avalanchego directory
 find "${TMPDIR}"/avalanchego-"${VERSION}"
@@ -136,16 +136,16 @@ EOF
 GENESIS_PATH=$2
 if [[ -z "${GENESIS_PATH}" ]]; then
   echo "creating VM genesis file with allocations"
-  rm -f "${TMPDIR}"/tokenvm.genesis
-  "${TMPDIR}"/token-cli genesis generate "${TMPDIR}"/allocations.json \
+  rm -f "${TMPDIR}"/seqvm.genesis
+  "${TMPDIR}"/seq-cli genesis generate "${TMPDIR}"/allocations.json \
   --window-target-units "${WINDOW_TARGET_UNITS}" \
   --max-block-units "${MAX_BLOCK_UNITS}" \
   --min-block-gap "${MIN_BLOCK_GAP}" \
-  --genesis-file "${TMPDIR}"/tokenvm.genesis
+  --genesis-file "${TMPDIR}"/seqvm.genesis
 else
   echo "copying custom genesis file"
-  rm -f "${TMPDIR}"/tokenvm.genesis
-  cp "${GENESIS_PATH}" "${TMPDIR}"/tokenvm.genesis
+  rm -f "${TMPDIR}"/seqvm.genesis
+  cp "${GENESIS_PATH}" "${TMPDIR}"/seqvm.genesis
 fi
 
 ############################
@@ -156,9 +156,9 @@ fi
 # else malicious entities can attempt to stuff memory with dust orders to cause
 # an OOM.
 echo "creating vm config"
-rm -f "${TMPDIR}"/tokenvm.config
-rm -rf "${TMPDIR}"/tokenvm-e2e-profiles
-cat <<EOF > "${TMPDIR}"/tokenvm.config
+rm -f "${TMPDIR}"/seqvm.config
+rm -rf "${TMPDIR}"/seqvm-e2e-profiles
+cat <<EOF > "${TMPDIR}"/seqvm.config
 {
   "mempoolSize": 10000000,
   "mempoolSponsorSize": 10000000,
@@ -171,7 +171,7 @@ cat <<EOF > "${TMPDIR}"/tokenvm.config
   "streamingBacklogSize": 10000000,
   "trackedPairs":["*"],
   "logLevel": "${LOG_LEVEL}",
-  "continuousProfilerDir":"${TMPDIR}/tokenvm-e2e-profiles/*",
+  "continuousProfilerDir":"${TMPDIR}/seqvm-e2e-profiles/*",
   "stateSyncServerDelay": ${STATESYNC_DELAY},
   "storeBlockResultsOnDisk": ${STORE_BLOCK_RESULTS_ON_DISK},
   "ethRPCAddr": "${ETHL1RPC}",
@@ -183,15 +183,15 @@ cat <<EOF > "${TMPDIR}"/tokenvm.config
   }
 }
 EOF
-mkdir -p "${TMPDIR}"/tokenvm-e2e-profiles
+mkdir -p "${TMPDIR}"/seqvm-e2e-profiles
 
 ############################
 
 ############################
 
 echo "creating subnet config"
-rm -f "${TMPDIR}"/tokenvm.subnet
-cat <<EOF > "${TMPDIR}"/tokenvm.subnet
+rm -f "${TMPDIR}"/seqvm.subnet
+cat <<EOF > "${TMPDIR}"/seqvm.subnet
 {
   "proposerMinBlockDelay": 0,
   "proposerNumHistoricalBlocks": 50000
@@ -275,9 +275,9 @@ echo "running e2e tests"
 --network-runner-grpc-gateway-endpoint="127.0.0.1:12353" \
 --avalanchego-path="${AVALANCHEGO_PATH}" \
 --avalanchego-plugin-dir="${AVALANCHEGO_PLUGIN_DIR}" \
---vm-genesis-path="${TMPDIR}"/tokenvm.genesis \
---vm-config-path="${TMPDIR}"/tokenvm.config \
---subnet-config-path="${TMPDIR}"/tokenvm.subnet \
+--vm-genesis-path="${TMPDIR}"/seqvm.genesis \
+--vm-config-path="${TMPDIR}"/seqvm.config \
+--subnet-config-path="${TMPDIR}"/seqvm.subnet \
 --output-path="${TMPDIR}"/avalanchego-"${VERSION}"/output.yaml \
 --mode="${MODE}"
 
