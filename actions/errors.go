@@ -5,4 +5,7 @@ package actions
 
 import "errors"
 
-var ErrNoSwapToFill = errors.New("no swap to fill")
+var (
+	ErrOutputValueZero    = errors.New("value is zero")
+	ErrOutputMemoTooLarge = errors.New("memo is too large")
+)

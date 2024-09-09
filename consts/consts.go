@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	HRP      = "token"
-	Name     = "tokenvm"
-	Symbol   = "TKN"
+	HRP      = "seq"
+	Name     = "seqvm"
+	Symbol   = "SEQ"
 	Decimals = 9
 )
 

@@ -22,9 +22,9 @@ type Controller interface {
 	Genesis() *genesis.Genesis
 	Tracer() trace.Tracer
 	GetTransaction(context.Context, ids.ID) (bool, int64, bool, fees.Dimensions, uint64, error)
-	GetAssetFromState(context.Context, ids.ID) (bool, []byte, uint8, []byte, uint64, codec.Address, error)
-	GetBalanceFromState(context.Context, codec.Address, ids.ID) (uint64, error)
+	GetBalanceFromState(context.Context, codec.Address) (uint64, error)
 	UnitPrices(ctx context.Context) (fees.Dimensions, error)
+	NameSpacesPrice(ctx context.Context, namespaces []string) ([]uint64, error)
 	GetAcceptedBlockWindow() int
 	Submit(
 		ctx context.Context,

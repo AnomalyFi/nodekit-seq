@@ -28,11 +28,7 @@ func CommitmentFromUint256(n *U256) (Commitment, error) {
 		zeros := make([]byte, 32-len(bigEndian))
 		bigEndian = append(zeros, bigEndian...)
 	}
-
-	for i, b := range bigEndian {
-		// Bytes() returns the bytes in big endian order and we need a 32 byte array so we populate it this way
-		bytes[i] = b
-	}
+	copy(bytes[:], bigEndian)
 	return bytes, nil
 }
 

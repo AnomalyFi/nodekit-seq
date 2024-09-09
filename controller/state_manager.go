@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"github.com/AnomalyFi/nodekit-seq/storage"
-	"github.com/ava-labs/avalanchego/ids"
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
@@ -30,9 +29,13 @@ func (*StateManager) FeeKey() []byte {
 	return storage.FeeKey()
 }
 
+func (*StateManager) FeeMarketKey() (k []byte) {
+	return storage.FeeMarketKey()
+}
+
 func (*StateManager) SponsorStateKeys(addr codec.Address) state.Keys {
 	return state.Keys{
-		string(storage.BalanceKey(addr, ids.Empty)): state.Read | state.Write,
+		string(storage.BalanceKey(addr)): state.Read | state.Write,
 	}
 }
 
@@ -42,7 +45,7 @@ func (*StateManager) CanDeduct(
 	im state.Immutable,
 	amount uint64,
 ) error {
-	bal, err := storage.GetBalance(ctx, im, addr, ids.Empty)
+	bal, err := storage.GetBalance(ctx, im, addr)
 	if err != nil {
 		return err
 	}
@@ -58,5 +61,5 @@ func (*StateManager) Deduct(
 	mu state.Mutable,
 	amount uint64,
 ) error {
-	return storage.SubBalance(ctx, mu, addr, ids.Empty, amount)
+	return storage.SubBalance(ctx, mu, addr, amount)
 }

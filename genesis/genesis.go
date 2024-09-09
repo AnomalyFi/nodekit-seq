@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/trace"
 	"github.com/ava-labs/avalanchego/x/merkledb"
 
@@ -45,6 +44,11 @@ type Genesis struct {
 	WindowTargetUnits          fees.Dimensions `json:"windowTargetUnits"` // 10s
 	MaxBlockUnits              fees.Dimensions `json:"maxBlockUnits"`     // must be possible to reach before block too large
 
+	// Fee Market Parameters
+	FeeMarketMinUnits               uint64 `json:"feeMarketMinUnits"`
+	FeeMarketWindowTargetUnits      uint64 `json:"feeMarketWindowTargetUnits"`
+	FeeMarketPriceChangeDenominator uint64 `json:"feeMarketPriceChangeDenominator"`
+
 	// Tx Parameters
 	ValidityWindow      int64 `json:"validityWindow"` // ms
 	MaxActionsPerTx     uint8 `json:"maxActionsPerTx"`
@@ -78,6 +82,11 @@ func Default() *Genesis {
 		UnitPriceChangeDenominator: fees.Dimensions{48, 48, 48, 48, 48},
 		WindowTargetUnits:          fees.Dimensions{20_000_000, 1_000, 1_000, 1_000, 1_000},
 		MaxBlockUnits:              fees.Dimensions{1_800_000, 2_000, 2_000, 2_000, 2_000},
+
+		// Fee Market Parameters
+		FeeMarketMinUnits:               100,
+		FeeMarketWindowTargetUnits:      600 * 1024, // 600 KiB
+		FeeMarketPriceChangeDenominator: 48,
 
 		// Tx Parameters
 		ValidityWindow:      60 * hconsts.MillisecondsPerSecond, // ms
@@ -121,26 +130,18 @@ func (g *Genesis) Load(ctx context.Context, tracer trace.Tracer, mu state.Mutabl
 	for _, alloc := range g.CustomAllocation {
 		pk, err := codec.ParseAddressBech32(consts.HRP, alloc.Address)
 		if err != nil {
+			fmt.Println("here here here parse address bech32")
 			return err
 		}
 		supply, err = smath.Add64(supply, alloc.Balance)
 		if err != nil {
 			return err
 		}
-		if err := storage.SetBalance(ctx, mu, pk, ids.Empty, alloc.Balance); err != nil {
+		if err := storage.SetBalance(ctx, mu, pk, alloc.Balance); err != nil {
 			return fmt.Errorf("%w: addr=%s, bal=%d", err, alloc.Address, alloc.Balance)
 		}
 	}
-	return storage.SetAsset(
-		ctx,
-		mu,
-		ids.Empty,
-		[]byte(consts.Symbol),
-		consts.Decimals,
-		[]byte(consts.Name),
-		supply,
-		codec.EmptyAddress,
-	)
+	return nil
 }
 
 func (g *Genesis) GetStateBranchFactor() merkledb.BranchFactor {
