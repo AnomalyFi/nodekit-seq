@@ -657,7 +657,8 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.NoError(err)
 		err = wsCli.RegisterBlocks()
 		require.NoError(err)
-		waitTillIncluded := func(ctx context.Context, txIDStr string) (bool, *chain.StatefulBlock, error) {
+		waitTillIncluded := func(ctx context.Context, txIDStr string, submitFunc func(context.Context) error) (bool, *chain.StatefulBlock, error) {
+			submitted := false
 			txID, err := ids.FromString(txIDStr)
 			require.NoError(err)
 			for {
@@ -671,6 +672,16 @@ var _ = ginkgo.Describe("[Test]", func() {
 						if t.ID() == txID {
 							hutils.Outf("{{green}}inclusion block found{{/}}\n")
 							return true, b, nil
+						}
+					}
+
+					if !submitted {
+						err := submitFunc(ctx)
+						if err != nil {
+							hutils.Outf("{{red}}failed to submit block: %s{{/}}\n", err)
+						} else {
+							hutils.Outf("{{green}}submitted tx: %s{{/}}\n", txIDStr)
+							submitted = true
 						}
 					}
 				}
@@ -694,10 +705,12 @@ var _ = ginkgo.Describe("[Test]", func() {
 				FromAddress: rsender,
 				RelayerID:   0,
 			}}
-			txID, err := instances[0].multicli.GenerateAndSubmitTx(ctx, txActions, 0)
+			parser, err := instances[0].tcli.Parser(ctx)
 			require.NoError(err)
-			hutils.Outf("{{green}}txID of submitted data:{{/}}%s \n", txID.String())
-			included, block, err := waitTillIncluded(ctx, txID.String())
+			submit, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
+			require.NoError(err)
+			txID := tx.ID()
+			included, block, err := waitTillIncluded(ctx, txID.String(), submit)
 			require.True(included)
 			require.NoError(err)
 			require.NotNil(block)
