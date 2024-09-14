@@ -126,6 +126,12 @@ func (c *Controller) Initialize(
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
+
+	if c.config.ArchiverConfig.ArchiverType == "sqlite" {
+		c.config.ArchiverConfig.DSN = "/tmp/sqlite." + snowCtx.NodeID.String() + ".db"
+		snowCtx.Log.Debug("setting archiver to", zap.String("dsn", c.config.ArchiverConfig.DSN))
+	}
+	// snowCtx.NodeID.String()
 	c.archiver, err = archiver.NewORMArchiverFromConfig(&c.config.ArchiverConfig)
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
