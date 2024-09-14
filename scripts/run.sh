@@ -40,9 +40,9 @@ if [[ ${MODE} != "run" ]]; then
   UNLIMITED_USAGE=true
 fi
 
-DB_PATH="/tmp/default.db"
-if [ -f "$DB_PATH" ] ; then
-  rm "$DB_PATH"
+DB_PATH="/tmp/sqlite.NodeID*.db"
+if [ -f $DB_PATH ] ; then
+  rm $DB_PATH
 fi
 
 WINDOW_TARGET_UNITS="40000000,450000,450000,450000,450000"
