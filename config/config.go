@@ -85,6 +85,10 @@ type Config struct {
 	// Archiver
 	ArchiverConfig archiver.ORMArchiverConfig `json:"archiverConfig"`
 
+	// Anchor
+	AnchorURL     string `json:"anchorURL"`
+	AnchorManager string `json:"anchorManager"`
+
 	loaded               bool
 	nodeID               ids.NodeID
 	parsedExemptSponsors []codec.Address
@@ -134,6 +138,8 @@ func (c *Config) setDefault() {
 	c.MaxOrdersPerPair = defaultMaxOrdersPerPair
 	c.ETHRPCAddr = c.Config.GetETHL1RPC()
 	c.ETHWSAddr = c.Config.GetETHL1WS()
+	c.AnchorURL = c.Config.GetAnchorURL()
+	c.AnchorManager = c.Config.GetAnchorManager()
 }
 
 func (c *Config) GetLogLevel() logging.Level                { return c.LogLevel }
@@ -175,3 +181,7 @@ func (c *Config) GetStoreTransactions() bool { return c.StoreTransactions }
 func (c *Config) Loaded() bool               { return c.loaded }
 func (c *Config) GetETHL1RPC() string        { return c.ETHRPCAddr }
 func (c *Config) GetETHL1WS() string         { return c.ETHWSAddr }
+func (c *Config) GetAnchorURL() string       { return c.AnchorURL }
+func (c *Config) GetAnchorManager() string {
+	return c.AnchorManager
+} // default bls pubkey for anchor manager

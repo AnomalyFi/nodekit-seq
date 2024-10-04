@@ -713,6 +713,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			included, block, err := waitTillIncluded(ctx, txID.String(), submit)
 			require.True(included)
 			require.NoError(err)
+			require.True(included)
 			require.NotNil(block)
 			blockID, err := block.ID()
 			require.NoError(err)

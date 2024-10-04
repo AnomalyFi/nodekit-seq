@@ -6,6 +6,7 @@ package controller
 import (
 	"context"
 
+	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/fees"
 
@@ -41,6 +42,12 @@ func (c *Controller) GetBalanceFromState(
 	addr codec.Address,
 ) (uint64, error) {
 	return storage.GetBalanceFromState(ctx, c.inner.ReadState, addr)
+}
+
+func (c *Controller) GetRegisteredAnchorsFromState(
+	ctx context.Context,
+) ([][]byte, []*hactions.AnchorInfo, error) {
+	return storage.GetAnchorsFromState(ctx, c.inner.ReadState)
 }
 
 func (c *Controller) GetAcceptedBlockWindow() int {

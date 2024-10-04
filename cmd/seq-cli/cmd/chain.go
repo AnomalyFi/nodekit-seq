@@ -137,3 +137,50 @@ var testHeaderCmd = &cobra.Command{
 		return nil
 	},
 }
+
+var anchorsCmd = &cobra.Command{
+	Use: "anchors",
+	RunE: func(_ *cobra.Command, args []string) error {
+		ctx := context.Background()
+		_, _, _, _, _, tcli, err := handler.DefaultActor()
+		if err != nil {
+			return err
+		}
+		namespaces, infos, err := tcli.RegisteredAnchors(ctx)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("num of anchors registered: %d\n", len(namespaces))
+		for i := 0; i < len(namespaces); i++ {
+			fmt.Printf("%s: %+v\n", string(namespaces[i]), infos[i])
+		}
+
+		return nil
+	},
+}
+
+var replaceAnchorCmd = &cobra.Command{
+	Use: "replace-anchor",
+	RunE: func(_ *cobra.Command, args []string) error {
+		anchorURL, err := handler.Root().PromptString("anchor addr", 0, 500)
+		if err != nil {
+			return err
+		}
+
+		ctx := context.Background()
+		_, _, _, hcli, _, _, err := handler.DefaultActor()
+		if err != nil {
+			return err
+		}
+		replaced, err := hcli.ReplaceAnchor(ctx, anchorURL)
+		if err != nil {
+			return err
+		}
+		if replaced {
+			fmt.Printf("replaced anchor to %s", anchorURL)
+		} else {
+			fmt.Println("unable to replace anchor")
+		}
+		return nil
+	},
+}
