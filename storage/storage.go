@@ -49,25 +49,28 @@ const (
 
 	// TODO: clean up the prefixes below
 	// stateDB
-	balancePrefix      = 0x0
-	assetPrefix        = 0x1
-	orderPrefix        = 0x2
-	loanPrefix         = 0x3
-	heightPrefix       = 0x4
-	timestampPrefix    = 0x5
-	feePrefix          = 0x6
-	incomingWarpPrefix = 0x7
-	outgoingWarpPrefix = 0x8
-	blockPrefix        = 0x9
-	feeMarketPrefix    = 0xa
+	balancePrefix           = 0x0
+	assetPrefix             = 0x1
+	orderPrefix             = 0x2
+	loanPrefix              = 0x3
+	heightPrefix            = 0x4
+	timestampPrefix         = 0x5
+	feePrefix               = 0x6
+	incomingWarpPrefix      = 0x7
+	outgoingWarpPrefix      = 0x8
+	blockPrefix             = 0x9
+	feeMarketPrefix         = 0xa
+	EpochExitRegistryPrefix = 0xf2
+	EpochExitPrefix         = 0xf3
 )
 
 const (
 	// ToDO: clean up
-	BalanceChunks uint16 = 1
-	AssetChunks   uint16 = 5
-	OrderChunks   uint16 = 2
-	LoanChunks    uint16 = 1
+	BalanceChunks   uint16 = 1
+	AssetChunks     uint16 = 5
+	OrderChunks     uint16 = 2
+	LoanChunks      uint16 = 1
+	EpochExitChunks uint16 = 1
 )
 
 var (
@@ -290,14 +293,16 @@ func AssetKey(asset ids.ID) (k []byte) {
 	return
 }
 
+func EpochExitRegistryKey() []byte {
+	// state key must >= 2 bytes
+	k := make([]byte, 1+consts.Uint16Len)
+	k[0] = EpochExitRegistryPrefix
+	binary.BigEndian.PutUint16(k[1:], EpochExitChunks)
+	return k
+}
+
 func AnchorRegistryKey() []byte {
 	return hactions.AnchorRegistryKey()
-
-	// // state key must >= 2 bytes
-	// k := make([]byte, 1+consts.Uint16Len)
-	// k[0] = anchorRegisteryPrefix
-	// binary.BigEndian.PutUint16(k[1:], BalanceChunks) //TODO: update the BalanceChunks to AnchorChunks
-	// return string(k)
 }
 
 func PackNamespaces(namespaces [][]byte) ([]byte, error) {
@@ -501,6 +506,251 @@ func delAnchor(
 ) error {
 	return mu.Remove(ctx, key)
 }
+
+// TODO Do we even need to have the multiple version if by default we get multiple?
+
+// func GetEpochExits(
+// 	ctx context.Context,
+// 	im state.Immutable,
+// ) ([]uint64, []*EpochExitInfo, error) {
+// 	_, epochs, infos, _, err := getEpochExits(ctx, im)
+// 	return epochs, infos, err
+// }
+
+// func getEpochExits(
+// 	ctx context.Context,
+// 	im state.Immutable,
+// ) ([]byte, []uint64, []*EpochInfo, bool, error) {
+// 	k := EpochExitRegistryKey()
+// 	epochs, exists, err := innerGetEpochExits(im.GetValue(ctx, k))
+// 	if err != nil {
+// 		return nil, nil, nil, false, err
+// 	}
+
+// 	infos := make([]*EpochExitInfo, 0, len(epochs))
+// 	for _, e := range epochs {
+// 		info, err := GetEpochExit(ctx, im, e)
+// 		if err != nil {
+// 			return nil, nil, nil, false, err
+// 		}
+// 		infos = append(infos, info)
+// 	}
+// 	return k, epochs, infos, exists, err
+// }
+
+// // TODO make a mapping of epochs to infos
+// // Used to serve RPC queries
+// func GetEpochExitsFromState(
+// 	ctx context.Context,
+// 	f ReadState,
+// ) ([][]byte, []*EpochInfo, error) {
+// 	k := EpochExitRegistryKey()
+// 	values, errs := f(ctx, [][]byte{k})
+// 	epochs, _, err := innerGetEpochExits(values[0], errs[0])
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
+
+// 	infos := make([]*EpochInfo, 0, len(epochs))
+// 	for _, e := range epochs {
+// 		k := EpochExitKey(e)
+// 		values, errs := f(ctx, [][]byte{k})
+// 		info, _, err := innerGetEpochExit(values[0], errs[0])
+// 		if err != nil {
+// 			return nil, nil, err
+// 		}
+// 		infos = append(infos, info)
+// 	}
+// 	return epochs, infos, err
+// }
+
+// func innerGetEpochExits(
+// 	v []byte,
+// 	err error,
+// ) ([]uint64, bool, error) {
+// 	if errors.Is(err, database.ErrNotFound) {
+// 		return nil, false, nil
+// 	}
+// 	if err != nil {
+// 		return nil, false, err
+// 	}
+// 	epochs, err := UnmarshalEpochInfo(v)
+// 	if err != nil {
+// 		return nil, false, err
+// 	}
+
+// 	return epochs, true, nil
+// }
+
+// func SetEpochExits(
+// 	ctx context.Context,
+// 	mu state.Mutable,
+// 	epochs []uint64,
+// ) error {
+// 	return setEpochExits(ctx, mu, epochs)
+// }
+
+// func setEpochExits(
+// 	ctx context.Context,
+// 	mu state.Mutable,
+// 	epochs []uint64,
+// ) error {
+// 	k := setEpochExits()
+// 	packed, err := PackEpochs(epochs)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return mu.Insert(ctx, k, packed)
+// }
+
+func EpochExitKey(epoch uint64) []byte {
+	k := make([]byte, 1+8+consts.Uint16Len)
+	k[0] = EpochExitPrefix
+	binary.BigEndian.PutUint64(k[1:], epoch)
+	binary.BigEndian.PutUint16(k[9:], EpochExitChunks)
+	return k
+}
+
+// This should get all the exits for 1 epoch
+func GetEpochExit(
+	ctx context.Context,
+	im state.Immutable,
+	epoch uint64,
+) (*EpochExitInfo, error) {
+	_, epoch, _, err := getEpochExit(ctx, im, namespace)
+	return epoch, err
+}
+
+func getEpochExit(
+	ctx context.Context,
+	im state.Immutable,
+	epoch uint64,
+) ([]byte, *EpochExitInfo, bool, error) {
+	k := EpochExitKey(epoch)
+	epochExit, exists, err := innerGetEpochExit(im.GetValue(ctx, k))
+	return k, epochExit, exists, err
+}
+
+// Used to serve RPC queries
+func GetEpochExitFromState(
+	ctx context.Context,
+	f ReadState,
+	epoch uint64,
+) (*EpochExitInfo, error) {
+	k := EpochExitKey(epoch)
+	values, errs := f(ctx, [][]byte{k})
+	epochExit, _, err := innerGetEpochExit(values[0], errs[0])
+	return epochExit, err
+}
+
+func innerGetEpochExit(
+	v []byte,
+	err error,
+) (*EpochExitInfo, bool, error) {
+	if errors.Is(err, database.ErrNotFound) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	p := codec.NewReader(v, consts.NetworkSizeLimit)
+	info, err := UnmarshalEpochExitInfo(p)
+	if err != nil {
+		return nil, false, err
+	}
+	return info, true, nil
+}
+
+func SetEpochExit(
+	ctx context.Context,
+	mu state.Mutable,
+	epoch uint64,
+	info *EpochExitInfo,
+) error {
+	k := EpochExitKey(epoch)
+	return setEpochExit(ctx, mu, k, info)
+}
+
+func setEpochExit(
+	ctx context.Context,
+	mu state.Mutable,
+	key []byte,
+	info *EpochExitInfo,
+) error {
+	p := codec.NewWriter(info.Size(), consts.NetworkSizeLimit)
+	err := info.Marshal(p)
+	if err != nil {
+		return err
+	}
+	infoBytes := p.Bytes()
+	return mu.Insert(ctx, key, infoBytes)
+}
+
+func DelEpochExit(
+	ctx context.Context,
+	mu state.Mutable,
+	epoch uint64,
+) error {
+	k := EpochExitKey(epoch)
+	return delEpochExit(ctx, mu, k)
+}
+
+func delEpochExit(
+	ctx context.Context,
+	mu state.Mutable,
+	key []byte,
+) error {
+	return mu.Remove(ctx, key)
+}
+
+func GetAllEpochExits(ctx context.Context, im state.Immutable) ([]int64, []*EpochExitInfo, error) {
+	k := EpochExitRegistryKey()
+	epochs, exists, err := innerGetAllEpochExits(im.GetValue(ctx, k))
+	if err != nil {
+		return nil, nil, err
+	}
+	if !exists {
+		return nil, nil, nil
+	}
+
+	infos := make([]*EpochExitInfo, 0, len(eventTimes))
+	for _, eventTime := range eventTimes {
+		info, err := GetEpochExits(ctx, im, eventTime)
+		if err != nil {
+			return nil, nil, err
+		}
+		infos = append(infos, info)
+	}
+	return epochs, infos, nil
+}
+
+func innerGetAllEpochExits(v []byte, err error) ([]int64, bool, error) {
+	if errors.Is(err, database.ErrNotFound) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	p := codec.NewReader(v, consts.NetworkSizeLimit)
+	count := p.UnpackInt()
+	epochs := make([]int64, count)
+	for i := 0; i < count; i++ {
+		epochs[i] = p.UnpackUint64()
+	}
+	return epochs, true, p.Err()
+}
+
+func SetAllEpochExits(ctx context.Context, mu state.Mutable, epochs []int64) error {
+	k := EpochExitRegistryKey()
+	p := codec.NewWriter(9*len(epochs), consts.NetworkSizeLimit)
+	p.PackInt(len(epochs))
+	for _, epoch := range epochs {
+		p.PackUint64(epoch)
+	}
+	return mu.Insert(ctx, k, p.Bytes())
+}
+
+// TODO end of the fixes
 
 func PrefixBlockKey(block ids.ID, parent ids.ID) (k []byte) {
 	k = make([]byte, 1+ids.IDLen*2)
