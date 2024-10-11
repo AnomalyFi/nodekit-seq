@@ -686,6 +686,7 @@ func setEpochExit(
 	return mu.Insert(ctx, key, infoBytes)
 }
 
+// TODO I should be able to delete 1 item out of the list instead of having to delete them all at once.
 func DelEpochExit(
 	ctx context.Context,
 	mu state.Mutable,
@@ -703,52 +704,52 @@ func delEpochExit(
 	return mu.Remove(ctx, key)
 }
 
-func GetAllEpochExits(ctx context.Context, im state.Immutable) ([]int64, []*EpochExitInfo, error) {
-	k := EpochExitRegistryKey()
-	epochs, exists, err := innerGetAllEpochExits(im.GetValue(ctx, k))
-	if err != nil {
-		return nil, nil, err
-	}
-	if !exists {
-		return nil, nil, nil
-	}
+// func GetAllEpochExits(ctx context.Context, im state.Immutable) ([]int64, []*EpochExitInfo, error) {
+// 	k := EpochExitRegistryKey()
+// 	epochs, exists, err := innerGetAllEpochExits(im.GetValue(ctx, k))
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
+// 	if !exists {
+// 		return nil, nil, nil
+// 	}
 
-	infos := make([]*EpochExitInfo, 0, len(eventTimes))
-	for _, eventTime := range eventTimes {
-		info, err := GetEpochExits(ctx, im, eventTime)
-		if err != nil {
-			return nil, nil, err
-		}
-		infos = append(infos, info)
-	}
-	return epochs, infos, nil
-}
+// 	infos := make([]*EpochExitInfo, 0, len(eventTimes))
+// 	for _, eventTime := range eventTimes {
+// 		info, err := GetEpochExits(ctx, im, eventTime)
+// 		if err != nil {
+// 			return nil, nil, err
+// 		}
+// 		infos = append(infos, info)
+// 	}
+// 	return epochs, infos, nil
+// }
 
-func innerGetAllEpochExits(v []byte, err error) ([]int64, bool, error) {
-	if errors.Is(err, database.ErrNotFound) {
-		return nil, false, nil
-	}
-	if err != nil {
-		return nil, false, err
-	}
-	p := codec.NewReader(v, consts.NetworkSizeLimit)
-	count := p.UnpackInt()
-	epochs := make([]int64, count)
-	for i := 0; i < count; i++ {
-		epochs[i] = p.UnpackUint64()
-	}
-	return epochs, true, p.Err()
-}
+// func innerGetAllEpochExits(v []byte, err error) ([]int64, bool, error) {
+// 	if errors.Is(err, database.ErrNotFound) {
+// 		return nil, false, nil
+// 	}
+// 	if err != nil {
+// 		return nil, false, err
+// 	}
+// 	p := codec.NewReader(v, consts.NetworkSizeLimit)
+// 	count := p.UnpackInt()
+// 	epochs := make([]int64, count)
+// 	for i := 0; i < count; i++ {
+// 		epochs[i] = p.UnpackUint64()
+// 	}
+// 	return epochs, true, p.Err()
+// }
 
-func SetAllEpochExits(ctx context.Context, mu state.Mutable, epochs []int64) error {
-	k := EpochExitRegistryKey()
-	p := codec.NewWriter(9*len(epochs), consts.NetworkSizeLimit)
-	p.PackInt(len(epochs))
-	for _, epoch := range epochs {
-		p.PackUint64(epoch)
-	}
-	return mu.Insert(ctx, k, p.Bytes())
-}
+// func SetAllEpochExits(ctx context.Context, mu state.Mutable, epochs []int64) error {
+// 	k := EpochExitRegistryKey()
+// 	p := codec.NewWriter(9*len(epochs), consts.NetworkSizeLimit)
+// 	p.PackInt(len(epochs))
+// 	for _, epoch := range epochs {
+// 		p.PackUint64(epoch)
+// 	}
+// 	return mu.Insert(ctx, k, p.Bytes())
+// }
 
 // TODO end of the fixes
 

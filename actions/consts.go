@@ -7,11 +7,13 @@ package actions
 const (
 	TransferID uint8 = 0
 	MsgID      uint8 = 1
+	ExitID     uint8 = 2
 )
 
 const (
 	// TODO: tune this
-	TransferComputeUnits = 1
+	TransferComputeUnits  = 1
+	EpochExitComputeUnits = 1
 
 	MsgComputeUnits = 15
 
