@@ -617,8 +617,8 @@ func GetEpochExit(
 	im state.Immutable,
 	epoch uint64,
 ) (*EpochExitInfo, error) {
-	_, epoch, _, err := getEpochExit(ctx, im, namespace)
-	return epoch, err
+	_, ep, _, err := getEpochExit(ctx, im, epoch)
+	return ep, err
 }
 
 func getEpochExit(
@@ -677,7 +677,12 @@ func setEpochExit(
 	key []byte,
 	info *EpochExitInfo,
 ) error {
-	p := codec.NewWriter(info.Size(), consts.NetworkSizeLimit)
+	var size int
+	for _, e := range info.Exits {
+		size += e.Size()
+	}
+
+	p := codec.NewWriter(size, consts.NetworkSizeLimit)
 	err := info.Marshal(p)
 	if err != nil {
 		return err
