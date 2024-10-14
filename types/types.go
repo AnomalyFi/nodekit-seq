@@ -212,3 +212,7 @@ type GetBlockTransactionsByNamespaceArgs struct {
 	Height    uint64 `json:"height"`
 	Namespace string `json:"namespace"`
 }
+
+type GetEpochExits struct {
+	Height uint64 `json:"height"`
+}

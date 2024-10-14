@@ -536,7 +536,7 @@ func getEpochExit(
 }
 
 // Used to serve RPC queries
-func GetEpochExitFromState(
+func GetEpochExitsFromState(
 	ctx context.Context,
 	f ReadState,
 	epoch uint64,

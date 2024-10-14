@@ -12,6 +12,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/fees"
 	"github.com/AnomalyFi/nodekit-seq/archiver"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
+	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/trace"
 	"github.com/ava-labs/avalanchego/utils/logging"
@@ -25,6 +26,7 @@ type Controller interface {
 	GetTransaction(context.Context, ids.ID) (bool, int64, bool, fees.Dimensions, uint64, error)
 	GetBalanceFromState(context.Context, codec.Address) (uint64, error)
 	GetRegisteredAnchorsFromState(context.Context) ([][]byte, []*hactions.AnchorInfo, error)
+	GetEpochExitsFromState(ctx context.Context, epoch uint64) (*storage.EpochExitInfo, error)
 	UnitPrices(ctx context.Context) (fees.Dimensions, error)
 	NameSpacesPrice(ctx context.Context, namespaces []string) ([]uint64, error)
 	GetAcceptedBlockWindow() int

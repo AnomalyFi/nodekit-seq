@@ -19,6 +19,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/auth"
 	seqconsts "github.com/AnomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/storage"
 
 	"github.com/AnomalyFi/hypersdk/codec"
 
@@ -361,7 +362,7 @@ type RegisteredAnchorReply struct {
 }
 
 func (j *JSONRPCServer) RegisteredAnchors(req *http.Request, args *struct{}, reply *RegisteredAnchorReply) error {
-	ctx, span := j.c.Tracer().Start(req.Context(), "Server.Balance")
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.RegisteredAnchors")
 	defer span.End()
 
 	namespaces, infos, err := j.c.GetRegisteredAnchorsFromState(ctx)
@@ -370,6 +371,22 @@ func (j *JSONRPCServer) RegisteredAnchors(req *http.Request, args *struct{}, rep
 	}
 	reply.Namespaces = namespaces
 	reply.Anchors = infos
+	return err
+}
+
+type EpochExitsReply struct {
+	Info *storage.EpochExitInfo `json:"info"`
+}
+
+func (j *JSONRPCServer) GetEpochExits(req *http.Request, args *types.GetEpochExits, reply *EpochExitsReply) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.GetEpochExits")
+	defer span.End()
+
+	info, err := j.c.GetEpochExitsFromState(ctx, args.Height)
+	if err != nil {
+		return err
+	}
+	reply.Info = info
 	return err
 }
 
