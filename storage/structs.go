@@ -17,7 +17,7 @@ type EpochInfo struct {
 }
 
 type EpochExitInfo struct {
-	Exits []EpochInfo
+	Exits []EpochInfo `json:"exits"`
 }
 
 func (e *EpochExitInfo) Marshal(p *codec.Packer) error {

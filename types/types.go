@@ -7,6 +7,10 @@ import (
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/ava-labs/avalanchego/ids"
+
+	hactions "github.com/AnomalyFi/hypersdk/actions"
+
+	"github.com/AnomalyFi/nodekit-seq/storage"
 )
 
 type SEQTransaction struct {
@@ -213,6 +217,11 @@ type GetBlockTransactionsByNamespaceArgs struct {
 	Namespace string `json:"namespace"`
 }
 
-type GetEpochExits struct {
-	Height uint64 `json:"height"`
+type RegisteredAnchorReply struct {
+	Namespaces [][]byte               `json:"namespaces"`
+	Anchors    []*hactions.AnchorInfo `json:"anchors"`
+}
+
+type EpochExitsReply struct {
+	Info *storage.EpochExitInfo `json:"info"`
 }
