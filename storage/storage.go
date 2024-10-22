@@ -49,25 +49,28 @@ const (
 
 	// TODO: clean up the prefixes below
 	// stateDB
-	balancePrefix      = 0x0
-	assetPrefix        = 0x1
-	orderPrefix        = 0x2
-	loanPrefix         = 0x3
-	heightPrefix       = 0x4
-	timestampPrefix    = 0x5
-	feePrefix          = 0x6
-	incomingWarpPrefix = 0x7
-	outgoingWarpPrefix = 0x8
-	blockPrefix        = 0x9
-	feeMarketPrefix    = 0xa
+	balancePrefix           = 0x0
+	assetPrefix             = 0x1
+	orderPrefix             = 0x2
+	loanPrefix              = 0x3
+	heightPrefix            = 0x4
+	timestampPrefix         = 0x5
+	feePrefix               = 0x6
+	incomingWarpPrefix      = 0x7
+	outgoingWarpPrefix      = 0x8
+	blockPrefix             = 0x9
+	feeMarketPrefix         = 0xa
+	EpochExitRegistryPrefix = 0xf2
+	EpochExitPrefix         = 0xf3
 )
 
 const (
 	// ToDO: clean up
-	BalanceChunks uint16 = 1
-	AssetChunks   uint16 = 5
-	OrderChunks   uint16 = 2
-	LoanChunks    uint16 = 1
+	BalanceChunks   uint16 = 1
+	AssetChunks     uint16 = 5
+	OrderChunks     uint16 = 2
+	LoanChunks      uint16 = 1
+	EpochExitChunks uint16 = 1
 )
 
 var (
@@ -290,14 +293,16 @@ func AssetKey(asset ids.ID) (k []byte) {
 	return
 }
 
+func EpochExitRegistryKey() []byte {
+	// state key must >= 2 bytes
+	k := make([]byte, 1+consts.Uint16Len)
+	k[0] = EpochExitRegistryPrefix
+	binary.BigEndian.PutUint16(k[1:], EpochExitChunks)
+	return k
+}
+
 func AnchorRegistryKey() []byte {
 	return hactions.AnchorRegistryKey()
-
-	// // state key must >= 2 bytes
-	// k := make([]byte, 1+consts.Uint16Len)
-	// k[0] = anchorRegisteryPrefix
-	// binary.BigEndian.PutUint16(k[1:], BalanceChunks) //TODO: update the BalanceChunks to AnchorChunks
-	// return string(k)
 }
 
 func PackNamespaces(namespaces [][]byte) ([]byte, error) {
@@ -495,6 +500,112 @@ func DelAnchor(
 }
 
 func delAnchor(
+	ctx context.Context,
+	mu state.Mutable,
+	key []byte,
+) error {
+	return mu.Remove(ctx, key)
+}
+
+func EpochExitKey(epoch uint64) []byte {
+	k := make([]byte, 1+8+consts.Uint16Len)
+	k[0] = EpochExitPrefix
+	binary.BigEndian.PutUint64(k[1:], epoch)
+	binary.BigEndian.PutUint16(k[9:], EpochExitChunks)
+	return k
+}
+
+// This should get all the exits for 1 epoch
+func GetEpochExit(
+	ctx context.Context,
+	im state.Immutable,
+	epoch uint64,
+) (*EpochExitInfo, error) {
+	_, ep, _, err := getEpochExit(ctx, im, epoch)
+	return ep, err
+}
+
+func getEpochExit(
+	ctx context.Context,
+	im state.Immutable,
+	epoch uint64,
+) ([]byte, *EpochExitInfo, bool, error) {
+	k := EpochExitKey(epoch)
+	epochExit, exists, err := innerGetEpochExit(im.GetValue(ctx, k))
+	return k, epochExit, exists, err
+}
+
+// Used to serve RPC queries
+func GetEpochExitsFromState(
+	ctx context.Context,
+	f ReadState,
+	epoch uint64,
+) (*EpochExitInfo, error) {
+	k := EpochExitKey(epoch)
+	values, errs := f(ctx, [][]byte{k})
+	epochExit, _, err := innerGetEpochExit(values[0], errs[0])
+	return epochExit, err
+}
+
+func innerGetEpochExit(
+	v []byte,
+	err error,
+) (*EpochExitInfo, bool, error) {
+	if errors.Is(err, database.ErrNotFound) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	p := codec.NewReader(v, consts.NetworkSizeLimit)
+	info, err := UnmarshalEpochExitInfo(p)
+	if err != nil {
+		return nil, false, err
+	}
+	return info, true, nil
+}
+
+func SetEpochExit(
+	ctx context.Context,
+	mu state.Mutable,
+	epoch uint64,
+	info *EpochExitInfo,
+) error {
+	k := EpochExitKey(epoch)
+	return setEpochExit(ctx, mu, k, info)
+}
+
+func setEpochExit(
+	ctx context.Context,
+	mu state.Mutable,
+	key []byte,
+	info *EpochExitInfo,
+) error {
+	var size int
+	for _, e := range info.Exits {
+		size += e.Size()
+	}
+
+	p := codec.NewWriter(size, consts.NetworkSizeLimit)
+	err := info.Marshal(p)
+	if err != nil {
+		return err
+	}
+	infoBytes := p.Bytes()
+	return mu.Insert(ctx, key, infoBytes)
+}
+
+// TODO I should be able to delete 1 item out of the list instead of having to delete them all at once.
+func DelEpochExit(
+	ctx context.Context,
+	mu state.Mutable,
+	epoch uint64,
+) error {
+	k := EpochExitKey(epoch)
+	return delEpochExit(ctx, mu, k)
+}
+
+func delEpochExit(
 	ctx context.Context,
 	mu state.Mutable,
 	key []byte,

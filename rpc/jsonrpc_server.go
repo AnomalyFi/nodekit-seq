@@ -12,7 +12,6 @@ import (
 
 	"github.com/ava-labs/avalanchego/ids"
 
-	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/fees"
@@ -355,13 +354,8 @@ func (j *JSONRPCServer) GetBlockTransactionsByNamespace(req *http.Request, args 
 	return nil
 }
 
-type RegisteredAnchorReply struct {
-	Namespaces [][]byte               `json:"namespaces"`
-	Anchors    []*hactions.AnchorInfo `json:"anchors"`
-}
-
-func (j *JSONRPCServer) RegisteredAnchors(req *http.Request, args *struct{}, reply *RegisteredAnchorReply) error {
-	ctx, span := j.c.Tracer().Start(req.Context(), "Server.Balance")
+func (j *JSONRPCServer) RegisteredAnchors(req *http.Request, args *struct{}, reply *types.RegisteredAnchorReply) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.RegisteredAnchors")
 	defer span.End()
 
 	namespaces, infos, err := j.c.GetRegisteredAnchorsFromState(ctx)
@@ -370,6 +364,18 @@ func (j *JSONRPCServer) RegisteredAnchors(req *http.Request, args *struct{}, rep
 	}
 	reply.Namespaces = namespaces
 	reply.Anchors = infos
+	return err
+}
+
+func (j *JSONRPCServer) GetEpochExits(req *http.Request, epoch uint64, reply *types.EpochExitsReply) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.GetEpochExits")
+	defer span.End()
+
+	info, err := j.c.GetEpochExitsFromState(ctx, epoch)
+	if err != nil {
+		return err
+	}
+	reply.Info = info
 	return err
 }
 

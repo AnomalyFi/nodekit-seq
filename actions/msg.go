@@ -16,7 +16,7 @@ import (
 var _ chain.Action = (*SequencerMsg)(nil)
 
 type SequencerMsg struct {
-	ChainID     []byte        `json:"chain_id"`
+	ChainID     []byte        `json:"chain_id"` // little endian encoded uint64
 	Data        []byte        `json:"data"`
 	FromAddress codec.Address `json:"from_address"`
 	RelayerID   int           `json:"relayer_id"`

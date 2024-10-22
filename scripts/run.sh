@@ -41,7 +41,7 @@ if [[ ${MODE} != "run" ]]; then
 fi
 
 DB_PATH="/tmp/sqlite.NodeID*.db"
-if [ -f $DB_PATH ] ; then
+if compgen -G "$DB_PATH" > /dev/null; then
   rm $DB_PATH
 fi
 

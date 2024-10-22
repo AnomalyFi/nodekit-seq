@@ -50,6 +50,13 @@ func (c *Controller) GetRegisteredAnchorsFromState(
 	return storage.GetAnchorsFromState(ctx, c.inner.ReadState)
 }
 
+func (c *Controller) GetEpochExitsFromState(
+	ctx context.Context,
+	epoch uint64,
+) (*storage.EpochExitInfo, error) {
+	return storage.GetEpochExitsFromState(ctx, c.inner.ReadState, epoch)
+}
+
 func (c *Controller) GetAcceptedBlockWindow() int {
 	return c.config.GetAcceptedBlockWindow()
 }

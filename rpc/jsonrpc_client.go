@@ -17,6 +17,7 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	_ "github.com/AnomalyFi/nodekit-seq/registry" // ensure registry populated
+	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/AnomalyFi/nodekit-seq/types"
 )
 
@@ -267,7 +268,7 @@ func (cli *JSONRPCClient) WaitForTransaction(ctx context.Context, txID ids.ID) (
 }
 
 func (cli *JSONRPCClient) RegisteredAnchors(ctx context.Context) ([][]byte, []*hactions.AnchorInfo, error) {
-	resp := new(RegisteredAnchorReply)
+	resp := new(types.RegisteredAnchorReply)
 	err := cli.requester.SendRequest(
 		ctx,
 		"registeredAnchors",
@@ -275,6 +276,17 @@ func (cli *JSONRPCClient) RegisteredAnchors(ctx context.Context) ([][]byte, []*h
 		resp,
 	)
 	return resp.Namespaces, resp.Anchors, err
+}
+
+func (cli *JSONRPCClient) GetEpochExits(ctx context.Context, epoch uint64) (*storage.EpochExitInfo, error) {
+	resp := new(types.EpochExitsReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"getEpochExits",
+		epoch,
+		resp,
+	)
+	return resp.Info, err
 }
 
 var _ chain.Parser = (*Parser)(nil)
