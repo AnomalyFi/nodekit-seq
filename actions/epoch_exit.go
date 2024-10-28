@@ -55,7 +55,7 @@ func (t *EpochExit) Execute(
 	_ ids.ID,
 ) ([][]byte, error) {
 	if t.Epoch != t.Info.Epoch {
-		return nil, fmt.Errorf("Epoch is not equal to what's in the meta, expected: %d, actual: %d", t.Epoch, t.Info.Epoch)
+		return nil, fmt.Errorf("epoch is not equal to what's in the meta, expected: %d, actual: %d", t.Epoch, t.Info.Epoch)
 	}
 
 	epochExit, err := storage.GetEpochExit(ctx, mu, t.Epoch)

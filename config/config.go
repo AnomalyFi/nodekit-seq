@@ -56,18 +56,16 @@ type Config struct {
 	ContinuousProfilerDir string `json:"continuousProfilerDir"` // "*" is replaced with rand int
 
 	// Streaming settings
-	StreamingBacklogSize int `json:"streamingBacklogSize"`
+	StreamingBacklogSize    int  `json:"streamingBacklogSize"`
+	StoreBlockResultsOnDisk bool `json:"storeBlockResultsOnDisk"`
 
 	// Mempool
 	MempoolSize           int      `json:"mempoolSize"`
 	MempoolSponsorSize    int      `json:"mempoolSponsorSize"`
 	MempoolExemptSponsors []string `json:"mempoolExemptSponsors"`
 
-	// Order Book
-	//
-	// This is denoted as <asset 1>-<asset 2>
-	MaxOrdersPerPair int      `json:"maxOrdersPerPair"`
-	TrackedPairs     []string `json:"trackedPairs"` // which asset ID pairs we care about
+	// Whitelisted Address: Address used to get fee discounts, or are allowed to perform specific actions like submitting proofs.
+	WhitelistedAddresses []string `json:"whitelistedAddresses"`
 
 	// Misc
 	VerifyAuth        bool          `json:"verifyAuth"`
@@ -89,9 +87,10 @@ type Config struct {
 	AnchorURL     string `json:"anchorURL"`
 	AnchorManager string `json:"anchorManager"`
 
-	loaded               bool
-	nodeID               ids.NodeID
-	parsedExemptSponsors []codec.Address
+	loaded                     bool
+	nodeID                     ids.NodeID
+	parsedExemptSponsors       []codec.Address
+	parsedWhiteListedAddresses []codec.Address
 }
 
 func New(nodeID ids.NodeID, b []byte) (*Config, error) {
@@ -114,6 +113,16 @@ func New(nodeID ids.NodeID, b []byte) (*Config, error) {
 		}
 		c.parsedExemptSponsors[i] = p
 	}
+
+	// Parse whitelisted address. These addresses are authorized to perform certain actions.
+	c.parsedWhiteListedAddresses = make([]codec.Address, len(c.WhitelistedAddresses))
+	for i, addr := range c.WhitelistedAddresses {
+		p, err := codec.ParseAddressBech32(consts.HRP, addr)
+		if err != nil {
+			return nil, err
+		}
+		c.parsedWhiteListedAddresses[i] = p
+	}
 	return c, nil
 }
 
@@ -135,7 +144,7 @@ func (c *Config) setDefault() {
 	c.StreamingBacklogSize = c.Config.GetStreamingBacklogSize()
 	c.VerifyAuth = c.Config.GetVerifyAuth()
 	c.StoreTransactions = defaultStoreTransactions
-	c.MaxOrdersPerPair = defaultMaxOrdersPerPair
+	c.StoreBlockResultsOnDisk = c.Config.GetStoreBlockResultsOnDisk()
 	c.ETHRPCAddr = c.Config.GetETHL1RPC()
 	c.ETHWSAddr = c.Config.GetETHL1WS()
 	c.AnchorURL = c.Config.GetAnchorURL()
@@ -162,6 +171,7 @@ func (c *Config) GetTraceConfig() *trace.Config {
 }
 func (c *Config) GetStateSyncServerDelay() time.Duration { return c.StateSyncServerDelay }
 func (c *Config) GetStreamingBacklogSize() int           { return c.StreamingBacklogSize }
+func (c *Config) GetStoreBlockResultsOnDisk() bool       { return c.StoreBlockResultsOnDisk }
 func (c *Config) GetContinuousProfilerConfig() *profiler.Config {
 	if len(c.ContinuousProfilerDir) == 0 {
 		return &profiler.Config{Enabled: false}
@@ -185,3 +195,6 @@ func (c *Config) GetAnchorURL() string       { return c.AnchorURL }
 func (c *Config) GetAnchorManager() string {
 	return c.AnchorManager
 } // default bls pubkey for anchor manager
+func (c *Config) GetParsedWhiteListedAddress() []codec.Address {
+	return c.parsedWhiteListedAddresses
+}

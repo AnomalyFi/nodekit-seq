@@ -11,6 +11,7 @@ import (
 
 	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/requester"
 	"github.com/AnomalyFi/hypersdk/rpc"
 	"github.com/AnomalyFi/hypersdk/utils"
@@ -302,7 +303,7 @@ func (p *Parser) ChainID() ids.ID {
 }
 
 func (p *Parser) Rules(t int64) chain.Rules {
-	return p.genesis.Rules(t, p.networkID, p.chainID)
+	return p.genesis.Rules(t, p.networkID, p.chainID, []codec.Address{})
 }
 
 func (*Parser) Registry() (chain.ActionRegistry, chain.AuthRegistry) {

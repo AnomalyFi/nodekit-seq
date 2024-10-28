@@ -8,12 +8,14 @@ const (
 	TransferID uint8 = 0
 	MsgID      uint8 = 1
 	ExitID     uint8 = 2
+	AuctionID  uint8 = 3
 )
 
 const (
 	// TODO: tune this
 	TransferComputeUnits  = 1
 	EpochExitComputeUnits = 1
+	AuctionComputeUnits   = 1
 
 	MsgComputeUnits = 15
 

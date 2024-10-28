@@ -392,7 +392,7 @@ func (p *ServerParser) ChainID() ids.ID {
 }
 
 func (p *ServerParser) Rules(t int64) chain.Rules {
-	return p.genesis.Rules(t, p.networkID, p.chainID)
+	return p.genesis.Rules(t, p.networkID, p.chainID, []codec.Address{})
 }
 
 func (*ServerParser) Registry() (chain.ActionRegistry, chain.AuthRegistry) {
