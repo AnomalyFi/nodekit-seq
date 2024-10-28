@@ -25,6 +25,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
 	hconsts "github.com/AnomalyFi/hypersdk/consts"
+	"github.com/AnomalyFi/hypersdk/crypto/bls"
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/pubsub"
 	"github.com/AnomalyFi/hypersdk/rpc"
@@ -825,6 +826,59 @@ var _ = ginkgo.Describe("[Test]", func() {
 			resp, err := instances[0].tcli.GetCommitmentBlocks(ctx, blk.Hght-1, blk.Hght, 100)
 			require.NoError(err)
 			require.Equal(len(resp.Blocks), 2)
+		})
+
+		ginkgo.By("get arcadia block builder", func() {
+			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(ctx, 12*time.Second)
+			defer cancel()
+
+			bidPrice := uint64(100)
+			epochNumber := uint64(time.Now().UnixMilli()/(12*hconsts.MillisecondsPerSecond)) + 1
+			p, err := bls.GeneratePrivateKey()
+			require.NoError(err)
+			builderSEQAddress := auth.NewBLSAddress(bls.PublicFromPrivateKey(p))
+			pubKeyBytes := bls.PublicKeyToBytes(bls.PublicFromPrivateKey(p))
+
+			builderMsg := make([]byte, 16)
+			binary.BigEndian.PutUint64(builderMsg[:8], epochNumber)
+			binary.BigEndian.PutUint64(builderMsg[8:], bidPrice)
+			builderMsg = append(builderMsg, pubKeyBytes...)
+
+			sig := bls.Sign(builderMsg, p)
+
+			// Generate transaction
+			txActions := []chain.Action{
+				&actions.Transfer{
+					To:    builderSEQAddress,
+					Value: bidPrice * 2,
+				},
+				&actions.Auction{
+					AuctionInfo: actions.AuctionInfo{
+						EpochNumber:       epochNumber,
+						BidPrice:          bidPrice,
+						BuilderSEQAddress: builderSEQAddress,
+					},
+					BuilderPublicKey: pubKeyBytes,
+					BuilderSignature: bls.SignatureToBytes(sig),
+				},
+			}
+
+			parser, err := instances[0].tcli.Parser(ctx)
+			require.NoError(err)
+			submit, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
+			require.NoError(err)
+			txID := tx.ID()
+			included, block, err := waitTillIncluded(ctx, txID.String(), submit)
+			require.True(included)
+			require.NoError(err)
+			require.NotNil(block)
+			_, err = block.ID()
+			require.NoError(err)
+
+			pubKeyBytesFromCli, err := instances[0].tcli.GetBuilder(context.Background(), epochNumber)
+			require.NoError(err)
+			require.Equal(pubKeyBytesFromCli, pubKeyBytes)
 		})
 	})
 

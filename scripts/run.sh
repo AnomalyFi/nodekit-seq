@@ -25,6 +25,7 @@ AGO_LOG_LEVEL=${AGO_LOG_LEVEL:-INFO}
 AGO_LOG_DISPLAY_LEVEL=${AGO_LOG_DISPLAY_LEVEL:-INFO}
 STATESYNC_DELAY=${STATESYNC_DELAY:-0}
 MIN_BLOCK_GAP=${MIN_BLOCK_GAP:-100}
+EPOCH_DURATION=${EPOCH_DURATION:-12000} # 12s
 STORE_TXS=${STORE_TXS:-false}
 UNLIMITED_USAGE=${UNLIMITED_USAGE:-false}
 STORE_BLOCK_RESULTS_ON_DISK=${STORE_BLOCK_RESULTS_ON_DISK:-true}
@@ -34,7 +35,7 @@ ADDRESS=${ADDRESS:-seq1qrzvk4zlwj9zsacqgtufx7zvapd3quufqpxk5rsdd4633m4wz2fdjlydh
 if [[ ${MODE} != "run" ]]; then
   LOG_LEVEL=INFO
   AGO_LOG_DISPLAY_LEVEL=INFO
-  STATESYNC_DELAY=100000000 # 100ms
+  STATESYNC_DELAY=100_000_000 # 100ms
   MIN_BLOCK_GAP=250 #ms
   STORE_TXS=true
   UNLIMITED_USAGE=true
@@ -61,6 +62,7 @@ echo VERSION: "${VERSION}"
 echo MODE: "${MODE}"
 echo STATESYNC_DELAY \(ns\): "${STATESYNC_DELAY}"
 echo MIN_BLOCK_GAP \(ms\): "${MIN_BLOCK_GAP}"
+echo EPOCH_DURATION \(ms\): "${EPOCH_DURATION}"
 echo STORE_TXS: "${STORE_TXS}"
 echo WINDOW_TARGET_UNITS: "${WINDOW_TARGET_UNITS}"
 echo MAX_BLOCK_UNITS: "${MAX_BLOCK_UNITS}"
@@ -142,6 +144,7 @@ if [[ -z "${GENESIS_PATH}" ]]; then
   --window-target-units "${WINDOW_TARGET_UNITS}" \
   --max-block-units "${MAX_BLOCK_UNITS}" \
   --min-block-gap "${MIN_BLOCK_GAP}" \
+  --epoch-duration "${EPOCH_DURATION}" \
   --genesis-file "${TMPDIR}"/seqvm.genesis
 else
   echo "copying custom genesis file"

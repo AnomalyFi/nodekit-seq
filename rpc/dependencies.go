@@ -27,6 +27,7 @@ type Controller interface {
 	GetBalanceFromState(context.Context, codec.Address) (uint64, error)
 	GetRegisteredAnchorsFromState(context.Context) ([][]byte, []*hactions.AnchorInfo, error)
 	GetEpochExitsFromState(ctx context.Context, epoch uint64) (*storage.EpochExitInfo, error)
+	GetArcadiaBuilderFromState(ctx context.Context, epoch uint64) ([]byte, error)
 	UnitPrices(ctx context.Context) (fees.Dimensions, error)
 	NameSpacesPrice(ctx context.Context, namespaces []string) ([]uint64, error)
 	GetAcceptedBlockWindow() int

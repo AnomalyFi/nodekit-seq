@@ -42,15 +42,12 @@ func (*EpochExit) StateKeysMaxChunks() []uint16 {
 	return []uint16{storage.EpochExitChunks, storage.EpochExitChunks}
 }
 
-func (*EpochExit) OutputsWarpMessage() bool {
-	return false
-}
-
 func (t *EpochExit) Execute(
 	ctx context.Context,
 	_ chain.Rules,
 	mu state.Mutable,
-	_ int64,
+	ts int64,
+	_ uint64,
 	actor codec.Address,
 	_ ids.ID,
 ) ([][]byte, error) {
@@ -60,7 +57,6 @@ func (t *EpochExit) Execute(
 
 	epochExit, err := storage.GetEpochExit(ctx, mu, t.Epoch)
 
-	// namespaces, _, err := storage.GetAnchors(ctx, mu)
 	if err != nil {
 		return nil, err
 	}
@@ -86,10 +82,6 @@ func (t *EpochExit) Execute(
 	default:
 		return nil, fmt.Errorf("op code(%d) not supported", t.OpCode)
 	}
-
-	// if err := storage.SetAnchors(ctx, mu, namespaces); err != nil {
-	// 	return nil, err
-	// }
 
 	return nil, nil
 }

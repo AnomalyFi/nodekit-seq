@@ -36,9 +36,9 @@ func (*Auction) GetTypeID() uint8 {
 
 func (a *Auction) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
 	return state.Keys{
-		string(storage.BalanceKey(actor)):                        state.Read | state.Write,
-		string(storage.BalanceKey(ArcadiaFundAddress())):         state.All,
-		string(storage.ArcadiaBidKey(a.AuctionInfo.EpochNumber)): state.Write | state.Allocate,
+		string(storage.BalanceKey(a.AuctionInfo.BuilderSEQAddress)): state.Read | state.Write,
+		string(storage.BalanceKey(ArcadiaFundAddress())):            state.All,
+		string(storage.ArcadiaBidKey(a.AuctionInfo.EpochNumber)):    state.Write | state.Allocate,
 	}
 }
 
@@ -47,11 +47,13 @@ func (*Auction) StateKeysMaxChunks() []uint16 {
 }
 
 // This is a permissioned action, only authorized address can only pass the execution.
+
 func (a *Auction) Execute(
 	ctx context.Context,
 	rules chain.Rules,
 	mu state.Mutable,
 	_ int64,
+	hght uint64,
 	actor codec.Address,
 	_ ids.ID,
 ) ([][]byte, error) {
@@ -60,15 +62,21 @@ func (a *Auction) Execute(
 	if !IsWhiteListed(rules, actor) {
 		return nil, ErrNotWhiteListed
 	}
+
+	// Allow auction bid for next epoch processed only during the current epoch.
+	if a.AuctionInfo.EpochNumber != Epoch(hght, rules.GetEpochDuration())+1 {
+		return nil, fmt.Errorf("epoch number is not valid, expected: %d, actual: %d", Epoch(hght, rules.GetEpochDuration())+1, a.AuctionInfo.EpochNumber)
+	}
+
 	pubkey, err := bls.PublicKeyFromBytes(a.BuilderPublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse public key: %w", err)
 	}
 
-	msg := make([]byte, 0, 16)
+	msg := make([]byte, 16)
 	binary.BigEndian.PutUint64(msg[:8], a.AuctionInfo.EpochNumber)
 	binary.BigEndian.PutUint64(msg[8:], a.AuctionInfo.BidPrice)
-
+	msg = append(msg, a.BuilderPublicKey...)
 	sig, err := bls.SignatureFromBytes(a.BuilderSignature)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse signature: %w", err)
@@ -110,8 +118,8 @@ func (a *Auction) Size() int {
 
 func (a *Auction) Marshal(p *codec.Packer) {
 	MarshalAuctionInfo(p, &a.AuctionInfo)
-	p.PackFixedBytes(a.BuilderPublicKey)
-	p.PackFixedBytes(a.BuilderSignature)
+	p.PackBytes(a.BuilderPublicKey)
+	p.PackBytes(a.BuilderSignature)
 }
 
 func UnmarshalAuction(p *codec.Packer) (chain.Action, error) {
@@ -121,9 +129,9 @@ func UnmarshalAuction(p *codec.Packer) (chain.Action, error) {
 		return nil, err
 	}
 	auction.AuctionInfo = *auctionInfo
-	p.UnpackFixedBytes(bls.PublicKeyLen, &auction.BuilderPublicKey)
-	p.UnpackFixedBytes(bls.SignatureLen, &auction.BuilderSignature)
-	return &auction, nil
+	p.UnpackBytes(48, true, &auction.BuilderPublicKey)
+	p.UnpackBytes(96, true, &auction.BuilderSignature)
+	return &auction, p.Err()
 }
 
 func (*Auction) ValidRange(chain.Rules) (int64, int64) {

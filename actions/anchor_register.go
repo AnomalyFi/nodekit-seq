@@ -45,15 +45,12 @@ func (*AnchorRegister) StateKeysMaxChunks() []uint16 {
 	return []uint16{hactions.AnchorChunks, hactions.AnchorChunks}
 }
 
-func (*AnchorRegister) OutputsWarpMessage() bool {
-	return false
-}
-
 func (t *AnchorRegister) Execute(
 	ctx context.Context,
 	_ chain.Rules,
 	mu state.Mutable,
 	_ int64,
+	_ uint64,
 	actor codec.Address,
 	_ ids.ID,
 ) ([][]byte, error) {

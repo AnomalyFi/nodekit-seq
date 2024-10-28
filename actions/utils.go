@@ -22,7 +22,7 @@ func ContainsAddress(addrs []codec.Address, addr codec.Address) bool {
 
 func ArcadiaFundAddress() codec.Address {
 	b := make([]byte, 33)
-	b[33] = 0x1
+	b[32] = 0x1
 	addr, _ := codec.ToAddress(b)
 	return addr
 }
@@ -42,4 +42,8 @@ func UnmarshalAnchorInfo(p *codec.Packer) (*AuctionInfo, error) {
 		return nil, p.Err()
 	}
 	return &auctionInfo, nil
+}
+
+func Epoch(blockHeight uint64, epochLength int64) uint64 {
+	return uint64(int64(blockHeight) / epochLength)
 }

@@ -379,6 +379,18 @@ func (j *JSONRPCServer) GetEpochExits(req *http.Request, epoch uint64, reply *ty
 	return err
 }
 
+func (j *JSONRPCServer) GetBuilder(req *http.Request, epoch uint64, reply *[48]byte) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.GetBuilder")
+	defer span.End()
+
+	builder, err := j.c.GetArcadiaBuilderFromState(ctx, epoch)
+	if err != nil {
+		return err
+	}
+	copy(reply[:], builder[:])
+	return nil
+}
+
 var _ chain.Parser = (*ServerParser)(nil)
 
 type ServerParser struct {

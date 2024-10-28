@@ -6,11 +6,15 @@ package cmd
 
 import (
 	"context"
+	"encoding/binary"
 
 	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/chain"
+	hconsts "github.com/AnomalyFi/hypersdk/consts"
+	"github.com/AnomalyFi/hypersdk/crypto/bls"
 	hutils "github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/actions"
+	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/consts"
 
 	"github.com/spf13/cobra"
@@ -134,6 +138,62 @@ var anchorCmd = &cobra.Command{
 			Info:      info,
 			OpCode:    op,
 		}}, cli, scli, tcli, factory, 0, true)
+		return err
+	},
+}
+
+var auctionCmd = &cobra.Command{
+	Use: "auction",
+	RunE: func(*cobra.Command, []string) error {
+		ctx := context.Background()
+		_, _, factory, cli, scli, tcli, err := handler.DefaultActor()
+		if err != nil {
+			return err
+		}
+
+		bidPrice, err := handler.Root().PromptAmount("bid price", consts.Decimals, 0, nil)
+		if err != nil {
+			return err
+		}
+		_, hght, _, err := cli.Accepted(ctx)
+		if err != nil {
+			return err
+		}
+
+		epochNumber := uint64(hght/12*hconsts.MillisecondsPerSecond) + 1
+
+		p, err := bls.GeneratePrivateKey()
+		if err != nil {
+			return err
+		}
+		builderSEQAddress := auth.NewBLSAddress(bls.PublicFromPrivateKey(p))
+		pubKeyBytes := bls.PublicKeyToBytes(bls.PublicFromPrivateKey(p))
+
+		builderMsg := make([]byte, 16)
+		binary.BigEndian.PutUint64(builderMsg[:8], epochNumber)
+		binary.BigEndian.PutUint64(builderMsg[8:], bidPrice)
+		builderMsg = append(builderMsg, pubKeyBytes...)
+
+		sig := bls.Sign(builderMsg, p)
+
+		// Generate transaction
+		action := []chain.Action{
+			&actions.Transfer{
+				To:    builderSEQAddress,
+				Value: bidPrice * 2,
+			},
+			&actions.Auction{
+				AuctionInfo: actions.AuctionInfo{
+					EpochNumber:       epochNumber,
+					BidPrice:          bidPrice,
+					BuilderSEQAddress: builderSEQAddress,
+				},
+				BuilderPublicKey: pubKeyBytes,
+				BuilderSignature: bls.SignatureToBytes(sig),
+			},
+		}
+
+		_, err = sendAndWait(ctx, action, cli, scli, tcli, factory, 0, true)
 		return err
 	},
 }

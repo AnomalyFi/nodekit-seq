@@ -290,6 +290,18 @@ func (cli *JSONRPCClient) GetEpochExits(ctx context.Context, epoch uint64) (*sto
 	return resp.Info, err
 }
 
+func (cli *JSONRPCClient) GetBuilder(ctx context.Context, epoch uint64) ([48]byte, error) {
+	resp := new([48]byte)
+	err := cli.requester.SendRequest(
+		ctx,
+		"getBuilder",
+		epoch,
+		resp,
+	)
+
+	return *resp, err
+}
+
 var _ chain.Parser = (*Parser)(nil)
 
 type Parser struct {

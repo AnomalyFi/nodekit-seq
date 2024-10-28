@@ -57,6 +57,13 @@ func (c *Controller) GetEpochExitsFromState(
 	return storage.GetEpochExitsFromState(ctx, c.inner.ReadState, epoch)
 }
 
+func (c *Controller) GetArcadiaBuilderFromState(
+	ctx context.Context,
+	epoch uint64,
+) ([]byte, error) {
+	return storage.GetArcadiaBuilderFromState(ctx, c.inner.ReadState, epoch)
+}
+
 func (c *Controller) GetAcceptedBlockWindow() int {
 	return c.config.GetAcceptedBlockWindow()
 }

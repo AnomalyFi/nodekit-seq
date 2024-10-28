@@ -60,6 +60,7 @@ const (
 	outgoingWarpPrefix      = 0x8
 	blockPrefix             = 0x9
 	feeMarketPrefix         = 0xa
+	ArcadiaRegisterPrefix   = 0xf1
 	EpochExitRegistryPrefix = 0xf2
 	EpochExitPrefix         = 0xf3
 	ArcadiaBidPrefix        = 0xf4
@@ -79,6 +80,7 @@ var (
 	successByte  = byte(0x1)
 	heightKey    = []byte{heightPrefix}
 	timestampKey = []byte{timestampPrefix}
+	arcadiaKey   = []byte{ArcadiaRegisterPrefix}
 	feeKey       = []byte{feePrefix}
 	feeMarketKey = []byte{feeMarketPrefix}
 
@@ -304,6 +306,10 @@ func EpochExitRegistryKey() []byte {
 
 func AnchorRegistryKey() []byte {
 	return hactions.AnchorRegistryKey()
+}
+
+func ArcadiaRegisterKey() []byte {
+	return arcadiaKey
 }
 
 func PackNamespaces(namespaces [][]byte) ([]byte, error) {
@@ -614,6 +620,28 @@ func delEpochExit(
 	return mu.Remove(ctx, key)
 }
 
+func SetArcadiaRegistrations(
+	ctx context.Context,
+	mu state.Mutable,
+	ns []byte,
+) error {
+	// v, err := mu.GetValue(ctx, arcadiaKey)
+	// if err != nil && err != database.ErrNotFound {
+	// 	return err
+	// }
+	// p := codec.NewWriter(len(v)+len(ns), consts.NetworkSizeLimit)
+	// p.PackBytes()
+	return mu.Insert(ctx, arcadiaKey, ns)
+}
+
+func GetArcadiaRegistrations(
+	ctx context.Context,
+	im state.Immutable,
+) ([][]byte, error) {
+	// return []byte{im.GetValue(ctx, arcadiaKey)
+	return nil, nil
+}
+
 func ArcadiaBidKey(epoch uint64) []byte {
 	k := make([]byte, 1+8+consts.Uint16Len)
 	k[0] = ArcadiaBidPrefix
@@ -661,8 +689,20 @@ func GetArcadiaBidderInfoAndSignature(
 	if err != nil {
 		return nil, nil, err
 	}
-	// @todo should we send parsed values?
 	return v[8 : 8+48], v[8+48:], nil
+}
+
+func GetArcadiaBuilderFromState(
+	ctx context.Context,
+	f ReadState,
+	epoch uint64,
+) ([]byte, error) {
+	k := ArcadiaBidKey(epoch)
+	values, errs := f(ctx, [][]byte{k})
+	if errs[0] != nil {
+		return nil, errs[0]
+	}
+	return values[0][8 : 8+48], nil
 }
 
 func PrefixBlockKey(block ids.ID, parent ids.ID) (k []byte) {

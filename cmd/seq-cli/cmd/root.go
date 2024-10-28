@@ -24,6 +24,7 @@ var (
 	dbPath                string
 	genesisFile           string
 	minBlockGap           int64
+	epochDuration         int64
 	minUnitPrice          []string
 	maxBlockUnits         []string
 	windowTargetUnits     []string
@@ -107,6 +108,12 @@ func init() {
 		-1,
 		"minimum block gap (ms)",
 	)
+	genGenesisCmd.PersistentFlags().Int64Var(
+		&epochDuration,
+		"epoch-duration",
+		12,
+		"epoch duration (ms)",
+	)
 	genesisCmd.AddCommand(
 		genGenesisCmd,
 	)
@@ -149,6 +156,7 @@ func init() {
 		transferCmd,
 		sequencerMsgCmd,
 		anchorCmd,
+		auctionCmd,
 	)
 
 	// spam
