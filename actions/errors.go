@@ -11,4 +11,7 @@ var (
 	ErrInvalidBidderSignature          = errors.New("invalid bidder signature")
 	ErrParsedBuilderSEQAddressMismatch = errors.New("parsed builder SEQ address mismatch")
 	ErrOutputMemoTooLarge              = errors.New("memo is too large")
+	ErrNameSpaceNotRegistered          = errors.New("namespace not registered")
+	ErrNotAuthorized                   = errors.New("not authorized")
+	ErrNameSpaceAlreadyRegistered      = errors.New("namespace already registered")
 )

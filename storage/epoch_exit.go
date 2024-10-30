@@ -11,14 +11,6 @@ import (
 	"github.com/ava-labs/avalanchego/database"
 )
 
-func EpochExitRegistryKey() []byte {
-	// state key must >= 2 bytes
-	k := make([]byte, 1+consts.Uint16Len)
-	k[0] = EpochExitRegistryPrefix
-	binary.BigEndian.PutUint16(k[1:], EpochExitChunks)
-	return k
-}
-
 func EpochExitKey(epoch uint64) []byte {
 	k := make([]byte, 1+8+consts.Uint16Len)
 	k[0] = EpochExitPrefix
@@ -105,22 +97,4 @@ func setEpochExit(
 	}
 	infoBytes := p.Bytes()
 	return mu.Insert(ctx, key, infoBytes)
-}
-
-// TODO I should be able to delete 1 item out of the list instead of having to delete them all at once.
-func DelEpochExit(
-	ctx context.Context,
-	mu state.Mutable,
-	epoch uint64,
-) error {
-	k := EpochExitKey(epoch)
-	return delEpochExit(ctx, mu, k)
-}
-
-func delEpochExit(
-	ctx context.Context,
-	mu state.Mutable,
-	key []byte,
-) error {
-	return mu.Remove(ctx, key)
 }

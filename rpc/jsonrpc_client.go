@@ -268,7 +268,7 @@ func (cli *JSONRPCClient) WaitForTransaction(ctx context.Context, txID ids.ID) (
 	return success, fee, nil
 }
 
-func (cli *JSONRPCClient) RegisteredAnchors(ctx context.Context) ([][]byte, []*hactions.AnchorInfo, error) {
+func (cli *JSONRPCClient) RegisteredAnchors(ctx context.Context) ([][]byte, []*hactions.RollupInfo, error) {
 	resp := new(types.RegisteredAnchorReply)
 	err := cli.requester.SendRequest(
 		ctx,

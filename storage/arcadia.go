@@ -4,34 +4,38 @@ import (
 	"context"
 	"encoding/binary"
 
+	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/state"
 )
 
-func ArcadiaRegisterKey() []byte {
-	return arcadiaKey
+func ArcadiaRegistryKey() []byte {
+	return hactions.ArcadiaRegistryKey()
 }
 
-func SetArcadiaRegistrations(
-	ctx context.Context,
-	mu state.Mutable,
-	ns []byte,
-) error {
-	// v, err := mu.GetValue(ctx, arcadiaKey)
-	// if err != nil && err != database.ErrNotFound {
-	// 	return err
-	// }
-	// p := codec.NewWriter(len(v)+len(ns), consts.NetworkSizeLimit)
-	// p.PackBytes()
-	return mu.Insert(ctx, arcadiaKey, ns)
-}
-
-func GetArcadiaRegistrations(
+func GetArcadiaRegistry(
 	ctx context.Context,
 	im state.Immutable,
 ) ([][]byte, error) {
-	// return []byte{im.GetValue(ctx, arcadiaKey)
-	return nil, nil
+	k := ArcadiaRegistryKey()
+	namespaces, _, err := innerGetRegistry(im.GetValue(ctx, k))
+	if err != nil {
+		return nil, err
+	}
+	return namespaces, nil
+}
+
+func SetArcadiaRegistry(
+	ctx context.Context,
+	mu state.Mutable,
+	namespaces [][]byte,
+) error {
+	k := ArcadiaRegistryKey()
+	packed, err := PackNamespaces(namespaces)
+	if err != nil {
+		return err
+	}
+	return mu.Insert(ctx, k, packed)
 }
 
 func ArcadiaBidKey(epoch uint64) []byte {

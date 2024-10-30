@@ -16,7 +16,7 @@ import (
 	"github.com/ava-labs/avalanchego/ids"
 )
 
-var _ chain.Action = (*AnchorRegister)(nil)
+var _ chain.Action = (*AnchorRegistration)(nil)
 
 const (
 	CreateAnchor = iota
@@ -24,28 +24,29 @@ const (
 	UpdateAnchor
 )
 
-type AnchorRegister struct {
-	Info      hactions.AnchorInfo `json:"info"`
+type AnchorRegistration struct {
+	Info      hactions.RollupInfo `json:"info"`
 	Namespace []byte              `json:"namespace"`
 	OpCode    int                 `json:"opcode"`
 }
 
-func (*AnchorRegister) GetTypeID() uint8 {
+func (*AnchorRegistration) GetTypeID() uint8 {
 	return hactions.AnchorRegisterID
 }
 
-func (t *AnchorRegister) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
+func (a *AnchorRegistration) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
 	return state.Keys{
-		string(storage.AnchorKey(t.Namespace)): state.All,
-		string(storage.AnchorRegistryKey()):    state.All,
+		string(storage.RollupInfoKey(a.Namespace)): state.All,
+		string(storage.AnchorRegistryKey()):        state.All,
+		string(storage.GlobalRollupRegistryKey()):  state.All,
 	}
 }
 
-func (*AnchorRegister) StateKeysMaxChunks() []uint16 {
-	return []uint16{hactions.AnchorChunks, hactions.AnchorChunks}
+func (*AnchorRegistration) StateKeysMaxChunks() []uint16 {
+	return []uint16{hactions.RollupInfoChunks, hactions.AnchorRegistryChunks, storage.GlobalRollupRegistryChunks}
 }
 
-func (t *AnchorRegister) Execute(
+func (a *AnchorRegistration) Execute(
 	ctx context.Context,
 	_ chain.Rules,
 	mu state.Mutable,
@@ -54,66 +55,100 @@ func (t *AnchorRegister) Execute(
 	actor codec.Address,
 	_ ids.ID,
 ) ([][]byte, error) {
-	if !bytes.Equal(t.Namespace, t.Info.Namespace) {
-		return nil, fmt.Errorf("namespace is not equal to what's in the meta, expected: %s, actual: %s", hex.EncodeToString(t.Namespace), hex.EncodeToString(t.Info.Namespace))
+	if !bytes.Equal(a.Namespace, a.Info.Namespace) {
+		return nil, fmt.Errorf("namespace is not equal to what's in the meta, expected: %s, actual: %s", hex.EncodeToString(a.Namespace), hex.EncodeToString(a.Info.Namespace))
 	}
 
-	namespaces, _, err := storage.GetAnchors(ctx, mu)
+	if len(a.Namespace) > consts.MaxNamespaceLen {
+		return nil, fmt.Errorf("namespace length is too long, maximum: %d, actual: %d", consts.MaxNamespaceLen, len(a.Namespace))
+	}
+
+	namespaces, err := storage.GetAnchorRegistry(ctx, mu)
 	if err != nil {
 		return nil, err
 	}
 
-	switch t.OpCode {
+	globalRollupNamespaces, err := storage.GetGlobalRollupRegistry(ctx, mu)
+	if err != nil {
+		return nil, err
+	}
+
+	switch a.OpCode {
 	case CreateAnchor:
-		namespaces = append(namespaces, t.Namespace)
-		if err := storage.SetAnchor(ctx, mu, t.Namespace, &t.Info); err != nil {
+		if contains(globalRollupNamespaces, a.Namespace) {
+			return nil, ErrNameSpaceAlreadyRegistered
+		}
+		namespaces = append(namespaces, a.Namespace)
+		globalRollupNamespaces = append(globalRollupNamespaces, a.Namespace)
+		if err := storage.SetRollupInfo(ctx, mu, a.Namespace, &a.Info); err != nil {
 			return nil, err
 		}
 	case UpdateAnchor:
-		namespaces = append(namespaces, t.Namespace)
-		if err := storage.SetAnchor(ctx, mu, t.Namespace, &t.Info); err != nil {
+		if err := authorizationChecks(ctx, actor, namespaces, a.Namespace, mu); err != nil {
+			return nil, err
+		}
+
+		if err := storage.SetRollupInfo(ctx, mu, a.Namespace, &a.Info); err != nil {
 			return nil, err
 		}
 	case DeleteAnchor:
+
+		if err := authorizationChecks(ctx, actor, namespaces, a.Namespace, mu); err != nil {
+			return nil, err
+		}
+
 		nsIdx := -1
 		for i, ns := range namespaces {
-			if bytes.Equal(t.Namespace, ns) {
+			if bytes.Equal(a.Namespace, ns) {
 				nsIdx = i
 				break
 			}
 		}
 		namespaces = slices.Delete(namespaces, nsIdx, nsIdx+1)
-		if err := storage.DelAnchor(ctx, mu, t.Namespace); err != nil {
+
+		nsIdx = -1
+		for i, ns := range globalRollupNamespaces {
+			if bytes.Equal(a.Namespace, ns) {
+				nsIdx = i
+				break
+			}
+		}
+		globalRollupNamespaces = slices.Delete(globalRollupNamespaces, nsIdx, nsIdx+1)
+
+		if err := storage.DelRollupInfo(ctx, mu, a.Namespace); err != nil {
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("op code(%d) not supported", t.OpCode)
+		return nil, fmt.Errorf("op code(%d) not supported", a.OpCode)
 	}
 
-	if err := storage.SetAnchors(ctx, mu, namespaces); err != nil {
+	if err := storage.SetAnchorRegistry(ctx, mu, namespaces); err != nil {
+		return nil, err
+	}
+	if err := storage.SetGlobalRollupRegistry(ctx, mu, globalRollupNamespaces); err != nil {
 		return nil, err
 	}
 
 	return nil, nil
 }
 
-func (*AnchorRegister) ComputeUnits(codec.Address, chain.Rules) uint64 {
+func (*AnchorRegistration) ComputeUnits(codec.Address, chain.Rules) uint64 {
 	return hactions.AnchorRegisterComputeUnits
 }
 
-func (t *AnchorRegister) Size() int {
-	return codec.BytesLen(t.Namespace) + codec.AddressLen + consts.BoolLen
+func (a *AnchorRegistration) Size() int {
+	return a.Info.Size() + len(a.Namespace) + consts.IntLen
 }
 
-func (t *AnchorRegister) Marshal(p *codec.Packer) {
-	t.Info.Marshal(p)
-	p.PackBytes(t.Namespace)
-	p.PackInt(t.OpCode)
+func (a *AnchorRegistration) Marshal(p *codec.Packer) {
+	a.Info.Marshal(p)
+	p.PackBytes(a.Namespace)
+	p.PackInt(a.OpCode)
 }
 
 func UnmarshalAnchorRegister(p *codec.Packer) (chain.Action, error) {
-	var anchorReg AnchorRegister
-	info, err := hactions.UnmarshalAnchorInfo(p)
+	var anchorReg AnchorRegistration
+	info, err := hactions.UnmarshalRollupInfo(p)
 	if err != nil {
 		return nil, err
 	}
@@ -123,15 +158,14 @@ func UnmarshalAnchorRegister(p *codec.Packer) (chain.Action, error) {
 	return &anchorReg, nil
 }
 
-func (*AnchorRegister) ValidRange(chain.Rules) (int64, int64) {
-	// Returning -1, -1 means that the action is always valid.
+func (*AnchorRegistration) ValidRange(chain.Rules) (int64, int64) {
 	return -1, -1
 }
 
-func (*AnchorRegister) NMTNamespace() []byte {
-	return DefaultNMTNamespace // TODO: mark this the same to registering namespace?
+func (*AnchorRegistration) NMTNamespace() []byte {
+	return DefaultNMTNamespace
 }
 
-func (*AnchorRegister) UseFeeMarket() bool {
+func (*AnchorRegistration) UseFeeMarket() bool {
 	return false
 }

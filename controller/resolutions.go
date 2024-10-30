@@ -46,7 +46,7 @@ func (c *Controller) GetBalanceFromState(
 
 func (c *Controller) GetRegisteredAnchorsFromState(
 	ctx context.Context,
-) ([][]byte, []*hactions.AnchorInfo, error) {
+) ([][]byte, []*hactions.RollupInfo, error) {
 	return storage.GetAnchorsFromState(ctx, c.inner.ReadState)
 }
 
@@ -54,7 +54,11 @@ func (c *Controller) GetEpochExitsFromState(
 	ctx context.Context,
 	epoch uint64,
 ) (*storage.EpochExitInfo, error) {
-	return storage.GetEpochExitsFromState(ctx, c.inner.ReadState, epoch)
+	info, err := storage.GetEpochExitsFromState(ctx, c.inner.ReadState, epoch)
+	if err != nil {
+		return nil, err
+	}
+	return info, nil
 }
 
 func (c *Controller) GetArcadiaBuilderFromState(

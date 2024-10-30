@@ -127,13 +127,13 @@ var anchorCmd = &cobra.Command{
 			return err
 		}
 
-		info := hactions.AnchorInfo{
+		info := hactions.RollupInfo{
 			FeeRecipient: feeRecipient,
 			Namespace:    namespace,
 		}
 
 		// Generate transaction
-		_, err = sendAndWait(ctx, []chain.Action{&actions.AnchorRegister{
+		_, err = sendAndWait(ctx, []chain.Action{&actions.AnchorRegistration{
 			Namespace: namespace,
 			Info:      info,
 			OpCode:    op,

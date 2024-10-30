@@ -1,19 +1,33 @@
 package actions
 
 import (
+	"bytes"
+	"context"
+
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
+	"github.com/AnomalyFi/hypersdk/state"
+	"github.com/AnomalyFi/nodekit-seq/storage"
 )
 
-func IsWhiteListed(rules chain.Rules, actor codec.Address) bool {
+func isWhiteListed(rules chain.Rules, actor codec.Address) bool {
 	whitelistedAddressesB, _ := rules.FetchCustom("whitelisted.Addresses")
 	whitelistedAddresses := whitelistedAddressesB.([]codec.Address)
-	return ContainsAddress(whitelistedAddresses, actor)
+	return containsAddress(whitelistedAddresses, actor)
 }
 
-func ContainsAddress(addrs []codec.Address, addr codec.Address) bool {
+func containsAddress(addrs []codec.Address, addr codec.Address) bool {
 	for _, a := range addrs {
 		if a == addr {
+			return true
+		}
+	}
+	return false
+}
+
+func contains(arr [][]byte, ns []byte) bool {
+	for _, v := range arr {
+		if bytes.Equal(v, ns) {
 			return true
 		}
 	}
@@ -27,21 +41,21 @@ func ArcadiaFundAddress() codec.Address {
 	return addr
 }
 
-func MarshalAuctionInfo(p *codec.Packer, info *AuctionInfo) {
-	p.PackUint64(info.EpochNumber)
-	p.PackUint64(info.BidPrice)
-	p.PackAddress(info.BuilderSEQAddress)
-}
-
-func UnmarshalAnchorInfo(p *codec.Packer) (*AuctionInfo, error) {
-	var auctionInfo AuctionInfo
-	auctionInfo.EpochNumber = p.UnpackUint64(true)
-	auctionInfo.BidPrice = p.UnpackUint64(true)
-	p.UnpackAddress(&auctionInfo.BuilderSEQAddress)
-	if p.Err() != nil {
-		return nil, p.Err()
+func authorizationChecks(ctx context.Context, actor codec.Address, namespaces [][]byte, ns []byte, im state.Immutable) error {
+	if !contains(namespaces, ns) {
+		return ErrNameSpaceNotRegistered
 	}
-	return &auctionInfo, nil
+
+	info, err := storage.GetRollupInfo(ctx, im, ns)
+	if err != nil {
+		return err
+	}
+
+	if info.AuthoritySEQAddress != actor {
+		return ErrNotAuthorized
+	}
+
+	return nil
 }
 
 func Epoch(blockHeight uint64, epochLength int64) uint64 {

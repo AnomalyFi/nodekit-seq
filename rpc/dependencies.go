@@ -25,7 +25,7 @@ type Controller interface {
 	Tracer() trace.Tracer
 	GetTransaction(context.Context, ids.ID) (bool, int64, bool, fees.Dimensions, uint64, error)
 	GetBalanceFromState(context.Context, codec.Address) (uint64, error)
-	GetRegisteredAnchorsFromState(context.Context) ([][]byte, []*hactions.AnchorInfo, error)
+	GetRegisteredAnchorsFromState(context.Context) ([][]byte, []*hactions.RollupInfo, error)
 	GetEpochExitsFromState(ctx context.Context, epoch uint64) (*storage.EpochExitInfo, error)
 	GetArcadiaBuilderFromState(ctx context.Context, epoch uint64) ([]byte, error)
 	UnitPrices(ctx context.Context) (fees.Dimensions, error)

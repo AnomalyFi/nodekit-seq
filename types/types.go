@@ -6,11 +6,10 @@ import (
 	"math/big"
 
 	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
 
 	hactions "github.com/AnomalyFi/hypersdk/actions"
-
-	"github.com/AnomalyFi/nodekit-seq/storage"
 )
 
 type SEQTransaction struct {
@@ -219,7 +218,7 @@ type GetBlockTransactionsByNamespaceArgs struct {
 
 type RegisteredAnchorReply struct {
 	Namespaces [][]byte               `json:"namespaces"`
-	Anchors    []*hactions.AnchorInfo `json:"anchors"`
+	Anchors    []*hactions.RollupInfo `json:"anchors"`
 }
 
 type EpochExitsReply struct {

@@ -3,9 +3,11 @@ package actions
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"slices"
 
+	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/consts"
@@ -33,13 +35,14 @@ func (*EpochExit) GetTypeID() uint8 {
 
 func (t *EpochExit) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
 	return state.Keys{
-		string(storage.EpochExitKey(t.Epoch)):  state.All,
-		string(storage.EpochExitRegistryKey()): state.All,
+		string(storage.EpochExitKey(t.Epoch)):           state.All,
+		string(storage.RollupInfoKey(t.Info.Namespace)): state.Read,
+		string(storage.ArcadiaRegistryKey()):            state.Read,
 	}
 }
 
 func (*EpochExit) StateKeysMaxChunks() []uint16 {
-	return []uint16{storage.EpochExitChunks, storage.EpochExitChunks}
+	return []uint16{storage.EpochExitChunks, hactions.RollupInfoChunks, hactions.ArcadiaRegistryChunks}
 }
 
 func (t *EpochExit) Execute(
@@ -55,15 +58,34 @@ func (t *EpochExit) Execute(
 		return nil, fmt.Errorf("epoch is not equal to what's in the meta, expected: %d, actual: %d", t.Epoch, t.Info.Epoch)
 	}
 
-	epochExit, err := storage.GetEpochExit(ctx, mu, t.Epoch)
+	// check if rollup is registered for arcadia.
+	nss, err := storage.GetArcadiaRegistry(ctx, mu)
+	if err != nil {
+		return nil, err
+	}
 
+	if !contains(nss, t.Info.Namespace) {
+		return nil, fmt.Errorf("namespace is not registered, namespace: %s", hex.EncodeToString(t.Info.Namespace))
+	}
+
+	rollupInfo, err := storage.GetRollupInfo(ctx, mu, t.Info.Namespace)
+	// rollup info will not be nil, as rollup is registered for arcadia.
+	if err != nil {
+		return nil, err
+	}
+
+	if rollupInfo.AuthoritySEQAddress != actor {
+		return nil, ErrNotAuthorized
+	}
+
+	epochExit, err := storage.GetEpochExit(ctx, mu, t.Epoch)
 	if err != nil {
 		return nil, err
 	}
 
 	switch t.OpCode {
 	case CreateExit:
-		epochExit.Exits = append(epochExit.Exits, t.Info)
+		epochExit.Exits = append(epochExit.Exits, &t.Info)
 		if err := storage.SetEpochExit(ctx, mu, t.Epoch, epochExit); err != nil {
 			return nil, err
 		}

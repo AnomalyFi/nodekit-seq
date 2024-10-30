@@ -1,9 +1,18 @@
 package storage
 
 import (
+	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/consts"
 )
+
+func PackNamespaces(namespaces [][]byte) ([]byte, error) {
+	return hactions.PackNamespaces(namespaces)
+}
+
+func UnpackNamespaces(raw []byte) ([][]byte, error) {
+	return hactions.UnpackNamespaces(raw)
+}
 
 func PackEpochs(epochs []uint64) ([]byte, error) {
 	p := codec.NewWriter(len(epochs)*8, consts.NetworkSizeLimit)
@@ -19,8 +28,7 @@ func UnpackEpochs(raw []byte) ([]uint64, error) {
 	eLen := p.UnpackInt(false)
 	epochs := make([]uint64, 0, eLen)
 	for i := 0; i < eLen; i++ {
-		var e uint64
-		e = p.UnpackUint64(true)
+		e := p.UnpackUint64(true)
 		epochs = append(epochs, e)
 	}
 

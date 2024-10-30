@@ -24,6 +24,23 @@ type AuctionInfo struct {
 	BuilderSEQAddress codec.Address `json:"builderSEQAddress"`
 }
 
+func (info *AuctionInfo) Marshal(p *codec.Packer) {
+	p.PackUint64(info.EpochNumber)
+	p.PackUint64(info.BidPrice)
+	p.PackAddress(info.BuilderSEQAddress)
+}
+
+func UnmarshalAuctionInfo(p *codec.Packer) (*AuctionInfo, error) {
+	var auctionInfo AuctionInfo
+	auctionInfo.EpochNumber = p.UnpackUint64(true)
+	auctionInfo.BidPrice = p.UnpackUint64(true)
+	p.UnpackAddress(&auctionInfo.BuilderSEQAddress)
+	if p.Err() != nil {
+		return nil, p.Err()
+	}
+	return &auctionInfo, nil
+}
+
 type Auction struct {
 	AuctionInfo      AuctionInfo `json:"auctionInfo"`
 	BuilderPublicKey []byte      `json:"builderPublicKey"` // BLS public key of the bidder.
@@ -46,8 +63,7 @@ func (*Auction) StateKeysMaxChunks() []uint16 {
 	return []uint16{storage.BalanceChunks, storage.BalanceChunks, storage.EpochExitChunks}
 }
 
-// This is a permissioned action, only authorized address can only pass the execution.
-
+// This is a permissioned action, only authorized address can pass the execution.
 func (a *Auction) Execute(
 	ctx context.Context,
 	rules chain.Rules,
@@ -59,7 +75,7 @@ func (a *Auction) Execute(
 ) ([][]byte, error) {
 	// TODO: this allows any whitelisted address to submit arcadia bid.
 	// change this to only allow the arcadia address to submit the bid.
-	if !IsWhiteListed(rules, actor) {
+	if !isWhiteListed(rules, actor) {
 		return nil, ErrNotWhiteListed
 	}
 
@@ -86,6 +102,7 @@ func (a *Auction) Execute(
 	if !bls.Verify(msg, pubkey, sig) {
 		return nil, ErrInvalidBidderSignature
 	}
+
 	builderSEQAddress := codec.CreateAddress(auth.BLSID, utils.ToID(a.BuilderPublicKey))
 	if builderSEQAddress != a.AuctionInfo.BuilderSEQAddress {
 		return nil, ErrParsedBuilderSEQAddressMismatch
@@ -117,14 +134,14 @@ func (a *Auction) Size() int {
 }
 
 func (a *Auction) Marshal(p *codec.Packer) {
-	MarshalAuctionInfo(p, &a.AuctionInfo)
+	a.AuctionInfo.Marshal(p)
 	p.PackBytes(a.BuilderPublicKey)
 	p.PackBytes(a.BuilderSignature)
 }
 
 func UnmarshalAuction(p *codec.Packer) (chain.Action, error) {
 	var auction Auction
-	auctionInfo, err := UnmarshalAnchorInfo(p)
+	auctionInfo, err := UnmarshalAuctionInfo(p)
 	if err != nil {
 		return nil, err
 	}
