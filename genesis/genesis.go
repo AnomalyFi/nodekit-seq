@@ -37,7 +37,7 @@ type Genesis struct {
 	// Chain Parameters
 	MinBlockGap      int64 `json:"minBlockGap"`      // ms
 	MinEmptyBlockGap int64 `json:"minEmptyBlockGap"` // ms
-	EpochDuration    int64 `json:"epochDuration"`    // ms
+	EpochDuration    int64 `json:"epochDuration"`    // number of SEQ blocks
 
 	// Chain Fee Parameters
 	MinUnitPrice               fees.Dimensions `json:"minUnitPrice"`
@@ -76,7 +76,7 @@ func Default() *Genesis {
 		// Chain Parameters
 		MinBlockGap:      1_000,
 		MinEmptyBlockGap: 1_000,
-		EpochDuration:    12 * hconsts.MillisecondsPerSecond,
+		EpochDuration:    6,
 
 		// Chain Fee Parameters
 		MinUnitPrice:               fees.Dimensions{100, 100, 100, 100, 100},
