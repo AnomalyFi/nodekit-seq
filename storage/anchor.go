@@ -23,28 +23,17 @@ func GetAnchorRegistry(
 }
 
 // Used to serve RPC queries
-func GetAnchorsFromState(
+func GetAnchorRegistryFromState(
 	ctx context.Context,
 	f ReadState,
-) ([][]byte, []*hactions.RollupInfo, error) {
+) ([][]byte, error) {
 	k := AnchorRegistryKey()
 	values, errs := f(ctx, [][]byte{k})
 	namespaces, _, err := innerGetRegistry(values[0], errs[0])
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-
-	infos := make([]*hactions.RollupInfo, 0, len(namespaces))
-	for _, ns := range namespaces {
-		k := RollupInfoKey(ns)
-		values, errs := f(ctx, [][]byte{k})
-		info, _, err := innerGetRollupInfo(values[0], errs[0])
-		if err != nil {
-			return nil, nil, err
-		}
-		infos = append(infos, info)
-	}
-	return namespaces, infos, err
+	return namespaces, nil
 }
 
 func innerGetRegistry(

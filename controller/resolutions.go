@@ -44,10 +44,16 @@ func (c *Controller) GetBalanceFromState(
 	return storage.GetBalanceFromState(ctx, c.inner.ReadState, addr)
 }
 
-func (c *Controller) GetRegisteredAnchorsFromState(
+func (c *Controller) GetAnchorRegistryFromState(
 	ctx context.Context,
-) ([][]byte, []*hactions.RollupInfo, error) {
-	return storage.GetAnchorsFromState(ctx, c.inner.ReadState)
+) ([][]byte, error) {
+	return storage.GetAnchorRegistryFromState(ctx, c.inner.ReadState)
+}
+
+func (c *Controller) GetArcadiaRegistryFromState(
+	ctx context.Context,
+) ([][]byte, error) {
+	return storage.GetArcadiaRegistryFromState(ctx, c.inner.ReadState)
 }
 
 func (c *Controller) GetEpochExitsFromState(
@@ -59,6 +65,13 @@ func (c *Controller) GetEpochExitsFromState(
 		return nil, err
 	}
 	return info, nil
+}
+
+func (c *Controller) GetRollupInfoFromState(
+	ctx context.Context,
+	namespace []byte,
+) (*hactions.RollupInfo, error) {
+	return storage.GetRollupInfoFromState(ctx, c.inner.ReadState, namespace)
 }
 
 func (c *Controller) GetArcadiaBuilderFromState(

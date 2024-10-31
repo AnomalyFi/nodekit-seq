@@ -47,8 +47,8 @@ func (r *Rules) GetValidityWindow() int64 {
 	return r.g.ValidityWindow
 }
 
-func (r *Rules) GetEpochDuration() int64 {
-	return r.g.EpochDuration
+func (r *Rules) GetEpochLength() int64 {
+	return r.g.EpochLength
 }
 
 func (r *Rules) GetMaxActionsPerTx() uint8 {

@@ -47,7 +47,7 @@ func innerGetRollupInfo(
 	if err != nil {
 		return nil, false, err
 	}
-	p := codec.NewReader(v, consts.NetworkSizeLimit) // @todo safely change the max limit to chunk size * max chunks
+	p := codec.NewReader(v, consts.NetworkSizeLimit)
 	info, err := hactions.UnmarshalRollupInfo(p)
 	if err != nil {
 		return nil, false, err

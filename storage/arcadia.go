@@ -7,6 +7,7 @@ import (
 	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/state"
+	"github.com/ava-labs/avalanchego/database"
 )
 
 func ArcadiaRegistryKey() []byte {
@@ -23,6 +24,16 @@ func GetArcadiaRegistry(
 		return nil, err
 	}
 	return namespaces, nil
+}
+
+func GetArcadiaRegistryFromState(
+	ctx context.Context,
+	f ReadState,
+) ([][]byte, error) {
+	k := ArcadiaRegistryKey()
+	values, errs := f(ctx, [][]byte{k})
+	namespaces, _, err := innerGetRegistry(values[0], errs[0])
+	return namespaces, err
 }
 
 func SetArcadiaRegistry(
@@ -42,7 +53,7 @@ func ArcadiaBidKey(epoch uint64) []byte {
 	k := make([]byte, 1+8+consts.Uint16Len)
 	k[0] = ArcadiaBidPrefix
 	binary.BigEndian.PutUint64(k[1:], epoch)
-	binary.BigEndian.PutUint16(k[9:], EpochExitChunks)
+	binary.BigEndian.PutUint16(k[9:], EpochExitsChunks)
 	return k
 }
 
@@ -95,6 +106,9 @@ func GetArcadiaBuilderFromState(
 ) ([]byte, error) {
 	k := ArcadiaBidKey(epoch)
 	values, errs := f(ctx, [][]byte{k})
+	if errs[0] == database.ErrNotFound {
+		return nil, nil
+	}
 	if errs[0] != nil {
 		return nil, errs[0]
 	}

@@ -30,23 +30,23 @@ const (
 	feeMarketPrefix = 0xa
 
 	ArcadiaRegistryPrefix      = 0xf2
-	EpochExitRegistryPrefix    = 0xf3
-	EpochExitPrefix            = 0xf4
-	ArcadiaBidPrefix           = 0xf5
-	GlobalRollupRegistryPrefix = 0xf6
-	ArcadiaInfoPrefix          = 0xf7
+	EpochExitsPrefix           = 0xf3
+	ArcadiaBidPrefix           = 0xf4
+	GlobalRollupRegistryPrefix = 0xf5
+	ArcadiaInfoPrefix          = 0xf6
 )
 
 const (
 	// ToDO: clean up
-	BalanceChunks   uint16 = 1
-	AssetChunks     uint16 = 5
-	EpochExitChunks uint16 = 1
+	BalanceChunks uint16 = 1
+
 	// The length of data stored at GlobalRollupRegistryKey and ArcadiaRegistryKey depends on number of rollups registered.
 	// Each chunk gives a state storage of 64 bytes.
 	// Its safe to limit the data of state storage for GlobalRollupRegistryKey and ArcadiaRegistryKey to atleast 3 KiB.
 	GlobalRollupRegistryChunks uint16 = 3 * 16
 	ArcadiaRegistryChunks      uint16 = 3 * 16
+	// EpochInfo size = 32 + 8 = 40 bytes.
+	EpochExitsChunks uint16 = 3 * 16
 	// 2 AddressLen* 33 + 1 MaxNameSpaceLen *  32 = 98 bytes
 	ArcadiaInfoChunks uint16 = 2
 )

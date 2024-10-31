@@ -29,7 +29,7 @@ func (e *EpochExitInfo) Marshal(p *codec.Packer) error {
 	return p.Err()
 }
 
-func UnmarshalEpochExitInfo(p *codec.Packer) (*EpochExitInfo, error) {
+func UnmarshalEpochExitsInfo(p *codec.Packer) (*EpochExitInfo, error) {
 	count := p.UnpackInt(true)
 	exits := make([]*EpochInfo, count)
 	for i := 0; i < count; i++ {

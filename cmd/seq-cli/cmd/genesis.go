@@ -57,7 +57,12 @@ var genGenesisCmd = &cobra.Command{
 		if minBlockGap >= 0 {
 			g.MinBlockGap = minBlockGap
 		}
-
+		if minEmptyBlockGap >= 0 {
+			g.MinEmptyBlockGap = minEmptyBlockGap
+		}
+		if epochLength > 0 {
+			g.EpochLength = epochLength
+		}
 		a, err := os.ReadFile(args[0])
 		if err != nil {
 			return err

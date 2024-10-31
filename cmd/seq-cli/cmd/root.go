@@ -24,7 +24,8 @@ var (
 	dbPath                string
 	genesisFile           string
 	minBlockGap           int64
-	epochDuration         int64
+	minEmptyBlockGap      int64
+	epochLength           int64
 	minUnitPrice          []string
 	maxBlockUnits         []string
 	windowTargetUnits     []string
@@ -109,10 +110,16 @@ func init() {
 		"minimum block gap (ms)",
 	)
 	genGenesisCmd.PersistentFlags().Int64Var(
-		&epochDuration,
-		"epoch-duration",
-		12,
-		"epoch duration (ms)",
+		&minEmptyBlockGap,
+		"min-empty-block-gap",
+		-1,
+		"minimum empty block gap (ms)",
+	)
+	genGenesisCmd.PersistentFlags().Int64Var(
+		&epochLength,
+		"epoch-length",
+		6,
+		"epoch length (# of SEQ blocks)",
 	)
 	genesisCmd.AddCommand(
 		genGenesisCmd,

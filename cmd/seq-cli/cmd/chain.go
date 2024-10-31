@@ -146,14 +146,14 @@ var anchorsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		namespaces, infos, err := tcli.RegisteredAnchors(ctx)
+		namespaces, err := tcli.AnchorRegistry(ctx)
 		if err != nil {
 			return err
 		}
 		fmt.Printf("num of anchors registered: %d\n", len(namespaces))
-		for i := 0; i < len(namespaces); i++ {
-			fmt.Printf("%s: %+v\n", string(namespaces[i]), infos[i])
-		}
+		// for i := 0; i < len(namespaces); i++ {
+		// 	fmt.Printf("%s: %+v\n", string(namespaces[i]), infos[i])
+		// }
 
 		return nil
 	},

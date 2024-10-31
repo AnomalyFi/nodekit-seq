@@ -63,9 +63,7 @@ func (a *ArcadiaRegistration) Execute(
 	if len(a.Namespace) > consts.MaxNamespaceLen {
 		return nil, fmt.Errorf("namespace length is too long, maximum: %d, actual: %d", consts.MaxNamespaceLen, len(a.Namespace))
 	}
-	if a.StartEpoch < Epoch(hght, rules.GetEpochDuration())+2 { // @todo derive this const from hypersdk preconf level.
-		return nil, fmt.Errorf("epoch number is not valid, minimum: %d, actual: %d", Epoch(hght, rules.GetEpochDuration())+2, a.StartEpoch)
-	}
+
 	namespaces, err := storage.GetArcadiaRegistry(ctx, mu)
 	if err != nil {
 		return nil, err
@@ -79,6 +77,9 @@ func (a *ArcadiaRegistration) Execute(
 	case CreateArcadia:
 		if contains(globalRollupNamespaces, a.Namespace) {
 			return nil, ErrNameSpaceAlreadyRegistered
+		}
+		if a.StartEpoch < Epoch(hght, rules.GetEpochLength())+2 { // @todo derive this const from hypersdk preconf level.
+			return nil, fmt.Errorf("epoch number is not valid, minimum: %d, actual: %d", Epoch(hght, rules.GetEpochLength())+2, a.StartEpoch)
 		}
 		namespaces = append(namespaces, a.Namespace)
 		globalRollupNamespaces = append(globalRollupNamespaces, a.Namespace)
@@ -143,8 +144,8 @@ func (a *ArcadiaRegistration) Size() int {
 func (a *ArcadiaRegistration) Marshal(p *codec.Packer) {
 	a.Info.Marshal(p)
 	p.PackBytes(a.Namespace)
-	p.PackUint64(a.StartEpoch)
 	p.PackInt(a.OpCode)
+	p.PackUint64(a.StartEpoch)
 }
 
 func UnmarshalArcadiaRegister(p *codec.Packer) (chain.Action, error) {
@@ -155,8 +156,12 @@ func UnmarshalArcadiaRegister(p *codec.Packer) (chain.Action, error) {
 	}
 	arcadiaReg.Info = *info
 	p.UnpackBytes(-1, true, &arcadiaReg.Namespace)
-	arcadiaReg.StartEpoch = p.UnpackUint64(false)
-	arcadiaReg.OpCode = p.UnpackInt(true)
+	arcadiaReg.OpCode = p.UnpackInt(false)
+	if arcadiaReg.OpCode == CreateArcadia {
+		arcadiaReg.StartEpoch = p.UnpackUint64(true)
+	} else {
+		arcadiaReg.StartEpoch = p.UnpackUint64(false)
+	}
 	return &arcadiaReg, nil
 }
 

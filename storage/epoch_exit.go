@@ -11,31 +11,31 @@ import (
 	"github.com/ava-labs/avalanchego/database"
 )
 
-func EpochExitKey(epoch uint64) []byte {
+func EpochExitsKey(epoch uint64) []byte {
 	k := make([]byte, 1+8+consts.Uint16Len)
-	k[0] = EpochExitPrefix
+	k[0] = EpochExitsPrefix
 	binary.BigEndian.PutUint64(k[1:], epoch)
-	binary.BigEndian.PutUint16(k[9:], EpochExitChunks)
+	binary.BigEndian.PutUint16(k[9:], EpochExitsChunks)
 	return k
 }
 
 // This should get all the exits for 1 epoch
-func GetEpochExit(
+func GetEpochExits(
 	ctx context.Context,
 	im state.Immutable,
 	epoch uint64,
-) (*EpochExitInfo, error) {
-	_, ep, _, err := getEpochExit(ctx, im, epoch)
-	return ep, err
+) (*EpochExitInfo, bool, error) {
+	_, ep, exists, err := getEpochExits(ctx, im, epoch)
+	return ep, exists, err
 }
 
-func getEpochExit(
+func getEpochExits(
 	ctx context.Context,
 	im state.Immutable,
 	epoch uint64,
 ) ([]byte, *EpochExitInfo, bool, error) {
-	k := EpochExitKey(epoch)
-	epochExit, exists, err := innerGetEpochExit(im.GetValue(ctx, k))
+	k := EpochExitsKey(epoch)
+	epochExit, exists, err := innerGetEpochExits(im.GetValue(ctx, k))
 	return k, epochExit, exists, err
 }
 
@@ -45,13 +45,13 @@ func GetEpochExitsFromState(
 	f ReadState,
 	epoch uint64,
 ) (*EpochExitInfo, error) {
-	k := EpochExitKey(epoch)
+	k := EpochExitsKey(epoch)
 	values, errs := f(ctx, [][]byte{k})
-	epochExit, _, err := innerGetEpochExit(values[0], errs[0])
+	epochExit, _, err := innerGetEpochExits(values[0], errs[0])
 	return epochExit, err
 }
 
-func innerGetEpochExit(
+func innerGetEpochExits(
 	v []byte,
 	err error,
 ) (*EpochExitInfo, bool, error) {
@@ -62,24 +62,24 @@ func innerGetEpochExit(
 		return nil, false, err
 	}
 	p := codec.NewReader(v, consts.NetworkSizeLimit)
-	info, err := UnmarshalEpochExitInfo(p)
+	info, err := UnmarshalEpochExitsInfo(p)
 	if err != nil {
 		return nil, false, err
 	}
 	return info, true, nil
 }
 
-func SetEpochExit(
+func SetEpochExits(
 	ctx context.Context,
 	mu state.Mutable,
 	epoch uint64,
 	info *EpochExitInfo,
 ) error {
-	k := EpochExitKey(epoch)
-	return setEpochExit(ctx, mu, k, info)
+	k := EpochExitsKey(epoch)
+	return setEpochExits(ctx, mu, k, info)
 }
 
-func setEpochExit(
+func setEpochExits(
 	ctx context.Context,
 	mu state.Mutable,
 	key []byte,

@@ -60,7 +60,7 @@ func (a *Auction) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
 }
 
 func (*Auction) StateKeysMaxChunks() []uint16 {
-	return []uint16{storage.BalanceChunks, storage.BalanceChunks, storage.EpochExitChunks}
+	return []uint16{storage.BalanceChunks, storage.BalanceChunks, storage.EpochExitsChunks}
 }
 
 // This is a permissioned action, only authorized address can pass the execution.
@@ -80,8 +80,8 @@ func (a *Auction) Execute(
 	}
 
 	// Allow auction bid for next epoch processed only during the current epoch.
-	if a.AuctionInfo.EpochNumber != Epoch(hght, rules.GetEpochDuration())+1 {
-		return nil, fmt.Errorf("epoch number is not valid, expected: %d, actual: %d", Epoch(hght, rules.GetEpochDuration())+1, a.AuctionInfo.EpochNumber)
+	if a.AuctionInfo.EpochNumber != Epoch(hght, rules.GetEpochLength())+1 {
+		return nil, fmt.Errorf("epoch number is not valid, expected: %d, actual: %d", Epoch(hght, rules.GetEpochLength())+1, a.AuctionInfo.EpochNumber)
 	}
 
 	pubkey, err := bls.PublicKeyFromBytes(a.BuilderPublicKey)

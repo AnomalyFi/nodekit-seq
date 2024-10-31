@@ -268,38 +268,60 @@ func (cli *JSONRPCClient) WaitForTransaction(ctx context.Context, txID ids.ID) (
 	return success, fee, nil
 }
 
-func (cli *JSONRPCClient) RegisteredAnchors(ctx context.Context) ([][]byte, []*hactions.RollupInfo, error) {
-	resp := new(types.RegisteredAnchorReply)
+func (cli *JSONRPCClient) AnchorRegistry(ctx context.Context) ([][]byte, error) {
+	resp := new(types.RegistryReply)
 	err := cli.requester.SendRequest(
 		ctx,
-		"registeredAnchors",
+		"getAnchorRegistry",
 		nil,
 		resp,
 	)
-	return resp.Namespaces, resp.Anchors, err
+	return resp.Namespaces, err
 }
 
+func (cli *JSONRPCClient) ArcadiaRegistry(ctx context.Context) ([][]byte, error) {
+	resp := new(types.RegistryReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"getArcadiaRegistry",
+		nil,
+		resp,
+	)
+	return resp.Namespaces, err
+}
+
+func (cli *JSONRPCClient) GetRollupInfo(ctx context.Context, namespace []byte) (*hactions.RollupInfo, error) {
+	resp := new(types.GetRollupInfoReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"getRollupInfo",
+		&types.GetRollupInfoArgs{Namespace: namespace},
+		resp,
+	)
+	return &resp.Info, err
+}
 func (cli *JSONRPCClient) GetEpochExits(ctx context.Context, epoch uint64) (*storage.EpochExitInfo, error) {
 	resp := new(types.EpochExitsReply)
+	args := &types.EpochExitsArgs{Epoch: epoch}
 	err := cli.requester.SendRequest(
 		ctx,
 		"getEpochExits",
-		epoch,
+		args,
 		resp,
 	)
 	return resp.Info, err
 }
 
-func (cli *JSONRPCClient) GetBuilder(ctx context.Context, epoch uint64) ([48]byte, error) {
-	resp := new([48]byte)
+func (cli *JSONRPCClient) GetBuilder(ctx context.Context, epoch uint64) (*[]byte, error) {
+	resp := new(types.GetBuilderReply)
+	args := &types.GetBuilderArgs{Epoch: epoch}
 	err := cli.requester.SendRequest(
 		ctx,
 		"getBuilder",
-		epoch,
+		args,
 		resp,
 	)
-
-	return *resp, err
+	return &resp.BuilderPubKey, err
 }
 
 var _ chain.Parser = (*Parser)(nil)

@@ -92,7 +92,6 @@ func (a *AnchorRegistration) Execute(
 			return nil, err
 		}
 	case DeleteAnchor:
-
 		if err := authorizationChecks(ctx, actor, namespaces, a.Namespace, mu); err != nil {
 			return nil, err
 		}
@@ -121,7 +120,6 @@ func (a *AnchorRegistration) Execute(
 	default:
 		return nil, fmt.Errorf("op code(%d) not supported", a.OpCode)
 	}
-
 	if err := storage.SetAnchorRegistry(ctx, mu, namespaces); err != nil {
 		return nil, err
 	}
