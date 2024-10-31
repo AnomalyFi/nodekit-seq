@@ -991,19 +991,19 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.Contains(string(result.Error), "invalid bidder signature")
 	})
 
-	ginkgo.It("test register rollup for anchor", func() {
+	ginkgo.It("test register rollup", func() {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
 
-		txActions := []chain.Action{&actions.AnchorRegistration{
+		txActions := []chain.Action{&actions.RollupRegistration{
 			Info: hactions.RollupInfo{
 				Namespace:           []byte("nkit"),
 				FeeRecipient:        rsender,
 				AuthoritySEQAddress: rsender,
 			},
 			Namespace: []byte("nkit"),
-			OpCode:    actions.CreateAnchor,
+			OpCode:    actions.CreateRollup,
 		}}
 		parser, err := instances[0].tcli.Parser(ctx)
 		require.NoError(err)
@@ -1019,7 +1019,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.NoError(txErr)
 		require.True(result.Success)
 	})
-	ginkgo.It("test update rollup info for anchor", func() {
+	ginkgo.It("test update rollup info", func() {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
@@ -1029,14 +1029,14 @@ var _ = ginkgo.Describe("[Test]", func() {
 		pubKey := bls.PublicFromPrivateKey(tpriv)
 		seqAddress := auth.NewBLSAddress(pubKey)
 
-		txActions := []chain.Action{&actions.AnchorRegistration{
+		txActions := []chain.Action{&actions.RollupRegistration{
 			Info: hactions.RollupInfo{
 				Namespace:           []byte("nkit"),
 				FeeRecipient:        seqAddress,
 				AuthoritySEQAddress: seqAddress,
 			},
 			Namespace: []byte("nkit"),
-			OpCode:    actions.UpdateAnchor,
+			OpCode:    actions.UpdateRollup,
 		}}
 		parser, err := instances[0].tcli.Parser(ctx)
 		require.NoError(err)
@@ -1052,29 +1052,29 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.NoError(txErr)
 		require.True(result.Success)
 	})
-	ginkgo.It("test delete rollup info for anchor", func() {
+	ginkgo.It("test delete rollup info", func() {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
 
 		txActions := []chain.Action{
-			&actions.AnchorRegistration{
+			&actions.RollupRegistration{
 				Info: hactions.RollupInfo{
 					Namespace:           []byte("nkit2"),
 					FeeRecipient:        rsender,
 					AuthoritySEQAddress: rsender,
 				},
 				Namespace: []byte("nkit2"),
-				OpCode:    actions.CreateAnchor,
+				OpCode:    actions.CreateRollup,
 			},
-			&actions.AnchorRegistration{
+			&actions.RollupRegistration{
 				Info: hactions.RollupInfo{
 					Namespace:           []byte("nkit2"),
 					FeeRecipient:        rsender,
 					AuthoritySEQAddress: rsender,
 				},
 				Namespace: []byte("nkit2"),
-				OpCode:    actions.DeleteAnchor,
+				OpCode:    actions.DeleteRollup,
 			},
 		}
 
@@ -1094,7 +1094,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.Empty(result.Error)
 	})
 
-	ginkgo.It("test tx fail for wrong authority modifications in anchor.", func() {
+	ginkgo.It("test tx fail for wrong authority modifications in rollup registration.", func() {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
@@ -1105,23 +1105,23 @@ var _ = ginkgo.Describe("[Test]", func() {
 		seqAddress := auth.NewBLSAddress(pubKey)
 
 		txActions := []chain.Action{
-			&actions.AnchorRegistration{
+			&actions.RollupRegistration{
 				Info: hactions.RollupInfo{
 					Namespace:           []byte("nkit3"),
 					FeeRecipient:        seqAddress,
 					AuthoritySEQAddress: seqAddress,
 				},
 				Namespace: []byte("nkit3"),
-				OpCode:    actions.CreateAnchor,
+				OpCode:    actions.CreateRollup,
 			},
-			&actions.AnchorRegistration{
+			&actions.RollupRegistration{
 				Info: hactions.RollupInfo{
 					Namespace:           []byte("nkit3"),
 					FeeRecipient:        seqAddress,
 					AuthoritySEQAddress: rsender,
 				},
 				Namespace: []byte("nkit3"),
-				OpCode:    actions.UpdateAnchor,
+				OpCode:    actions.UpdateRollup,
 			},
 		}
 		parser, err := instances[0].tcli.Parser(ctx)
@@ -1140,7 +1140,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.Contains(string(result.Error), "not authorized")
 	})
 
-	ginkgo.It("test already existing namespace in anchor", func() {
+	ginkgo.It("test already existing namespace in rollup registration", func() {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
@@ -1150,14 +1150,14 @@ var _ = ginkgo.Describe("[Test]", func() {
 		pubKey := bls.PublicFromPrivateKey(tpriv)
 		seqAddress := auth.NewBLSAddress(pubKey)
 
-		txActions := []chain.Action{&actions.AnchorRegistration{
+		txActions := []chain.Action{&actions.RollupRegistration{
 			Info: hactions.RollupInfo{
 				Namespace:           []byte("nkit"),
 				FeeRecipient:        seqAddress,
 				AuthoritySEQAddress: seqAddress,
 			},
 			Namespace: []byte("nkit"),
-			OpCode:    actions.CreateAnchor,
+			OpCode:    actions.CreateRollup,
 		}}
 		parser, err := instances[0].tcli.Parser(ctx)
 		require.NoError(err)
@@ -1175,119 +1175,9 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.Contains(string(result.Error), "namespace already registered")
 	})
 
-	ginkgo.It("test arcadia register", func() {
-		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
-		defer cancel()
-
-		currEpoch, err := instances[0].cli.GetCurrentEpoch()
-		require.NoError(err)
-		txActions := []chain.Action{&actions.ArcadiaRegistration{
-			Info: hactions.RollupInfo{
-				Namespace:           []byte("arcadia"),
-				FeeRecipient:        rsender,
-				AuthoritySEQAddress: rsender,
-			},
-			Namespace:  []byte("arcadia"),
-			StartEpoch: currEpoch + 5,
-			OpCode:     actions.CreateArcadia,
-		}}
-		parser, err := instances[0].tcli.Parser(ctx)
-		require.NoError(err)
-		_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
-		require.NoError(err)
-		hutils.Outf("{{green}}txID of submitted data:{{/}}%s\n", tx.ID().String())
-		err = instances[0].wsCli.RegisterTx(tx)
-		require.NoError(err)
-		txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
-		require.Equal(tx.ID(), txID)
-		require.NoError(err)
-		require.NoError(txErr)
-		require.True(result.Success)
-		require.Empty(result.Error)
-	})
-	ginkgo.It("test update rollup info for arcadia", func() {
-		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
-		defer cancel()
-		tpriv, err := bls.GeneratePrivateKey()
-		require.NoError(err)
-
-		pubKey := bls.PublicFromPrivateKey(tpriv)
-		seqAddress := auth.NewBLSAddress(pubKey)
-
-		txActions := []chain.Action{&actions.ArcadiaRegistration{
-			Info: hactions.RollupInfo{
-				Namespace:           []byte("arcadia"),
-				FeeRecipient:        seqAddress,
-				AuthoritySEQAddress: seqAddress,
-			},
-			Namespace:  []byte("arcadia"),
-			StartEpoch: 100,
-			OpCode:     actions.UpdateArcadia,
-		}}
-		parser, err := instances[0].tcli.Parser(ctx)
-		require.NoError(err)
-		_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
-		require.NoError(err)
-		hutils.Outf("{{green}}txID of submitted data:{{/}}%s\n", tx.ID().String())
-
-		err = instances[0].wsCli.RegisterTx(tx)
-		require.NoError(err)
-		txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
-		require.Equal(tx.ID(), txID)
-		require.NoError(err)
-		require.NoError(txErr)
-		require.True(result.Success)
-		require.Empty(result.Error)
-	})
-	ginkgo.It("test delete rollup info for arcadia", func() {
-		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
-		defer cancel()
-		currEpoch, err := instances[0].cli.GetCurrentEpoch()
-		require.NoError(err)
-		txActions := []chain.Action{
-			&actions.ArcadiaRegistration{
-				Info: hactions.RollupInfo{
-					Namespace:           []byte("arcadia2"),
-					FeeRecipient:        rsender,
-					AuthoritySEQAddress: rsender,
-				},
-				Namespace:  []byte("arcadia2"),
-				StartEpoch: currEpoch + 10,
-				OpCode:     actions.CreateArcadia,
-			},
-			&actions.ArcadiaRegistration{
-				Info: hactions.RollupInfo{
-					Namespace:           []byte("arcadia2"),
-					FeeRecipient:        rsender,
-					AuthoritySEQAddress: rsender,
-				},
-				Namespace:  []byte("arcadia2"),
-				StartEpoch: currEpoch + 10,
-				OpCode:     actions.DeleteArcadia,
-			},
-		}
-
-		parser, err := instances[0].tcli.Parser(ctx)
-		require.NoError(err)
-		_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
-		require.NoError(err)
-		hutils.Outf("{{green}}txID of submitted data:{{/}}%s\n", tx.ID().String())
-
-		err = instances[0].wsCli.RegisterTx(tx)
-		require.NoError(err)
-		txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
-		require.Equal(tx.ID(), txID)
-		require.NoError(err)
-		require.NoError(txErr)
-		require.True(result.Success)
-		require.Empty(result.Error)
-	})
 	var currEpoch uint64
-	// TODO: Add test for global registry.
-	ginkgo.It("test create epoch exit for arcadia", func() {
+
+	ginkgo.It("test create epoch exit for rollups", func() {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
@@ -1295,20 +1185,20 @@ var _ = ginkgo.Describe("[Test]", func() {
 		currEpoch = crEpoch
 		require.NoError(err)
 		txActions := []chain.Action{
-			&actions.ArcadiaRegistration{
+			&actions.RollupRegistration{
 				Info: hactions.RollupInfo{
-					Namespace:           []byte("arcadia3"),
+					Namespace:           []byte("nkit4"),
 					FeeRecipient:        rsender,
 					AuthoritySEQAddress: rsender,
 				},
-				Namespace:  []byte("arcadia3"),
-				StartEpoch: currEpoch + 10,
-				OpCode:     actions.CreateArcadia,
+				Namespace: []byte("nkit4"),
+				// StartEpoch: currEpoch + 10,
+				OpCode: actions.CreateRollup,
 			},
 			&actions.EpochExit{
 				Info: storage.EpochInfo{
 					Epoch:     currEpoch + 15,
-					Namespace: []byte("arcadia3"),
+					Namespace: []byte("nkit4"),
 				},
 				Epoch:  currEpoch + 15,
 				OpCode: actions.CreateExit,
@@ -1331,7 +1221,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.Empty(result.Error)
 	})
 
-	ginkgo.It("test delete epoch exit for arcadia", func() {
+	ginkgo.It("test delete epoch exit", func() {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
@@ -1339,7 +1229,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			&actions.EpochExit{
 				Info: storage.EpochInfo{
 					Epoch:     currEpoch + 15,
-					Namespace: []byte("arcadia3"),
+					Namespace: []byte("nkit4"),
 				},
 				Epoch:  currEpoch + 15,
 				OpCode: actions.DeleteExit,
@@ -1361,7 +1251,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.Empty(result.Error)
 	})
 
-	ginkgo.It("test epoch exit only works for arcadia rollups", func() {
+	ginkgo.It("test epoch exit only works for registered rollups", func() {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
@@ -1369,7 +1259,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			&actions.EpochExit{
 				Info: storage.EpochInfo{
 					Epoch:     currEpoch + 15,
-					Namespace: []byte("arcadia4"),
+					Namespace: []byte("nkit5"),
 				},
 				Epoch:  currEpoch + 15,
 				OpCode: actions.CreateExit,
@@ -1387,7 +1277,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.NoError(err)
 		require.NoError(txErr)
 		require.False(result.Success)
-		require.Contains(string(result.Error), "namespace is not registered for arcadia")
+		require.Contains(string(result.Error), "namespace is not registered")
 	})
 	switch mode {
 	case modeTest:

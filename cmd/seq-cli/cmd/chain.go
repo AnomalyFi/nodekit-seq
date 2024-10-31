@@ -139,14 +139,14 @@ var testHeaderCmd = &cobra.Command{
 }
 
 var anchorsCmd = &cobra.Command{
-	Use: "anchors",
+	Use: "rollups",
 	RunE: func(_ *cobra.Command, args []string) error {
 		ctx := context.Background()
 		_, _, _, _, _, tcli, err := handler.DefaultActor()
 		if err != nil {
 			return err
 		}
-		namespaces, err := tcli.AnchorRegistry(ctx)
+		namespaces, err := tcli.RollupRegistry(ctx)
 		if err != nil {
 			return err
 		}

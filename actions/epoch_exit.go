@@ -37,12 +37,12 @@ func (t *EpochExit) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
 	return state.Keys{
 		string(storage.EpochExitsKey(t.Epoch)):          state.All,
 		string(storage.RollupInfoKey(t.Info.Namespace)): state.Read,
-		string(storage.ArcadiaRegistryKey()):            state.Read,
+		string(storage.RollupRegistryKey()):             state.Read,
 	}
 }
 
 func (*EpochExit) StateKeysMaxChunks() []uint16 {
-	return []uint16{storage.EpochExitsChunks, hactions.RollupInfoChunks, hactions.ArcadiaRegistryChunks}
+	return []uint16{storage.EpochExitsChunks, hactions.RollupInfoChunks, hactions.RollupRegistryChunks}
 }
 
 // TODO: Add check for curr epoch > start epoch of arcadia.
@@ -59,18 +59,18 @@ func (t *EpochExit) Execute(
 		return nil, fmt.Errorf("epoch is not equal to what's in the meta, expected: %d, actual: %d", t.Epoch, t.Info.Epoch)
 	}
 
-	// check if rollup is registered for arcadia.
-	nss, err := storage.GetArcadiaRegistry(ctx, mu)
+	// check if rollup is registered.
+	nss, err := storage.GetRollupRegistry(ctx, mu)
 	if err != nil {
 		return nil, err
 	}
 
 	if !contains(nss, t.Info.Namespace) {
-		return nil, fmt.Errorf("namespace is not registered for arcadia, namespace: %s", hex.EncodeToString(t.Info.Namespace))
+		return nil, fmt.Errorf("namespace is not registered, namespace: %s", hex.EncodeToString(t.Info.Namespace))
 	}
 
 	rollupInfo, err := storage.GetRollupInfo(ctx, mu, t.Info.Namespace)
-	// rollup info will not be nil, as rollup is registered for arcadia.
+	// rollup info will not be nil, as rollup is registered.
 	if err != nil {
 		return nil, err
 	}

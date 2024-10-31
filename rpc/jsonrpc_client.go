@@ -268,22 +268,11 @@ func (cli *JSONRPCClient) WaitForTransaction(ctx context.Context, txID ids.ID) (
 	return success, fee, nil
 }
 
-func (cli *JSONRPCClient) AnchorRegistry(ctx context.Context) ([][]byte, error) {
+func (cli *JSONRPCClient) RollupRegistry(ctx context.Context) ([][]byte, error) {
 	resp := new(types.RegistryReply)
 	err := cli.requester.SendRequest(
 		ctx,
-		"getAnchorRegistry",
-		nil,
-		resp,
-	)
-	return resp.Namespaces, err
-}
-
-func (cli *JSONRPCClient) ArcadiaRegistry(ctx context.Context) ([][]byte, error) {
-	resp := new(types.RegistryReply)
-	err := cli.requester.SendRequest(
-		ctx,
-		"getArcadiaRegistry",
+		"getRollupRegistry",
 		nil,
 		resp,
 	)
@@ -300,6 +289,7 @@ func (cli *JSONRPCClient) GetRollupInfo(ctx context.Context, namespace []byte) (
 	)
 	return &resp.Info, err
 }
+
 func (cli *JSONRPCClient) GetEpochExits(ctx context.Context, epoch uint64) (*storage.EpochExitInfo, error) {
 	resp := new(types.EpochExitsReply)
 	args := &types.EpochExitsArgs{Epoch: epoch}

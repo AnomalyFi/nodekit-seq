@@ -9,25 +9,25 @@ import (
 	"github.com/ava-labs/avalanchego/database"
 )
 
-func AnchorRegistryKey() []byte {
-	return hactions.AnchorRegistryKey()
+func RollupRegistryKey() []byte {
+	return hactions.RollupRegistryKey()
 }
 
-func GetAnchorRegistry(
+func GetRollupRegistry(
 	ctx context.Context,
 	im state.Immutable,
 ) ([][]byte, error) {
-	k := AnchorRegistryKey()
+	k := RollupRegistryKey()
 	namespaces, _, err := innerGetRegistry(im.GetValue(ctx, k))
 	return namespaces, err
 }
 
 // Used to serve RPC queries
-func GetAnchorRegistryFromState(
+func GetRollupRegistryFromState(
 	ctx context.Context,
 	f ReadState,
 ) ([][]byte, error) {
-	k := AnchorRegistryKey()
+	k := RollupRegistryKey()
 	values, errs := f(ctx, [][]byte{k})
 	namespaces, _, err := innerGetRegistry(values[0], errs[0])
 	if err != nil {
@@ -54,12 +54,12 @@ func innerGetRegistry(
 	return namespaces, true, nil
 }
 
-func SetAnchorRegistry(
+func SetRollupRegistry(
 	ctx context.Context,
 	mu state.Mutable,
 	namespaces [][]byte,
 ) error {
-	k := AnchorRegistryKey()
+	k := RollupRegistryKey()
 	packed, err := PackNamespaces(namespaces)
 	if err != nil {
 		return err

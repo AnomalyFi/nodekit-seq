@@ -370,7 +370,7 @@ func (j *JSONRPCServer) GetBuilder(req *http.Request, args *types.GetBuilderArgs
 	ctx, span := j.c.Tracer().Start(req.Context(), "Server.GetBuilder")
 	defer span.End()
 
-	builder, err := j.c.GetArcadiaBuilderFromState(ctx, args.Epoch)
+	builder, err := j.c.GetBuilderFromState(ctx, args.Epoch)
 	if err != nil {
 		return err
 	}
@@ -378,28 +378,16 @@ func (j *JSONRPCServer) GetBuilder(req *http.Request, args *types.GetBuilderArgs
 	return nil
 }
 
-func (j *JSONRPCServer) GetAnchorRegistry(req *http.Request, args *struct{}, reply *types.RegistryReply) error {
-	ctx, span := j.c.Tracer().Start(req.Context(), "Server.RegisteredAnchors")
+func (j *JSONRPCServer) GetRollupRegistry(req *http.Request, args *struct{}, reply *types.RegistryReply) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.GetRollupRegistry")
 	defer span.End()
 
-	namespaces, err := j.c.GetAnchorRegistryFromState(ctx)
+	namespaces, err := j.c.GetRollupRegistryFromState(ctx)
 	if err != nil {
 		return err
 	}
 	reply.Namespaces = namespaces
 	return err
-}
-
-func (j *JSONRPCServer) GetArcadiaRegistry(req *http.Request, args *struct{}, reply *types.RegistryReply) error {
-	ctx, span := j.c.Tracer().Start(req.Context(), "Server.GetArcadiaRegistry")
-	defer span.End()
-
-	namespaces, err := j.c.GetArcadiaRegistryFromState(ctx)
-	if err != nil {
-		return err
-	}
-	reply.Namespaces = namespaces
-	return nil
 }
 
 func (j *JSONRPCServer) GetRollupInfo(req *http.Request, args *types.GetRollupInfoArgs, reply *types.GetRollupInfoReply) error {

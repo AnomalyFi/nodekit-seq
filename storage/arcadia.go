@@ -4,50 +4,10 @@ import (
 	"context"
 	"encoding/binary"
 
-	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/state"
 	"github.com/ava-labs/avalanchego/database"
 )
-
-func ArcadiaRegistryKey() []byte {
-	return hactions.ArcadiaRegistryKey()
-}
-
-func GetArcadiaRegistry(
-	ctx context.Context,
-	im state.Immutable,
-) ([][]byte, error) {
-	k := ArcadiaRegistryKey()
-	namespaces, _, err := innerGetRegistry(im.GetValue(ctx, k))
-	if err != nil {
-		return nil, err
-	}
-	return namespaces, nil
-}
-
-func GetArcadiaRegistryFromState(
-	ctx context.Context,
-	f ReadState,
-) ([][]byte, error) {
-	k := ArcadiaRegistryKey()
-	values, errs := f(ctx, [][]byte{k})
-	namespaces, _, err := innerGetRegistry(values[0], errs[0])
-	return namespaces, err
-}
-
-func SetArcadiaRegistry(
-	ctx context.Context,
-	mu state.Mutable,
-	namespaces [][]byte,
-) error {
-	k := ArcadiaRegistryKey()
-	packed, err := PackNamespaces(namespaces)
-	if err != nil {
-		return err
-	}
-	return mu.Insert(ctx, k, packed)
-}
 
 func ArcadiaBidKey(epoch uint64) []byte {
 	k := make([]byte, 1+8+consts.Uint16Len)

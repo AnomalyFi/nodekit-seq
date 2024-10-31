@@ -133,7 +133,7 @@ var anchorCmd = &cobra.Command{
 		}
 
 		// Generate transaction
-		_, err = sendAndWait(ctx, []chain.Action{&actions.AnchorRegistration{
+		_, err = sendAndWait(ctx, []chain.Action{&actions.RollupRegistration{
 			Namespace: namespace,
 			Info:      info,
 			OpCode:    op,
