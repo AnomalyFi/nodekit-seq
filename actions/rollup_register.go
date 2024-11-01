@@ -48,10 +48,10 @@ func (*RollupRegistration) StateKeysMaxChunks() []uint16 {
 
 func (r *RollupRegistration) Execute(
 	ctx context.Context,
-	_ chain.Rules,
+	rules chain.Rules,
 	mu state.Mutable,
 	_ int64,
-	_ uint64,
+	hght uint64,
 	actor codec.Address,
 	_ ids.ID,
 ) ([][]byte, error) {
@@ -72,6 +72,9 @@ func (r *RollupRegistration) Execute(
 	case CreateRollup:
 		if contains(namespaces, r.Namespace) {
 			return nil, ErrNameSpaceAlreadyRegistered
+		}
+		if r.StartEpoch < Epoch(hght, rules.GetEpochLength())+2 {
+			return nil, fmt.Errorf("epoch number is not valid, minimum: %d, actual: %d", Epoch(hght, rules.GetEpochLength())+2, r.StartEpoch)
 		}
 		namespaces = append(namespaces, r.Namespace)
 		if err := storage.SetRollupInfo(ctx, mu, r.Namespace, &r.Info); err != nil {
@@ -123,8 +126,8 @@ func (r *RollupRegistration) Size() int {
 func (r *RollupRegistration) Marshal(p *codec.Packer) {
 	r.Info.Marshal(p)
 	p.PackBytes(r.Namespace)
-	p.PackUint64(r.StartEpoch)
 	p.PackInt(r.OpCode)
+	p.PackUint64(r.StartEpoch)
 }
 
 func UnmarshalRollupRegister(p *codec.Packer) (chain.Action, error) {
@@ -135,8 +138,12 @@ func UnmarshalRollupRegister(p *codec.Packer) (chain.Action, error) {
 	}
 	RollupReg.Info = *info
 	p.UnpackBytes(-1, false, &RollupReg.Namespace)
-	RollupReg.StartEpoch = p.UnpackUint64(true)
 	RollupReg.OpCode = p.UnpackInt(false)
+	if RollupReg.OpCode == CreateRollup {
+		RollupReg.StartEpoch = p.UnpackUint64(true)
+	} else {
+		RollupReg.StartEpoch = p.UnpackUint64(false)
+	}
 	return &RollupReg, nil
 }
 

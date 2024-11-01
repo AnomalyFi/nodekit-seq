@@ -995,15 +995,17 @@ var _ = ginkgo.Describe("[Test]", func() {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
-
+		currEpoch, err := instances[0].cli.GetCurrentEpoch()
+		require.NoError(err)
 		txActions := []chain.Action{&actions.RollupRegistration{
 			Info: hactions.RollupInfo{
 				Namespace:           []byte("nkit"),
 				FeeRecipient:        rsender,
 				AuthoritySEQAddress: rsender,
 			},
-			Namespace: []byte("nkit"),
-			OpCode:    actions.CreateRollup,
+			Namespace:  []byte("nkit"),
+			StartEpoch: currEpoch + 5,
+			OpCode:     actions.CreateRollup,
 		}}
 		parser, err := instances[0].tcli.Parser(ctx)
 		require.NoError(err)
@@ -1028,7 +1030,6 @@ var _ = ginkgo.Describe("[Test]", func() {
 
 		pubKey := bls.PublicFromPrivateKey(tpriv)
 		seqAddress := auth.NewBLSAddress(pubKey)
-
 		txActions := []chain.Action{&actions.RollupRegistration{
 			Info: hactions.RollupInfo{
 				Namespace:           []byte("nkit"),
@@ -1056,7 +1057,8 @@ var _ = ginkgo.Describe("[Test]", func() {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
-
+		currEpoch, err := instances[0].cli.GetCurrentEpoch()
+		require.NoError(err)
 		txActions := []chain.Action{
 			&actions.RollupRegistration{
 				Info: hactions.RollupInfo{
@@ -1064,8 +1066,9 @@ var _ = ginkgo.Describe("[Test]", func() {
 					FeeRecipient:        rsender,
 					AuthoritySEQAddress: rsender,
 				},
-				Namespace: []byte("nkit2"),
-				OpCode:    actions.CreateRollup,
+				StartEpoch: currEpoch + 5,
+				Namespace:  []byte("nkit2"),
+				OpCode:     actions.CreateRollup,
 			},
 			&actions.RollupRegistration{
 				Info: hactions.RollupInfo{
@@ -1104,6 +1107,8 @@ var _ = ginkgo.Describe("[Test]", func() {
 		pubKey := bls.PublicFromPrivateKey(tpriv)
 		seqAddress := auth.NewBLSAddress(pubKey)
 
+		currEpoch, err := instances[0].cli.GetCurrentEpoch()
+		require.NoError(err)
 		txActions := []chain.Action{
 			&actions.RollupRegistration{
 				Info: hactions.RollupInfo{
@@ -1111,8 +1116,9 @@ var _ = ginkgo.Describe("[Test]", func() {
 					FeeRecipient:        seqAddress,
 					AuthoritySEQAddress: seqAddress,
 				},
-				Namespace: []byte("nkit3"),
-				OpCode:    actions.CreateRollup,
+				StartEpoch: currEpoch + 5,
+				Namespace:  []byte("nkit3"),
+				OpCode:     actions.CreateRollup,
 			},
 			&actions.RollupRegistration{
 				Info: hactions.RollupInfo{
@@ -1150,14 +1156,17 @@ var _ = ginkgo.Describe("[Test]", func() {
 		pubKey := bls.PublicFromPrivateKey(tpriv)
 		seqAddress := auth.NewBLSAddress(pubKey)
 
+		currEpoch, err := instances[0].cli.GetCurrentEpoch()
+		require.NoError(err)
 		txActions := []chain.Action{&actions.RollupRegistration{
 			Info: hactions.RollupInfo{
 				Namespace:           []byte("nkit"),
 				FeeRecipient:        seqAddress,
 				AuthoritySEQAddress: seqAddress,
 			},
-			Namespace: []byte("nkit"),
-			OpCode:    actions.CreateRollup,
+			StartEpoch: currEpoch + 5,
+			Namespace:  []byte("nkit"),
+			OpCode:     actions.CreateRollup,
 		}}
 		parser, err := instances[0].tcli.Parser(ctx)
 		require.NoError(err)
@@ -1191,9 +1200,9 @@ var _ = ginkgo.Describe("[Test]", func() {
 					FeeRecipient:        rsender,
 					AuthoritySEQAddress: rsender,
 				},
-				Namespace: []byte("nkit4"),
-				// StartEpoch: currEpoch + 10,
-				OpCode: actions.CreateRollup,
+				Namespace:  []byte("nkit4"),
+				StartEpoch: currEpoch + 10,
+				OpCode:     actions.CreateRollup,
 			},
 			&actions.EpochExit{
 				Info: storage.EpochInfo{
