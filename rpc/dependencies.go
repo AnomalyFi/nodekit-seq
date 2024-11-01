@@ -25,8 +25,10 @@ type Controller interface {
 	Tracer() trace.Tracer
 	GetTransaction(context.Context, ids.ID) (bool, int64, bool, fees.Dimensions, uint64, error)
 	GetBalanceFromState(context.Context, codec.Address) (uint64, error)
-	GetRegisteredAnchorsFromState(context.Context) ([][]byte, []*hactions.AnchorInfo, error)
 	GetEpochExitsFromState(ctx context.Context, epoch uint64) (*storage.EpochExitInfo, error)
+	GetBuilderFromState(ctx context.Context, epoch uint64) ([]byte, error)
+	GetRollupInfoFromState(ctx context.Context, namespace []byte) (*hactions.RollupInfo, error)
+	GetRollupRegistryFromState(ctx context.Context) ([][]byte, error)
 	UnitPrices(ctx context.Context) (fees.Dimensions, error)
 	NameSpacesPrice(ctx context.Context, namespaces []string) ([]uint64, error)
 	GetAcceptedBlockWindow() int

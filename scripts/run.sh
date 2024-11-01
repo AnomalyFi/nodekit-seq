@@ -24,7 +24,9 @@ LOG_LEVEL=${LOG_LEVEL:-INFO}
 AGO_LOG_LEVEL=${AGO_LOG_LEVEL:-INFO}
 AGO_LOG_DISPLAY_LEVEL=${AGO_LOG_DISPLAY_LEVEL:-INFO}
 STATESYNC_DELAY=${STATESYNC_DELAY:-0}
-MIN_BLOCK_GAP=${MIN_BLOCK_GAP:-100}
+MIN_BLOCK_GAP=${MIN_BLOCK_GAP:-2000}
+MIN_EMPTY_BLOCK_GAP=${MIN_EMPTY_BLOCK_GAP:-2000}
+EPOCH_LENGTH=${EPOCH_LENGTH:-6} # 6 SEQ blocks
 STORE_TXS=${STORE_TXS:-false}
 UNLIMITED_USAGE=${UNLIMITED_USAGE:-false}
 STORE_BLOCK_RESULTS_ON_DISK=${STORE_BLOCK_RESULTS_ON_DISK:-true}
@@ -36,6 +38,8 @@ if [[ ${MODE} != "run" ]]; then
   AGO_LOG_DISPLAY_LEVEL=INFO
   STATESYNC_DELAY=100000000 # 100ms
   MIN_BLOCK_GAP=250 #ms
+  MIN_EMPTY_BLOCK_GAP=250 #ms
+  EPOCH_LENGTH=48
   STORE_TXS=true
   UNLIMITED_USAGE=true
 fi
@@ -61,6 +65,7 @@ echo VERSION: "${VERSION}"
 echo MODE: "${MODE}"
 echo STATESYNC_DELAY \(ns\): "${STATESYNC_DELAY}"
 echo MIN_BLOCK_GAP \(ms\): "${MIN_BLOCK_GAP}"
+echo EPOCH_LENGTH : "${EPOCH_LENGTH}"
 echo STORE_TXS: "${STORE_TXS}"
 echo WINDOW_TARGET_UNITS: "${WINDOW_TARGET_UNITS}"
 echo MAX_BLOCK_UNITS: "${MAX_BLOCK_UNITS}"
@@ -142,6 +147,8 @@ if [[ -z "${GENESIS_PATH}" ]]; then
   --window-target-units "${WINDOW_TARGET_UNITS}" \
   --max-block-units "${MAX_BLOCK_UNITS}" \
   --min-block-gap "${MIN_BLOCK_GAP}" \
+  --min-empty-block-gap "${MIN_EMPTY_BLOCK_GAP}" \
+  --epoch-length "${EPOCH_LENGTH}" \
   --genesis-file "${TMPDIR}"/seqvm.genesis
 else
   echo "copying custom genesis file"
@@ -164,13 +171,13 @@ cat <<EOF > "${TMPDIR}"/seqvm.config
   "mempoolSize": 10000000,
   "mempoolSponsorSize": 10000000,
   "mempoolExemptSponsors":["${ADDRESS}"],
+  "whitelistedAddresses":["${ADDRESS}"],
   "authVerificationCores": 2,
   "rootGenerationCores": 2,
   "transactionExecutionCores": 2,
   "verifyAuth": true,
   "storeTransactions": ${STORE_TXS},
   "streamingBacklogSize": 10000000,
-  "trackedPairs":["*"],
   "logLevel": "${LOG_LEVEL}",
   "continuousProfilerDir":"${TMPDIR}/seqvm-e2e-profiles/*",
   "stateSyncServerDelay": ${STATESYNC_DELAY},

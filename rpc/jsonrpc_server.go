@@ -354,29 +354,52 @@ func (j *JSONRPCServer) GetBlockTransactionsByNamespace(req *http.Request, args 
 	return nil
 }
 
-func (j *JSONRPCServer) RegisteredAnchors(req *http.Request, args *struct{}, reply *types.RegisteredAnchorReply) error {
-	ctx, span := j.c.Tracer().Start(req.Context(), "Server.RegisteredAnchors")
-	defer span.End()
-
-	namespaces, infos, err := j.c.GetRegisteredAnchorsFromState(ctx)
-	if err != nil {
-		return err
-	}
-	reply.Namespaces = namespaces
-	reply.Anchors = infos
-	return err
-}
-
-func (j *JSONRPCServer) GetEpochExits(req *http.Request, epoch uint64, reply *types.EpochExitsReply) error {
+func (j *JSONRPCServer) GetEpochExits(req *http.Request, args *types.EpochExitsArgs, reply *types.EpochExitsReply) error {
 	ctx, span := j.c.Tracer().Start(req.Context(), "Server.GetEpochExits")
 	defer span.End()
 
-	info, err := j.c.GetEpochExitsFromState(ctx, epoch)
+	info, err := j.c.GetEpochExitsFromState(ctx, args.Epoch)
 	if err != nil {
 		return err
 	}
 	reply.Info = info
 	return err
+}
+
+func (j *JSONRPCServer) GetBuilder(req *http.Request, args *types.GetBuilderArgs, reply *types.GetBuilderReply) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.GetBuilder")
+	defer span.End()
+
+	builder, err := j.c.GetBuilderFromState(ctx, args.Epoch)
+	if err != nil {
+		return err
+	}
+	reply.BuilderPubKey = builder
+	return nil
+}
+
+func (j *JSONRPCServer) GetRollupRegistry(req *http.Request, args *struct{}, reply *types.RegistryReply) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.GetRollupRegistry")
+	defer span.End()
+
+	namespaces, err := j.c.GetRollupRegistryFromState(ctx)
+	if err != nil {
+		return err
+	}
+	reply.Namespaces = namespaces
+	return err
+}
+
+func (j *JSONRPCServer) GetRollupInfo(req *http.Request, args *types.GetRollupInfoArgs, reply *types.GetRollupInfoReply) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.GetRollupInfo")
+	defer span.End()
+
+	info, err := j.c.GetRollupInfoFromState(ctx, args.Namespace)
+	if err != nil {
+		return err
+	}
+	reply.Info = *info
+	return nil
 }
 
 var _ chain.Parser = (*ServerParser)(nil)
@@ -392,7 +415,7 @@ func (p *ServerParser) ChainID() ids.ID {
 }
 
 func (p *ServerParser) Rules(t int64) chain.Rules {
-	return p.genesis.Rules(t, p.networkID, p.chainID)
+	return p.genesis.Rules(t, p.networkID, p.chainID, []codec.Address{})
 }
 
 func (*ServerParser) Registry() (chain.ActionRegistry, chain.AuthRegistry) {

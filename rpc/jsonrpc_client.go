@@ -11,6 +11,7 @@ import (
 
 	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/requester"
 	"github.com/AnomalyFi/hypersdk/rpc"
 	"github.com/AnomalyFi/hypersdk/utils"
@@ -267,26 +268,50 @@ func (cli *JSONRPCClient) WaitForTransaction(ctx context.Context, txID ids.ID) (
 	return success, fee, nil
 }
 
-func (cli *JSONRPCClient) RegisteredAnchors(ctx context.Context) ([][]byte, []*hactions.AnchorInfo, error) {
-	resp := new(types.RegisteredAnchorReply)
+func (cli *JSONRPCClient) RollupRegistry(ctx context.Context) ([][]byte, error) {
+	resp := new(types.RegistryReply)
 	err := cli.requester.SendRequest(
 		ctx,
-		"registeredAnchors",
+		"getRollupRegistry",
 		nil,
 		resp,
 	)
-	return resp.Namespaces, resp.Anchors, err
+	return resp.Namespaces, err
+}
+
+func (cli *JSONRPCClient) GetRollupInfo(ctx context.Context, namespace []byte) (*hactions.RollupInfo, error) {
+	resp := new(types.GetRollupInfoReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"getRollupInfo",
+		&types.GetRollupInfoArgs{Namespace: namespace},
+		resp,
+	)
+	return &resp.Info, err
 }
 
 func (cli *JSONRPCClient) GetEpochExits(ctx context.Context, epoch uint64) (*storage.EpochExitInfo, error) {
 	resp := new(types.EpochExitsReply)
+	args := &types.EpochExitsArgs{Epoch: epoch}
 	err := cli.requester.SendRequest(
 		ctx,
 		"getEpochExits",
-		epoch,
+		args,
 		resp,
 	)
 	return resp.Info, err
+}
+
+func (cli *JSONRPCClient) GetBuilder(ctx context.Context, epoch uint64) (*[]byte, error) {
+	resp := new(types.GetBuilderReply)
+	args := &types.GetBuilderArgs{Epoch: epoch}
+	err := cli.requester.SendRequest(
+		ctx,
+		"getBuilder",
+		args,
+		resp,
+	)
+	return &resp.BuilderPubKey, err
 }
 
 var _ chain.Parser = (*Parser)(nil)
@@ -302,7 +327,7 @@ func (p *Parser) ChainID() ids.ID {
 }
 
 func (p *Parser) Rules(t int64) chain.Rules {
-	return p.genesis.Rules(t, p.networkID, p.chainID)
+	return p.genesis.Rules(t, p.networkID, p.chainID, []codec.Address{})
 }
 
 func (*Parser) Registry() (chain.ActionRegistry, chain.AuthRegistry) {

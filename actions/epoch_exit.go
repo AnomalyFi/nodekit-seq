@@ -3,9 +3,11 @@ package actions
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"slices"
 
+	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/consts"
@@ -31,65 +33,97 @@ func (*EpochExit) GetTypeID() uint8 {
 	return ExitID
 }
 
-func (t *EpochExit) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
+func (e *EpochExit) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
 	return state.Keys{
-		string(storage.EpochExitKey(t.Epoch)):  state.All,
-		string(storage.EpochExitRegistryKey()): state.All,
+		string(storage.EpochExitsKey(e.Epoch)):          state.All,
+		string(storage.RollupInfoKey(e.Info.Namespace)): state.Read,
+		string(storage.RollupRegistryKey()):             state.Read,
 	}
 }
 
 func (*EpochExit) StateKeysMaxChunks() []uint16 {
-	return []uint16{storage.EpochExitChunks, storage.EpochExitChunks}
+	return []uint16{storage.EpochExitsChunks, hactions.RollupInfoChunks, hactions.RollupRegistryChunks}
 }
 
-func (*EpochExit) OutputsWarpMessage() bool {
-	return false
-}
-
-func (t *EpochExit) Execute(
+// TODO: Add check for curr epoch > start epoch of arcadia.
+func (e *EpochExit) Execute(
 	ctx context.Context,
 	_ chain.Rules,
 	mu state.Mutable,
-	_ int64,
+	ts int64,
+	_ uint64,
 	actor codec.Address,
 	_ ids.ID,
 ) ([][]byte, error) {
-	if t.Epoch != t.Info.Epoch {
-		return nil, fmt.Errorf("Epoch is not equal to what's in the meta, expected: %d, actual: %d", t.Epoch, t.Info.Epoch)
+	if e.Epoch != e.Info.Epoch {
+		return nil, fmt.Errorf("epoch is not equal to what's in the meta, expected: %d, actual: %d", e.Epoch, e.Info.Epoch)
 	}
 
-	epochExit, err := storage.GetEpochExit(ctx, mu, t.Epoch)
-
-	// namespaces, _, err := storage.GetAnchors(ctx, mu)
+	// check if rollup is registered.
+	nss, err := storage.GetRollupRegistry(ctx, mu)
 	if err != nil {
 		return nil, err
 	}
 
-	switch t.OpCode {
+	if !contains(nss, e.Info.Namespace) {
+		return nil, fmt.Errorf("namespace is not registered, namespace: %s", hex.EncodeToString(e.Info.Namespace))
+	}
+
+	rollupInfo, err := storage.GetRollupInfo(ctx, mu, e.Info.Namespace)
+	// rollup info will not be nil, as rollup is registered.
+	if err != nil {
+		return nil, err
+	}
+
+	if rollupInfo.AuthoritySEQAddress != actor {
+		return nil, ErrNotAuthorized
+	}
+
+	epochExits, exists, err := storage.GetEpochExits(ctx, mu, e.Epoch)
+	if err != nil {
+		return nil, err
+	}
+
+	switch e.OpCode {
 	case CreateExit:
-		epochExit.Exits = append(epochExit.Exits, t.Info)
-		if err := storage.SetEpochExit(ctx, mu, t.Epoch, epochExit); err != nil {
+		// Check if rollup exited already for the Epoch.
+		if exists {
+			for _, es := range epochExits.Exits {
+				if bytes.Equal(e.Info.Namespace, es.Namespace) {
+					return nil, fmt.Errorf("exit already exists, namespace: %s, epoch: %d", hex.EncodeToString(e.Info.Namespace), e.Epoch)
+				}
+			}
+		}
+		if !exists {
+			epochExits = new(storage.EpochExitInfo)
+			epochExits.Exits = make([]*storage.EpochInfo, 0)
+		}
+		epochExits.Exits = append(epochExits.Exits, &e.Info)
+		if err := storage.SetEpochExits(ctx, mu, e.Epoch, epochExits); err != nil {
 			return nil, err
 		}
 	case DeleteExit:
 		idx := -1
-		for i, e := range epochExit.Exits {
-			if t.Epoch == e.Epoch && bytes.Equal(t.Info.Namespace, e.Namespace) {
-				idx = i
-				break
+		// Check if rollup exit exists and get its index in epoch exits.
+		if exists {
+			for i, es := range epochExits.Exits {
+				if bytes.Equal(e.Info.Namespace, es.Namespace) {
+					idx = i
+					break
+				}
 			}
 		}
-		epochExit.Exits = slices.Delete(epochExit.Exits, idx, idx+1)
-		if err := storage.SetEpochExit(ctx, mu, t.Epoch, epochExit); err != nil {
+		// Rollup did not exit prior.
+		if idx == -1 {
+			return nil, fmt.Errorf("exit not found, namespace: %s, epoch: %d", hex.EncodeToString(e.Info.Namespace), e.Epoch)
+		}
+		epochExits.Exits = slices.Delete(epochExits.Exits, idx, idx+1)
+		if err := storage.SetEpochExits(ctx, mu, e.Epoch, epochExits); err != nil {
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("op code(%d) not supported", t.OpCode)
+		return nil, fmt.Errorf("op code(%d) not supported", e.OpCode)
 	}
-
-	// if err := storage.SetAnchors(ctx, mu, namespaces); err != nil {
-	// 	return nil, err
-	// }
 
 	return nil, nil
 }
@@ -98,14 +132,14 @@ func (*EpochExit) ComputeUnits(codec.Address, chain.Rules) uint64 {
 	return EpochExitComputeUnits
 }
 
-func (t *EpochExit) Size() int {
-	return codec.BytesLen(t.Info.Namespace) + consts.Uint64Len + consts.BoolLen
+func (e *EpochExit) Size() int {
+	return e.Info.Size() + consts.Uint64Len + consts.IntLen
 }
 
-func (t *EpochExit) Marshal(p *codec.Packer) {
-	t.Info.Marshal(p)
-	p.PackUint64(t.Epoch)
-	p.PackInt(t.OpCode)
+func (e *EpochExit) Marshal(p *codec.Packer) {
+	e.Info.Marshal(p)
+	p.PackUint64(e.Epoch)
+	p.PackInt(e.OpCode)
 }
 
 func UnmarshalEpochExit(p *codec.Packer) (chain.Action, error) {

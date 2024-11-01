@@ -44,17 +44,35 @@ func (c *Controller) GetBalanceFromState(
 	return storage.GetBalanceFromState(ctx, c.inner.ReadState, addr)
 }
 
-func (c *Controller) GetRegisteredAnchorsFromState(
+func (c *Controller) GetRollupRegistryFromState(
 	ctx context.Context,
-) ([][]byte, []*hactions.AnchorInfo, error) {
-	return storage.GetAnchorsFromState(ctx, c.inner.ReadState)
+) ([][]byte, error) {
+	return storage.GetRollupRegistryFromState(ctx, c.inner.ReadState)
 }
 
 func (c *Controller) GetEpochExitsFromState(
 	ctx context.Context,
 	epoch uint64,
 ) (*storage.EpochExitInfo, error) {
-	return storage.GetEpochExitsFromState(ctx, c.inner.ReadState, epoch)
+	info, err := storage.GetEpochExitsFromState(ctx, c.inner.ReadState, epoch)
+	if err != nil {
+		return nil, err
+	}
+	return info, nil
+}
+
+func (c *Controller) GetRollupInfoFromState(
+	ctx context.Context,
+	namespace []byte,
+) (*hactions.RollupInfo, error) {
+	return storage.GetRollupInfoFromState(ctx, c.inner.ReadState, namespace)
+}
+
+func (c *Controller) GetBuilderFromState(
+	ctx context.Context,
+	epoch uint64,
+) ([]byte, error) {
+	return storage.GetArcadiaBuilderFromState(ctx, c.inner.ReadState, epoch)
 }
 
 func (c *Controller) GetAcceptedBlockWindow() int {

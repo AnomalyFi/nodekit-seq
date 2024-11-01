@@ -17,7 +17,7 @@ type EpochInfo struct {
 }
 
 type EpochExitInfo struct {
-	Exits []EpochInfo `json:"exits"`
+	Exits []*EpochInfo `json:"exits"`
 }
 
 func (e *EpochExitInfo) Marshal(p *codec.Packer) error {
@@ -29,9 +29,9 @@ func (e *EpochExitInfo) Marshal(p *codec.Packer) error {
 	return p.Err()
 }
 
-func UnmarshalEpochExitInfo(p *codec.Packer) (*EpochExitInfo, error) {
+func UnmarshalEpochExitsInfo(p *codec.Packer) (*EpochExitInfo, error) {
 	count := p.UnpackInt(true)
-	exits := make([]EpochInfo, count)
+	exits := make([]*EpochInfo, count)
 	for i := 0; i < count; i++ {
 		ret := new(EpochInfo)
 		p.UnpackBytes(32, false, &ret.Namespace)
@@ -42,7 +42,7 @@ func UnmarshalEpochExitInfo(p *codec.Packer) (*EpochExitInfo, error) {
 			return nil, err
 		}
 
-		exits[i] = *ret
+		exits[i] = ret
 	}
 	return &EpochExitInfo{Exits: exits}, p.Err()
 }

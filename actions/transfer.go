@@ -47,6 +47,7 @@ func (t *Transfer) Execute(
 	_ chain.Rules,
 	mu state.Mutable,
 	_ int64,
+	_ uint64,
 	actor codec.Address,
 	_ ids.ID,
 ) ([][]byte, error) {

@@ -40,6 +40,7 @@ func (*SequencerMsg) Execute(
 	_ chain.Rules,
 	_ state.Mutable,
 	_ int64,
+	_ uint64,
 	_ codec.Address,
 	_ ids.ID,
 ) ([][]byte, error) {

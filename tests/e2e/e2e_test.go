@@ -22,15 +22,18 @@ import (
 	"github.com/fatih/color"
 	"github.com/stretchr/testify/require"
 
+	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
 	hconsts "github.com/AnomalyFi/hypersdk/consts"
+	"github.com/AnomalyFi/hypersdk/crypto/bls"
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/pubsub"
 	"github.com/AnomalyFi/hypersdk/rpc"
 	"github.com/AnomalyFi/nodekit-seq/actions"
 	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/consts"
+	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/AnomalyFi/nodekit-seq/types"
 
 	hutils "github.com/AnomalyFi/hypersdk/utils"
@@ -329,7 +332,8 @@ var _ = ginkgo.BeforeSuite(func() {
 		nodeID, err := ids.NodeIDFromString(info.GetId())
 		require.NoError(err)
 		cli := rpc.NewJSONRPCClient(u)
-
+		wsCli, err := rpc.NewWebSocketClient(u, rpc.DefaultHandshakeTimeout, pubsub.MaxPendingMessages, pubsub.MaxReadMessageSize)
+		require.NoError(err)
 		// After returning healthy, the node may not respond right away
 		//
 		// TODO: figure out why
@@ -348,6 +352,7 @@ var _ = ginkgo.BeforeSuite(func() {
 			uri:      u,
 			cli:      cli,
 			tcli:     trpc.NewJSONRPCClient(u, networkID, bid),
+			wsCli:    wsCli,
 			multicli: trpc.NewMultiJSONRPCClientWithED25519Factory(u, networkID, bid, privBytes),
 		})
 	}
@@ -374,6 +379,7 @@ type instance struct {
 	uri      string
 	cli      *rpc.JSONRPCClient
 	tcli     *trpc.JSONRPCClient
+	wsCli    *rpc.WebSocketClient
 	multicli *trpc.MultiJSONRPCClient
 }
 
@@ -826,12 +832,462 @@ var _ = ginkgo.Describe("[Test]", func() {
 			require.NoError(err)
 			require.Equal(len(resp.Blocks), 2)
 		})
+
 	})
 
-	// TODO: add custom asset test
-	// TODO: test with only part of sig weight
-	// TODO: attempt to mint a warp asset
+	// TODO: This is a flaky test. It passes only if the transaction is included just in right blocks. If not tests fails.
+	ginkgo.It("test auction is working perfectly", func() {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+		tpriv, err := bls.GeneratePrivateKey()
+		require.NoError(err)
+		pubKey := bls.PublicFromPrivateKey(tpriv)
+		pubKeyBytes := bls.PublicKeyToBytes(pubKey)
+		builderSEQAddress := auth.NewBLSAddress(pubKey)
+		_, hght, _, err := instances[0].cli.Accepted(ctx)
+		require.NoError(err)
+		if hght%6 != 0 {
+			_, hght, _, err = instances[0].cli.Accepted(ctx)
+			require.NoError(err)
+			time.Sleep(50 * time.Millisecond)
+		}
+		epochNumber, err := instances[0].cli.GetCurrentEpoch()
+		require.NoError(err)
+		msg := make([]byte, 16)
+		binary.BigEndian.PutUint64(msg[:8], epochNumber+1)
+		binary.BigEndian.PutUint64(msg[8:], 100)
+		msg = append(msg, pubKeyBytes...)
+		sig := bls.Sign(msg, tpriv)
+		txActions := []chain.Action{
+			&actions.Transfer{
+				To:    builderSEQAddress,
+				Value: 200,
+			},
+			&actions.Auction{
+				AuctionInfo: actions.AuctionInfo{
+					EpochNumber:       epochNumber + 1,
+					BidPrice:          100,
+					BuilderSEQAddress: builderSEQAddress,
+				},
+				BuilderPublicKey: pubKeyBytes,
+				BuilderSignature: bls.SignatureToBytes(sig),
+			},
+		}
+		parser, err := instances[0].tcli.Parser(ctx)
+		require.NoError(err)
+		_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
+		require.NoError(err)
+		hutils.Outf("{{green}}txID of submitted data:{{/}}%s at height:{{/}}\n", tx.ID().String(), hght)
 
+		err = instances[0].wsCli.RegisterTx(tx)
+		require.NoError(err)
+		txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
+		require.Equal(tx.ID(), txID)
+		require.NoError(err)
+		require.NoError(txErr)
+		require.True(result.Success)
+
+		if result.Success {
+			pubKeyBytesFromCli, err := instances[0].tcli.GetBuilder(context.Background(), epochNumber+1)
+			require.NoError(err)
+			require.Equal(pubKeyBytes, *pubKeyBytesFromCli)
+		}
+	})
+
+	ginkgo.It("issuing invalid auction transaction: epoch not equal to next epoch", func() {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+		tpriv, err := bls.GeneratePrivateKey()
+		require.NoError(err)
+		pubKey := bls.PublicFromPrivateKey(tpriv)
+		pubKeyBytes := bls.PublicKeyToBytes(pubKey)
+		builderSEQAddress := auth.NewBLSAddress(pubKey)
+		currEpoch, err := instances[0].cli.GetCurrentEpoch()
+		require.NoError(err)
+		msg := make([]byte, 16)
+		binary.BigEndian.PutUint64(msg[:8], currEpoch+1)
+		binary.BigEndian.PutUint64(msg[8:], 100)
+		msg = append(msg, pubKeyBytes...)
+		sig := bls.Sign(msg, tpriv)
+		txActions := []chain.Action{
+			&actions.Transfer{
+				To:    builderSEQAddress,
+				Value: 200,
+			},
+			&actions.Auction{
+				AuctionInfo: actions.AuctionInfo{
+					EpochNumber:       currEpoch,
+					BidPrice:          100,
+					BuilderSEQAddress: builderSEQAddress,
+				},
+				BuilderPublicKey: pubKeyBytes,
+				BuilderSignature: bls.SignatureToBytes(sig),
+			},
+		}
+		parser, err := instances[0].tcli.Parser(ctx)
+		require.NoError(err)
+		_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
+		require.NoError(err)
+		hutils.Outf("{{green}}txID of submitted data:{{/}}%s\n", tx.ID().String())
+		err = instances[0].wsCli.RegisterTx(tx)
+		require.NoError(err)
+		txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
+		require.Equal(tx.ID(), txID)
+		require.NoError(err)
+		require.NoError(txErr)
+		require.Contains(string(result.Error), "epoch number is not valid")
+		require.False(result.Success)
+	})
+
+	// TODO: This is a flaky test. It passes only if the transaction is included just in right blocks. If not test fails.
+	ginkgo.It("issuing invalid auction transaction: wrong signature", func() {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+		tpriv, err := bls.GeneratePrivateKey()
+		require.NoError(err)
+		pubKey := bls.PublicFromPrivateKey(tpriv)
+		pubKeyBytes := bls.PublicKeyToBytes(pubKey)
+		builderSEQAddress := auth.NewBLSAddress(pubKey)
+		currEpoch, err := instances[0].cli.GetCurrentEpoch()
+		require.NoError(err)
+		msg := make([]byte, 16)
+		binary.BigEndian.PutUint64(msg[:8], currEpoch+1)
+		binary.BigEndian.PutUint64(msg[8:], 100)
+		msg = append(msg, pubKeyBytes...)
+		tpriv2, err := bls.GeneratePrivateKey()
+		require.NoError(err)
+		sig := bls.Sign(msg, tpriv2)
+		txActions := []chain.Action{
+			&actions.Transfer{
+				To:    builderSEQAddress,
+				Value: 200,
+			},
+			&actions.Auction{
+				AuctionInfo: actions.AuctionInfo{
+					EpochNumber:       currEpoch + 1,
+					BidPrice:          100,
+					BuilderSEQAddress: builderSEQAddress,
+				},
+				BuilderPublicKey: pubKeyBytes,
+				BuilderSignature: bls.SignatureToBytes(sig),
+			},
+		}
+		parser, err := instances[0].tcli.Parser(ctx)
+		require.NoError(err)
+		_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
+		require.NoError(err)
+		hutils.Outf("{{green}}txID of submitted data:{{/}}%s\n", tx.ID().String())
+
+		err = instances[0].wsCli.RegisterTx(tx)
+		require.NoError(err)
+		txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
+		require.Equal(tx.ID(), txID)
+		require.NoError(err)
+		require.NoError(txErr)
+		require.False(result.Success)
+		require.Contains(string(result.Error), "invalid bidder signature")
+	})
+
+	ginkgo.It("test register rollup", func() {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+		currEpoch, err := instances[0].cli.GetCurrentEpoch()
+		require.NoError(err)
+		txActions := []chain.Action{&actions.RollupRegistration{
+			Info: hactions.RollupInfo{
+				Namespace:           []byte("nkit"),
+				FeeRecipient:        rsender,
+				AuthoritySEQAddress: rsender,
+			},
+			Namespace:  []byte("nkit"),
+			StartEpoch: currEpoch + 5,
+			OpCode:     actions.CreateRollup,
+		}}
+		parser, err := instances[0].tcli.Parser(ctx)
+		require.NoError(err)
+		_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
+		require.NoError(err)
+		hutils.Outf("{{green}}txID of submitted data:{{/}}%s\n", tx.ID().String())
+
+		err = instances[0].wsCli.RegisterTx(tx)
+		require.NoError(err)
+		txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
+		require.Equal(tx.ID(), txID)
+		require.NoError(err)
+		require.NoError(txErr)
+		require.True(result.Success)
+	})
+	ginkgo.It("test update rollup info", func() {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+		tpriv, err := bls.GeneratePrivateKey()
+		require.NoError(err)
+
+		pubKey := bls.PublicFromPrivateKey(tpriv)
+		seqAddress := auth.NewBLSAddress(pubKey)
+		txActions := []chain.Action{&actions.RollupRegistration{
+			Info: hactions.RollupInfo{
+				Namespace:           []byte("nkit"),
+				FeeRecipient:        seqAddress,
+				AuthoritySEQAddress: seqAddress,
+			},
+			Namespace: []byte("nkit"),
+			OpCode:    actions.UpdateRollup,
+		}}
+		parser, err := instances[0].tcli.Parser(ctx)
+		require.NoError(err)
+		_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
+		require.NoError(err)
+		hutils.Outf("{{green}}txID of submitted data:{{/}}%s\n", tx.ID().String())
+
+		err = instances[0].wsCli.RegisterTx(tx)
+		require.NoError(err)
+		txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
+		require.Equal(tx.ID(), txID)
+		require.NoError(err)
+		require.NoError(txErr)
+		require.True(result.Success)
+	})
+	ginkgo.It("test delete rollup info", func() {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+		currEpoch, err := instances[0].cli.GetCurrentEpoch()
+		require.NoError(err)
+		txActions := []chain.Action{
+			&actions.RollupRegistration{
+				Info: hactions.RollupInfo{
+					Namespace:           []byte("nkit2"),
+					FeeRecipient:        rsender,
+					AuthoritySEQAddress: rsender,
+				},
+				StartEpoch: currEpoch + 5,
+				Namespace:  []byte("nkit2"),
+				OpCode:     actions.CreateRollup,
+			},
+			&actions.RollupRegistration{
+				Info: hactions.RollupInfo{
+					Namespace:           []byte("nkit2"),
+					FeeRecipient:        rsender,
+					AuthoritySEQAddress: rsender,
+				},
+				Namespace: []byte("nkit2"),
+				OpCode:    actions.DeleteRollup,
+			},
+		}
+
+		parser, err := instances[0].tcli.Parser(ctx)
+		require.NoError(err)
+		_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
+		require.NoError(err)
+		hutils.Outf("{{green}}txID of submitted data:{{/}}%s\n", tx.ID().String())
+
+		err = instances[0].wsCli.RegisterTx(tx)
+		require.NoError(err)
+		txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
+		require.Equal(tx.ID(), txID)
+		require.NoError(err)
+		require.NoError(txErr)
+		require.True(result.Success)
+		require.Empty(result.Error)
+	})
+
+	ginkgo.It("test tx fail for wrong authority modifications in rollup registration.", func() {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+		tpriv, err := bls.GeneratePrivateKey()
+		require.NoError(err)
+
+		pubKey := bls.PublicFromPrivateKey(tpriv)
+		seqAddress := auth.NewBLSAddress(pubKey)
+
+		currEpoch, err := instances[0].cli.GetCurrentEpoch()
+		require.NoError(err)
+		txActions := []chain.Action{
+			&actions.RollupRegistration{
+				Info: hactions.RollupInfo{
+					Namespace:           []byte("nkit3"),
+					FeeRecipient:        seqAddress,
+					AuthoritySEQAddress: seqAddress,
+				},
+				StartEpoch: currEpoch + 5,
+				Namespace:  []byte("nkit3"),
+				OpCode:     actions.CreateRollup,
+			},
+			&actions.RollupRegistration{
+				Info: hactions.RollupInfo{
+					Namespace:           []byte("nkit3"),
+					FeeRecipient:        seqAddress,
+					AuthoritySEQAddress: rsender,
+				},
+				Namespace: []byte("nkit3"),
+				OpCode:    actions.UpdateRollup,
+			},
+		}
+		parser, err := instances[0].tcli.Parser(ctx)
+		require.NoError(err)
+		_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
+		require.NoError(err)
+		hutils.Outf("{{green}}txID of submitted data:{{/}}%s\n", tx.ID().String())
+
+		err = instances[0].wsCli.RegisterTx(tx)
+		require.NoError(err)
+		txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
+		require.Equal(tx.ID(), txID)
+		require.NoError(err)
+		require.NoError(txErr)
+		require.False(result.Success)
+		require.Contains(string(result.Error), "not authorized")
+	})
+
+	ginkgo.It("test already existing namespace in rollup registration", func() {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+		tpriv, err := bls.GeneratePrivateKey()
+		require.NoError(err)
+
+		pubKey := bls.PublicFromPrivateKey(tpriv)
+		seqAddress := auth.NewBLSAddress(pubKey)
+
+		currEpoch, err := instances[0].cli.GetCurrentEpoch()
+		require.NoError(err)
+		txActions := []chain.Action{&actions.RollupRegistration{
+			Info: hactions.RollupInfo{
+				Namespace:           []byte("nkit"),
+				FeeRecipient:        seqAddress,
+				AuthoritySEQAddress: seqAddress,
+			},
+			StartEpoch: currEpoch + 5,
+			Namespace:  []byte("nkit"),
+			OpCode:     actions.CreateRollup,
+		}}
+		parser, err := instances[0].tcli.Parser(ctx)
+		require.NoError(err)
+		_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
+		require.NoError(err)
+		hutils.Outf("{{green}}txID of submitted data:{{/}}%s\n", tx.ID().String())
+
+		err = instances[0].wsCli.RegisterTx(tx)
+		require.NoError(err)
+		txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
+		require.Equal(tx.ID(), txID)
+		require.NoError(err)
+		require.NoError(txErr)
+		require.False(result.Success)
+		require.Contains(string(result.Error), "namespace already registered")
+	})
+
+	var currEpoch uint64
+
+	ginkgo.It("test create epoch exit for rollups", func() {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+		crEpoch, err := instances[0].cli.GetCurrentEpoch()
+		currEpoch = crEpoch
+		require.NoError(err)
+		txActions := []chain.Action{
+			&actions.RollupRegistration{
+				Info: hactions.RollupInfo{
+					Namespace:           []byte("nkit4"),
+					FeeRecipient:        rsender,
+					AuthoritySEQAddress: rsender,
+				},
+				Namespace:  []byte("nkit4"),
+				StartEpoch: currEpoch + 10,
+				OpCode:     actions.CreateRollup,
+			},
+			&actions.EpochExit{
+				Info: storage.EpochInfo{
+					Epoch:     currEpoch + 15,
+					Namespace: []byte("nkit4"),
+				},
+				Epoch:  currEpoch + 15,
+				OpCode: actions.CreateExit,
+			},
+		}
+
+		parser, err := instances[0].tcli.Parser(ctx)
+		require.NoError(err)
+		_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
+		require.NoError(err)
+		hutils.Outf("{{green}}txID of submitted data:{{/}}%s\n", tx.ID().String())
+		err = instances[0].wsCli.RegisterTx(tx)
+		require.NoError(err)
+		txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
+		require.Equal(tx.ID(), txID)
+		require.NoError(err)
+		require.NoError(txErr)
+		fmt.Println("result: ", string(result.Error))
+		require.True(result.Success)
+		require.Empty(result.Error)
+	})
+
+	ginkgo.It("test delete epoch exit", func() {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+		txActions := []chain.Action{
+			&actions.EpochExit{
+				Info: storage.EpochInfo{
+					Epoch:     currEpoch + 15,
+					Namespace: []byte("nkit4"),
+				},
+				Epoch:  currEpoch + 15,
+				OpCode: actions.DeleteExit,
+			},
+		}
+		parser, err := instances[0].tcli.Parser(ctx)
+		require.NoError(err)
+		_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
+		require.NoError(err)
+		hutils.Outf("{{green}}txID of submitted data:{{/}}%s\n", tx.ID().String())
+		err = instances[0].wsCli.RegisterTx(tx)
+		require.NoError(err)
+		txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
+		require.Equal(tx.ID(), txID)
+		require.NoError(err)
+		require.NoError(txErr)
+		fmt.Println("result: ", string(result.Error))
+		require.True(result.Success)
+		require.Empty(result.Error)
+	})
+
+	ginkgo.It("test epoch exit only works for registered rollups", func() {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+		txActions := []chain.Action{
+			&actions.EpochExit{
+				Info: storage.EpochInfo{
+					Epoch:     currEpoch + 15,
+					Namespace: []byte("nkit5"),
+				},
+				Epoch:  currEpoch + 15,
+				OpCode: actions.CreateExit,
+			},
+		}
+		parser, err := instances[0].tcli.Parser(ctx)
+		require.NoError(err)
+		_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
+		require.NoError(err)
+		hutils.Outf("{{green}}txID of submitted data:{{/}}%s\n", tx.ID().String())
+		err = instances[0].wsCli.RegisterTx(tx)
+		require.NoError(err)
+		txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
+		require.Equal(tx.ID(), txID)
+		require.NoError(err)
+		require.NoError(txErr)
+		require.False(result.Success)
+		require.Contains(string(result.Error), "namespace is not registered")
+	})
 	switch mode {
 	case modeTest:
 		hutils.Outf("{{yellow}}skipping bootstrap and state sync tests{{/}}\n")
