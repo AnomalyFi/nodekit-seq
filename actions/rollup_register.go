@@ -25,9 +25,10 @@ const (
 )
 
 type RollupRegistration struct {
-	Info      hactions.RollupInfo `json:"info"`
-	Namespace []byte              `json:"namespace"`
-	OpCode    int                 `json:"opcode"`
+	Info       hactions.RollupInfo `json:"info"`
+	Namespace  []byte              `json:"namespace"`
+	StartEpoch uint64              `json:"startEpoch"`
+	OpCode     int                 `json:"opcode"`
 }
 
 func (*RollupRegistration) GetTypeID() uint8 {
@@ -116,12 +117,13 @@ func (*RollupRegistration) ComputeUnits(codec.Address, chain.Rules) uint64 {
 }
 
 func (r *RollupRegistration) Size() int {
-	return r.Info.Size() + len(r.Namespace) + consts.IntLen
+	return r.Info.Size() + len(r.Namespace) + consts.Uint64Len + consts.IntLen
 }
 
 func (r *RollupRegistration) Marshal(p *codec.Packer) {
 	r.Info.Marshal(p)
 	p.PackBytes(r.Namespace)
+	p.PackUint64(r.StartEpoch)
 	p.PackInt(r.OpCode)
 }
 
@@ -133,6 +135,7 @@ func UnmarshalRollupRegister(p *codec.Packer) (chain.Action, error) {
 	}
 	RollupReg.Info = *info
 	p.UnpackBytes(-1, false, &RollupReg.Namespace)
+	RollupReg.StartEpoch = p.UnpackUint64(true)
 	RollupReg.OpCode = p.UnpackInt(false)
 	return &RollupReg, nil
 }
