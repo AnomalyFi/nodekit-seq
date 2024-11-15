@@ -53,7 +53,7 @@ func (c *Controller) GetRollupRegistryFromState(
 func (c *Controller) GetEpochExitsFromState(
 	ctx context.Context,
 	epoch uint64,
-) (*storage.EpochExitInfo, error) {
+) (*hactions.EpochExitInfo, error) {
 	info, err := storage.GetEpochExitsFromState(ctx, c.inner.ReadState, epoch)
 	if err != nil {
 		return nil, err

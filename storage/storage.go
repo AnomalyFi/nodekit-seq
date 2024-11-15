@@ -30,7 +30,6 @@ const (
 	feeMarketPrefix = 0xa
 
 	ArcadiaRegistryPrefix      = 0xf2
-	EpochExitsPrefix           = 0xf3
 	ArcadiaBidPrefix           = 0xf4
 	GlobalRollupRegistryPrefix = 0xf5
 	ArcadiaInfoPrefix          = 0xf6

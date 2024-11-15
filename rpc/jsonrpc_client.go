@@ -18,7 +18,6 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	_ "github.com/AnomalyFi/nodekit-seq/registry" // ensure registry populated
-	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/AnomalyFi/nodekit-seq/types"
 )
 
@@ -290,7 +289,7 @@ func (cli *JSONRPCClient) GetRollupInfo(ctx context.Context, namespace []byte) (
 	return &resp.Info, err
 }
 
-func (cli *JSONRPCClient) GetEpochExits(ctx context.Context, epoch uint64) (*storage.EpochExitInfo, error) {
+func (cli *JSONRPCClient) GetEpochExits(ctx context.Context, epoch uint64) (*hactions.EpochExitInfo, error) {
 	resp := new(types.EpochExitsReply)
 	args := &types.EpochExitsArgs{Epoch: epoch}
 	err := cli.requester.SendRequest(

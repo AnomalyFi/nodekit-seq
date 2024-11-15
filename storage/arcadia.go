@@ -4,17 +4,13 @@ import (
 	"context"
 	"encoding/binary"
 
-	"github.com/AnomalyFi/hypersdk/consts"
+	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/state"
 	"github.com/ava-labs/avalanchego/database"
 )
 
 func ArcadiaBidKey(epoch uint64) []byte {
-	k := make([]byte, 1+8+consts.Uint16Len)
-	k[0] = ArcadiaBidPrefix
-	binary.BigEndian.PutUint64(k[1:], epoch)
-	binary.BigEndian.PutUint16(k[9:], EpochExitsChunks)
-	return k
+	return hactions.ArcadiaBidKey(epoch)
 }
 
 func StoreArcadiaBidInfo(
@@ -46,7 +42,7 @@ func GetArcadiaBidValue(
 	return binary.BigEndian.Uint64(v[:8]), nil
 }
 
-func GetArcadiaBidderInfoAndSignature(
+func GetArcadiaBuilderInfoAndSignature(
 	ctx context.Context,
 	im state.Immutable,
 	epoch uint64,

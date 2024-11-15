@@ -24,9 +24,9 @@ const (
 )
 
 type EpochExit struct {
-	Info   storage.EpochInfo `json:"info"`
-	Epoch  uint64            `json:"epoch"`
-	OpCode int               `json:"opcode"`
+	Info   hactions.EpochInfo `json:"info"`
+	Epoch  uint64             `json:"epoch"`
+	OpCode int                `json:"opcode"`
 }
 
 func (*EpochExit) GetTypeID() uint8 {
@@ -35,14 +35,14 @@ func (*EpochExit) GetTypeID() uint8 {
 
 func (e *EpochExit) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
 	return state.Keys{
-		string(storage.EpochExitsKey(e.Epoch)):          state.All,
+		string(hactions.EpochExitsKey(e.Epoch)):         state.All,
 		string(storage.RollupInfoKey(e.Info.Namespace)): state.Read,
 		string(storage.RollupRegistryKey()):             state.Read,
 	}
 }
 
 func (*EpochExit) StateKeysMaxChunks() []uint16 {
-	return []uint16{storage.EpochExitsChunks, hactions.RollupInfoChunks, hactions.RollupRegistryChunks}
+	return []uint16{hactions.EpochExitsChunks, hactions.RollupInfoChunks, hactions.RollupRegistryChunks}
 }
 
 // TODO: Add check for curr epoch > start epoch of arcadia.
@@ -95,8 +95,8 @@ func (e *EpochExit) Execute(
 			}
 		}
 		if !exists {
-			epochExits = new(storage.EpochExitInfo)
-			epochExits.Exits = make([]*storage.EpochInfo, 0)
+			epochExits = new(hactions.EpochExitInfo)
+			epochExits.Exits = make([]*hactions.EpochInfo, 0)
 		}
 		epochExits.Exits = append(epochExits.Exits, &e.Info)
 		if err := storage.SetEpochExits(ctx, mu, e.Epoch, epochExits); err != nil {
@@ -144,7 +144,7 @@ func (e *EpochExit) Marshal(p *codec.Packer) {
 
 func UnmarshalEpochExit(p *codec.Packer) (chain.Action, error) {
 	var epoch EpochExit
-	info, err := storage.UnmarshalEpochInfo(p)
+	info, err := hactions.UnmarshalEpochInfo(p)
 	if err != nil {
 		return nil, err
 	}

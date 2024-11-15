@@ -6,7 +6,6 @@ import (
 	"math/big"
 
 	"github.com/AnomalyFi/hypersdk/chain"
-	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
 
 	hactions "github.com/AnomalyFi/hypersdk/actions"
@@ -225,7 +224,7 @@ type EpochExitsArgs struct {
 }
 
 type EpochExitsReply struct {
-	Info *storage.EpochExitInfo `json:"info"`
+	Info *hactions.EpochExitInfo `json:"info"`
 }
 
 type GetRollupInfoArgs struct {

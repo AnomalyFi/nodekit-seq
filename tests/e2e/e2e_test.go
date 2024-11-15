@@ -33,7 +33,6 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/actions"
 	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/consts"
-	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/AnomalyFi/nodekit-seq/types"
 
 	hutils "github.com/AnomalyFi/hypersdk/utils"
@@ -1205,7 +1204,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 				OpCode:     actions.CreateRollup,
 			},
 			&actions.EpochExit{
-				Info: storage.EpochInfo{
+				Info: hactions.EpochInfo{
 					Epoch:     currEpoch + 15,
 					Namespace: []byte("nkit4"),
 				},
@@ -1236,7 +1235,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		defer cancel()
 		txActions := []chain.Action{
 			&actions.EpochExit{
-				Info: storage.EpochInfo{
+				Info: hactions.EpochInfo{
 					Epoch:     currEpoch + 15,
 					Namespace: []byte("nkit4"),
 				},
@@ -1266,7 +1265,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		defer cancel()
 		txActions := []chain.Action{
 			&actions.EpochExit{
-				Info: storage.EpochInfo{
+				Info: hactions.EpochInfo{
 					Epoch:     currEpoch + 15,
 					Namespace: []byte("nkit5"),
 				},
