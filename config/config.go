@@ -87,6 +87,9 @@ type Config struct {
 	AnchorURL     string `json:"anchorURL"`
 	AnchorManager string `json:"anchorManager"`
 
+	// Arcadia
+	ArcadiaURL string `json:"arcadiaURL"`
+
 	loaded                     bool
 	nodeID                     ids.NodeID
 	parsedExemptSponsors       []codec.Address
@@ -149,6 +152,7 @@ func (c *Config) setDefault() {
 	c.ETHWSAddr = c.Config.GetETHL1WS()
 	c.AnchorURL = c.Config.GetAnchorURL()
 	c.AnchorManager = c.Config.GetAnchorManager()
+	c.ArcadiaURL = c.Config.GetArcadiaURL()
 }
 
 func (c *Config) GetLogLevel() logging.Level                { return c.LogLevel }
