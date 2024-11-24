@@ -184,6 +184,7 @@ cat <<EOF > "${TMPDIR}"/seqvm.config
   "storeBlockResultsOnDisk": ${STORE_BLOCK_RESULTS_ON_DISK},
   "ethRPCAddr": "${ETHL1RPC}",
   "ethWSAddr": "${ETHL1WS}",
+  "arcadiaURL": "http://localhost:12345/",
   "archiverConfig": {
     "enabled": true,
     "archiverType": "sqlite",

@@ -196,6 +196,7 @@ func (c *Config) Loaded() bool               { return c.loaded }
 func (c *Config) GetETHL1RPC() string        { return c.ETHRPCAddr }
 func (c *Config) GetETHL1WS() string         { return c.ETHWSAddr }
 func (c *Config) GetAnchorURL() string       { return c.AnchorURL }
+func (c *Config) GetArcadiaURL() string      { return c.ArcadiaURL }
 func (c *Config) GetAnchorManager() string {
 	return c.AnchorManager
 } // default bls pubkey for anchor manager

@@ -104,7 +104,7 @@ var sequencerMsgCmd = &cobra.Command{
 }
 
 var anchorCmd = &cobra.Command{
-	Use: "anchor",
+	Use: "rollup-register",
 	RunE: func(*cobra.Command, []string) error {
 		ctx := context.Background()
 		_, _, factory, cli, scli, tcli, err := handler.DefaultActor()
@@ -128,15 +128,17 @@ var anchorCmd = &cobra.Command{
 		}
 
 		info := hactions.RollupInfo{
-			FeeRecipient: feeRecipient,
-			Namespace:    namespace,
+			FeeRecipient:        feeRecipient,
+			Namespace:           namespace,
+			AuthoritySEQAddress: feeRecipient,
 		}
-
+		e, _ := cli.GetCurrentEpoch()
 		// Generate transaction
 		_, err = sendAndWait(ctx, []chain.Action{&actions.RollupRegistration{
-			Namespace: namespace,
-			Info:      info,
-			OpCode:    op,
+			Namespace:  namespace,
+			Info:       info,
+			OpCode:     op,
+			StartEpoch: e + 4,
 		}}, cli, scli, tcli, factory, 0, true)
 		return err
 	},
