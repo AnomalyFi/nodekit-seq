@@ -180,6 +180,8 @@ cat <<EOF > "${TMPDIR}"/seqvm.config
   "streamingBacklogSize": 10000000,
   "logLevel": "${LOG_LEVEL}",
   "continuousProfilerDir":"${TMPDIR}/seqvm-e2e-profiles/*",
+  "traceEnabled":true, 
+  "traceSampleRate":1,
   "stateSyncServerDelay": ${STATESYNC_DELAY},
   "storeBlockResultsOnDisk": ${STORE_BLOCK_RESULTS_ON_DISK},
   "ethRPCAddr": "${ETHL1RPC}",
