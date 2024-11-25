@@ -32,6 +32,7 @@ UNLIMITED_USAGE=${UNLIMITED_USAGE:-false}
 STORE_BLOCK_RESULTS_ON_DISK=${STORE_BLOCK_RESULTS_ON_DISK:-true}
 ETHL1RPC=${ETHL1RPC:-http://localhost:8545}
 ETHL1WS=${ETHL1WS:-ws://localhost:8546}
+ARCADIA_URL=${ARCADIA_URL:-http://localhost:12345}
 ADDRESS=${ADDRESS:-seq1qrzvk4zlwj9zsacqgtufx7zvapd3quufqpxk5rsdd4633m4wz2fdjlydh3t}
 if [[ ${MODE} != "run" ]]; then
   LOG_LEVEL=INFO
@@ -186,7 +187,7 @@ cat <<EOF > "${TMPDIR}"/seqvm.config
   "storeBlockResultsOnDisk": ${STORE_BLOCK_RESULTS_ON_DISK},
   "ethRPCAddr": "${ETHL1RPC}",
   "ethWSAddr": "${ETHL1WS}",
-  "arcadiaURL": "http://localhost:12345/",
+  "arcadiaURL": "${ARCADIA_URL}",
   "archiverConfig": {
     "enabled": true,
     "archiverType": "sqlite",

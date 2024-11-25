@@ -30,7 +30,7 @@ type EpochExit struct {
 }
 
 func (*EpochExit) GetTypeID() uint8 {
-	return ExitID
+	return hactions.EpochExitID
 }
 
 func (e *EpochExit) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
