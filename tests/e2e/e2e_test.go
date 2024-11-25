@@ -1132,6 +1132,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 					Namespace:           []byte("nkit3"),
 					FeeRecipient:        seqAddress,
 					AuthoritySEQAddress: rsender,
+					SequencerPublicKey:  pubKeyDummy,
 				},
 				Namespace: []byte("nkit3"),
 				OpCode:    actions.UpdateRollup,
