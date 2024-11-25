@@ -44,8 +44,7 @@ const (
 	// Its safe to limit the data of state storage for GlobalRollupRegistryKey and ArcadiaRegistryKey to atleast 3 KiB.
 	GlobalRollupRegistryChunks uint16 = 3 * 16
 	ArcadiaRegistryChunks      uint16 = 3 * 16
-	// EpochInfo size = 32 + 8 = 40 bytes.
-	EpochExitsChunks uint16 = 3 * 16
+
 	// 2 AddressLen* 33 + 1 MaxNameSpaceLen *  32 = 98 bytes
 	ArcadiaInfoChunks uint16 = 2
 )

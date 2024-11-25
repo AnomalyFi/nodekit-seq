@@ -990,6 +990,9 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.Contains(string(result.Error), "invalid bidder signature")
 	})
 
+	pubKeyDummy := make([]byte, 48)
+	pubKeyDummy[1] = 1
+
 	ginkgo.It("test register rollup", func() {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
@@ -1001,6 +1004,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 				Namespace:           []byte("nkit"),
 				FeeRecipient:        rsender,
 				AuthoritySEQAddress: rsender,
+				SequencerPublicKey:  pubKeyDummy,
 			},
 			Namespace:  []byte("nkit"),
 			StartEpoch: currEpoch + 5,
@@ -1034,6 +1038,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 				Namespace:           []byte("nkit"),
 				FeeRecipient:        seqAddress,
 				AuthoritySEQAddress: seqAddress,
+				SequencerPublicKey:  pubKeyDummy,
 			},
 			Namespace: []byte("nkit"),
 			OpCode:    actions.UpdateRollup,
@@ -1064,6 +1069,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 					Namespace:           []byte("nkit2"),
 					FeeRecipient:        rsender,
 					AuthoritySEQAddress: rsender,
+					SequencerPublicKey:  pubKeyDummy,
 				},
 				StartEpoch: currEpoch + 5,
 				Namespace:  []byte("nkit2"),
@@ -1074,6 +1080,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 					Namespace:           []byte("nkit2"),
 					FeeRecipient:        rsender,
 					AuthoritySEQAddress: rsender,
+					SequencerPublicKey:  pubKeyDummy,
 				},
 				Namespace: []byte("nkit2"),
 				OpCode:    actions.DeleteRollup,
@@ -1114,6 +1121,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 					Namespace:           []byte("nkit3"),
 					FeeRecipient:        seqAddress,
 					AuthoritySEQAddress: seqAddress,
+					SequencerPublicKey:  pubKeyDummy,
 				},
 				StartEpoch: currEpoch + 5,
 				Namespace:  []byte("nkit3"),
@@ -1162,6 +1170,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 				Namespace:           []byte("nkit"),
 				FeeRecipient:        seqAddress,
 				AuthoritySEQAddress: seqAddress,
+				SequencerPublicKey:  pubKeyDummy,
 			},
 			StartEpoch: currEpoch + 5,
 			Namespace:  []byte("nkit"),
@@ -1198,6 +1207,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 					Namespace:           []byte("nkit4"),
 					FeeRecipient:        rsender,
 					AuthoritySEQAddress: rsender,
+					SequencerPublicKey:  pubKeyDummy,
 				},
 				Namespace:  []byte("nkit4"),
 				StartEpoch: currEpoch + 10,
