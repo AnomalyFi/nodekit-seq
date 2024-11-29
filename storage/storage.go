@@ -20,7 +20,6 @@ const (
 	// metaDB
 	txPrefix = 0x0
 
-	// TODO: clean up the prefixes below
 	// stateDB
 	balancePrefix   = 0x0
 	heightPrefix    = 0x4
@@ -28,25 +27,10 @@ const (
 	feePrefix       = 0x6
 	blockPrefix     = 0x9
 	feeMarketPrefix = 0xa
-
-	ArcadiaRegistryPrefix      = 0xf2
-	ArcadiaBidPrefix           = 0xf4
-	GlobalRollupRegistryPrefix = 0xf5
-	ArcadiaInfoPrefix          = 0xf6
 )
 
 const (
-	// ToDO: clean up
 	BalanceChunks uint16 = 1
-
-	// The length of data stored at GlobalRollupRegistryKey and ArcadiaRegistryKey depends on number of rollups registered.
-	// Each chunk gives a state storage of 64 bytes.
-	// Its safe to limit the data of state storage for GlobalRollupRegistryKey and ArcadiaRegistryKey to atleast 3 KiB.
-	GlobalRollupRegistryChunks uint16 = 3 * 16
-	ArcadiaRegistryChunks      uint16 = 3 * 16
-
-	// 2 AddressLen* 33 + 1 MaxNameSpaceLen *  32 = 98 bytes
-	ArcadiaInfoChunks uint16 = 2
 )
 
 var (
