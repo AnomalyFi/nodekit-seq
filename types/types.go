@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -84,22 +85,22 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 	}
 
 	if dec.Height == nil {
-		return fmt.Errorf("Field height of type Header is required")
+		return errors.New("Field height of type Header is required")
 	}
 	h.Height = *dec.Height
 
 	if dec.Timestamp == nil {
-		return fmt.Errorf("Field timestamp of type Header is required")
+		return errors.New("Field timestamp of type Header is required")
 	}
 	h.Timestamp = *dec.Timestamp
 
 	if dec.L1Head == nil {
-		return fmt.Errorf("Field l1_head of type Header is required")
+		return errors.New("Field l1_head of type Header is required")
 	}
 	h.L1Head = *dec.L1Head
 
 	if dec.TransactionsRoot == nil {
-		return fmt.Errorf("Field transactions_root of type Header is required")
+		return errors.New("Field transactions_root of type Header is required")
 	}
 	h.TransactionsRoot = *dec.TransactionsRoot
 
@@ -131,7 +132,7 @@ func (r *NmtRoot) UnmarshalJSON(b []byte) error {
 	}
 
 	if dec.Root == nil {
-		return fmt.Errorf("Field root of type NmtRoot is required")
+		return errors.New("Field root of type NmtRoot is required")
 	}
 	r.Root = *dec.Root
 
