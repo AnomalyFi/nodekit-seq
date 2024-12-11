@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/AnomalyFi/hypersdk/chain"
@@ -91,7 +92,7 @@ var watchChainCmd = &cobra.Command{
 				return err
 			}
 			if lastAccepted > uint64(acceptedWindow) && lastAccepted-uint64(acceptedWindow) > startBlock {
-				return fmt.Errorf("start block is too old")
+				return errors.New("start block is too old")
 			}
 		}
 
