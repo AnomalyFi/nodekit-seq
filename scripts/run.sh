@@ -181,7 +181,7 @@ cat <<EOF > "${TMPDIR}"/seqvm.config
   "streamingBacklogSize": 10000000,
   "logLevel": "${LOG_LEVEL}",
   "continuousProfilerDir":"${TMPDIR}/seqvm-e2e-profiles/*",
-  "traceEnabled":true, 
+  "traceEnabled":false, 
   "traceSampleRate":1,
   "stateSyncServerDelay": ${STATESYNC_DELAY},
   "storeBlockResultsOnDisk": ${STORE_BLOCK_RESULTS_ON_DISK},
@@ -192,7 +192,8 @@ cat <<EOF > "${TMPDIR}"/seqvm.config
     "enabled": true,
     "archiverType": "sqlite",
     "dsn": "/tmp/default.db"
-  }
+  },
+  "valRPCPort": ":9321"
 }
 EOF
 mkdir -p "${TMPDIR}"/seqvm-e2e-profiles

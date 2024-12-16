@@ -30,6 +30,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/pubsub"
 	"github.com/AnomalyFi/hypersdk/rpc"
+	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/actions"
 	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/consts"
@@ -425,6 +426,16 @@ var _ = ginkgo.Describe("[Network]", func() {
 			_, _, chainID, err := cli.Network(context.Background())
 			require.NoError(err)
 			require.NotEqual(chainID, ids.Empty)
+		}
+	})
+})
+
+var _ = ginkgo.Describe("[Derive Port]", func() {
+	// require := require.New(ginkgo.GinkgoT())
+
+	ginkgo.It("can derive port", func() {
+		for _, inst := range instances {
+			hutils.Outf("{{green}}port number for:{{/}} %s, nodeID: %s\n", utils.GetPortFromNodeID(inst.nodeID), inst.nodeID)
 		}
 	})
 })

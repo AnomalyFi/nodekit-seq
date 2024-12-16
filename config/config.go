@@ -83,6 +83,9 @@ type Config struct {
 	// Archiver
 	ArchiverConfig archiver.ORMArchiverConfig `json:"archiverConfig"`
 
+	// Validator RPC Port
+	ValRPCPort string `json:"valRPCPort"`
+
 	// Arcadia
 	ArcadiaURL string `json:"arcadiaURL"`
 
