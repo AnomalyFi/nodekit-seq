@@ -347,13 +347,12 @@ var _ = ginkgo.BeforeSuite(func() {
 			}
 		}
 		require.NoError(err)
-		// valuri := strings.Split(info.Uri, ":")
 		purl, err := url.Parse(info.Uri)
 		require.NoError(err)
 		host, _, err := net.SplitHostPort(purl.Host)
 		require.NoError(err)
-		valUri := "http://" + host + hutils.GetPortFromNodeID(nodeID)
-		hutils.Outf("port url: %s", valUri)
+		valURI := "http://" + host + hutils.GetPortFromNodeID(nodeID)
+		hutils.Outf("port url: %s", valURI)
 		instances = append(instances, instance{
 			nodeID:   nodeID,
 			uri:      u,
@@ -361,7 +360,7 @@ var _ = ginkgo.BeforeSuite(func() {
 			tcli:     trpc.NewJSONRPCClient(u, networkID, bid),
 			wsCli:    wsCli,
 			multicli: trpc.NewMultiJSONRPCClientWithED25519Factory(u, networkID, bid, privBytes),
-			valCli:   rpc.NewJSONRPCValClient(valUri),
+			valCli:   rpc.NewJSONRPCValClient(valURI),
 		})
 	}
 
@@ -855,7 +854,6 @@ var _ = ginkgo.Describe("[Test]", func() {
 			require.NoError(err)
 			require.Equal(len(resp.Blocks), 2)
 		})
-
 	})
 
 	// TODO: This is a flaky test. It passes only if the transaction is included just in right blocks. If not tests fails.

@@ -35,7 +35,7 @@ func (*RollupRegistration) GetTypeID() uint8 {
 	return hactions.RollupRegisterID
 }
 
-func (r *RollupRegistration) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
+func (r *RollupRegistration) StateKeys(_ codec.Address, _ ids.ID) state.Keys {
 	return state.Keys{
 		string(storage.RollupInfoKey(r.Namespace)): state.All,
 		string(storage.RollupRegistryKey()):        state.All,
@@ -131,20 +131,20 @@ func (r *RollupRegistration) Marshal(p *codec.Packer) {
 }
 
 func UnmarshalRollupRegister(p *codec.Packer) (chain.Action, error) {
-	var RollupReg RollupRegistration
+	var rollupReg RollupRegistration
 	info, err := hactions.UnmarshalRollupInfo(p)
 	if err != nil {
 		return nil, err
 	}
-	RollupReg.Info = *info
-	p.UnpackBytes(-1, false, &RollupReg.Namespace)
-	RollupReg.OpCode = p.UnpackInt(false)
-	if RollupReg.OpCode == CreateRollup {
-		RollupReg.StartEpoch = p.UnpackUint64(true)
+	rollupReg.Info = *info
+	p.UnpackBytes(-1, false, &rollupReg.Namespace)
+	rollupReg.OpCode = p.UnpackInt(false)
+	if rollupReg.OpCode == CreateRollup {
+		rollupReg.StartEpoch = p.UnpackUint64(true)
 	} else {
-		RollupReg.StartEpoch = p.UnpackUint64(false)
+		rollupReg.StartEpoch = p.UnpackUint64(false)
 	}
-	return &RollupReg, nil
+	return &rollupReg, nil
 }
 
 func (*RollupRegistration) ValidRange(chain.Rules) (int64, int64) {

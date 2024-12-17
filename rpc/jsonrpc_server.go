@@ -378,7 +378,7 @@ func (j *JSONRPCServer) GetBuilder(req *http.Request, args *types.GetBuilderArgs
 	return nil
 }
 
-func (j *JSONRPCServer) GetRollupRegistry(req *http.Request, args *struct{}, reply *types.RegistryReply) error {
+func (j *JSONRPCServer) GetRollupRegistry(req *http.Request, _ *struct{}, reply *types.RegistryReply) error {
 	ctx, span := j.c.Tracer().Start(req.Context(), "Server.GetRollupRegistry")
 	defer span.End()
 

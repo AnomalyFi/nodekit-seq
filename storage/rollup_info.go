@@ -40,7 +40,7 @@ func GetRollupInfoFromState(
 func innerGetRollupInfo(
 	v []byte,
 	err error,
-) (*hactions.RollupInfo, bool, error) {
+) (*hactions.RollupInfo, bool, error) { //nolint:unparam
 	if errors.Is(err, database.ErrNotFound) {
 		return nil, false, nil
 	}
@@ -63,8 +63,8 @@ func SetRollupInfo(
 ) error {
 	k := RollupInfoKey(namespace)
 	p := codec.NewWriter(info.Size(), consts.NetworkSizeLimit)
-	err := info.Marshal(p)
-	if err != nil {
+	info.Marshal(p)
+	if err := p.Err(); err != nil {
 		return err
 	}
 	infoBytes := p.Bytes()

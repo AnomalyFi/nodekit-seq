@@ -52,7 +52,7 @@ func (*Auction) GetTypeID() uint8 {
 	return AuctionID
 }
 
-func (a *Auction) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
+func (a *Auction) StateKeys(_ codec.Address, _ ids.ID) state.Keys {
 	return state.Keys{
 		string(storage.BalanceKey(a.AuctionInfo.BuilderSEQAddress)): state.Read | state.Write,
 		string(storage.BalanceKey(ArcadiaFundAddress())):            state.All,
@@ -130,7 +130,7 @@ func (*Auction) ComputeUnits(codec.Address, chain.Rules) uint64 {
 	return AuctionComputeUnits
 }
 
-func (a *Auction) Size() int {
+func (*Auction) Size() int {
 	return 2*consts.Uint64Len + bls.PublicKeyLen + bls.SignatureLen + codec.AddressLen
 }
 

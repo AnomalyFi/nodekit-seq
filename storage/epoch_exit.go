@@ -87,8 +87,8 @@ func setEpochExits(
 	}
 
 	p := codec.NewWriter(size, consts.NetworkSizeLimit)
-	err := info.Marshal(p)
-	if err != nil {
+	info.Marshal(p)
+	if err := p.Err(); err != nil {
 		return err
 	}
 	infoBytes := p.Bytes()

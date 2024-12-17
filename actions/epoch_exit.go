@@ -33,7 +33,7 @@ func (*EpochExit) GetTypeID() uint8 {
 	return hactions.EpochExitID
 }
 
-func (e *EpochExit) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
+func (e *EpochExit) StateKeys(_ codec.Address, _ ids.ID) state.Keys {
 	return state.Keys{
 		string(hactions.EpochExitsKey(e.Epoch)):         state.All,
 		string(storage.RollupInfoKey(e.Info.Namespace)): state.Read,
@@ -50,7 +50,7 @@ func (e *EpochExit) Execute(
 	ctx context.Context,
 	_ chain.Rules,
 	mu state.Mutable,
-	ts int64,
+	_ int64,
 	_ uint64,
 	actor codec.Address,
 	_ ids.ID,

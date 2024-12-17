@@ -163,7 +163,7 @@ var auctionCmd = &cobra.Command{
 			return err
 		}
 
-		epochNumber := uint64(hght/12*hconsts.MillisecondsPerSecond) + 1
+		epochNumber := hght/12*hconsts.MillisecondsPerSecond + 1
 
 		p, err := bls.GeneratePrivateKey()
 		if err != nil {
