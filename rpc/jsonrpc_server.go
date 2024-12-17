@@ -12,6 +12,7 @@ import (
 
 	"github.com/ava-labs/avalanchego/ids"
 
+	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/fees"
@@ -399,6 +400,29 @@ func (j *JSONRPCServer) GetRollupInfo(req *http.Request, args *types.GetRollupIn
 		return err
 	}
 	reply.Info = *info
+	return nil
+}
+
+func (j *JSONRPCServer) GetAllRollupInfo(req *http.Request, _ *struct{}, reply *types.GetAllRollupInfoReply) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.GetAllRollupInfo")
+	defer span.End()
+
+	namespaces, err := j.c.GetRollupRegistryFromState(ctx)
+	if err != nil {
+		return err
+	}
+
+	reply.Info = make(map[uint64][]hactions.RollupInfo)
+	for _, ns := range namespaces {
+		info, err := j.c.GetRollupInfoFromState(ctx, ns)
+		if err != nil {
+			return err
+		}
+		l := reply.Info[info.StartEpoch]
+		l = append(l, *info)
+		reply.Info[info.StartEpoch] = l
+	}
+
 	return nil
 }
 

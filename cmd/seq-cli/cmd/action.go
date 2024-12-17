@@ -128,18 +128,18 @@ var rollupCmd = &cobra.Command{
 			return err
 		}
 
+		e, _ := cli.GetCurrentEpoch()
 		info := hactions.RollupInfo{
 			FeeRecipient:        feeRecipient,
 			Namespace:           namespace,
 			AuthoritySEQAddress: feeRecipient,
+			StartEpoch:          e + 4,
 		}
-		e, _ := cli.GetCurrentEpoch()
 		// Generate transaction
 		_, err = sendAndWait(ctx, []chain.Action{&actions.RollupRegistration{
-			Namespace:  namespace,
-			Info:       info,
-			OpCode:     op,
-			StartEpoch: e + 4,
+			Namespace: namespace,
+			Info:      info,
+			OpCode:    op,
 		}}, cli, scli, tcli, factory, 0, true)
 		return err
 	},

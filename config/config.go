@@ -12,6 +12,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/config"
 	"github.com/AnomalyFi/hypersdk/gossiper"
+	"github.com/AnomalyFi/hypersdk/rpc"
 	"github.com/AnomalyFi/hypersdk/trace"
 	"github.com/AnomalyFi/hypersdk/vm"
 	"github.com/ava-labs/avalanchego/ids"
@@ -83,11 +84,11 @@ type Config struct {
 	// Archiver
 	ArchiverConfig archiver.ORMArchiverConfig `json:"archiverConfig"`
 
-	// Validator RPC Port
-	ValRPCPort string `json:"valRPCPort"`
-
 	// Arcadia
 	ArcadiaURL string `json:"arcadiaURL"`
+
+	// Validator RPC Port
+	ValRPCConfig rpc.JSONRPCValServerConfig `json:"valRPCConfig"`
 
 	loaded                     bool
 	nodeID                     ids.NodeID
@@ -150,6 +151,7 @@ func (c *Config) setDefault() {
 	c.ETHRPCAddr = c.Config.GetETHL1RPC()
 	c.ETHWSAddr = c.Config.GetETHL1WS()
 	c.ArcadiaURL = c.Config.GetArcadiaURL()
+	c.ValRPCConfig = *c.Config.GetValServerConfig()
 }
 
 func (c *Config) GetLogLevel() logging.Level                { return c.LogLevel }
@@ -193,6 +195,11 @@ func (c *Config) Loaded() bool               { return c.loaded }
 func (c *Config) GetETHL1RPC() string        { return c.ETHRPCAddr }
 func (c *Config) GetETHL1WS() string         { return c.ETHWSAddr }
 func (c *Config) GetArcadiaURL() string      { return c.ArcadiaURL }
+func (c *Config) GetValServerConfig() *rpc.JSONRPCValServerConfig {
+	return &rpc.JSONRPCValServerConfig{
+		DerivePort: true,
+	}
+}
 func (c *Config) GetParsedWhiteListedAddress() []codec.Address {
 	return c.parsedWhiteListedAddresses
 }

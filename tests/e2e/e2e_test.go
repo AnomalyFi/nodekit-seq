@@ -351,7 +351,7 @@ var _ = ginkgo.BeforeSuite(func() {
 		require.NoError(err)
 		host, _, err := net.SplitHostPort(purl.Host)
 		require.NoError(err)
-		valURI := "http://" + host + hutils.GetPortFromNodeID(nodeID)
+		valURI := "http://" + host + fmt.Sprintf(":%d", hutils.GetPortFromNodeID(nodeID))
 		hutils.Outf("port url: %s", valURI)
 		instances = append(instances, instance{
 			nodeID:   nodeID,
@@ -887,7 +887,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			},
 			&actions.Auction{
 				AuctionInfo: actions.AuctionInfo{
-					EpochNumber:       epochNumber + 1,
+					EpochNumber:       epochNumber + 2,
 					BidPrice:          100,
 					BuilderSEQAddress: builderSEQAddress,
 				},
@@ -1027,10 +1027,10 @@ var _ = ginkgo.Describe("[Test]", func() {
 				FeeRecipient:        rsender,
 				AuthoritySEQAddress: rsender,
 				SequencerPublicKey:  pubKeyDummy,
+				StartEpoch:          currEpoch + 5,
 			},
-			Namespace:  []byte("nkit"),
-			StartEpoch: currEpoch + 5,
-			OpCode:     actions.CreateRollup,
+			Namespace: []byte("nkit"),
+			OpCode:    actions.CreateRollup,
 		}}
 		parser, err := instances[0].tcli.Parser(ctx)
 		require.NoError(err)
@@ -1044,6 +1044,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.Equal(tx.ID(), txID)
 		require.NoError(err)
 		require.NoError(txErr)
+		require.Empty(string(result.Error))
 		require.True(result.Success)
 	})
 	ginkgo.It("test update rollup info", func() {
@@ -1053,6 +1054,8 @@ var _ = ginkgo.Describe("[Test]", func() {
 		tpriv, err := bls.GeneratePrivateKey()
 		require.NoError(err)
 
+		currEpoch, err := instances[0].cli.GetCurrentEpoch()
+		require.NoError(err)
 		pubKey := bls.PublicFromPrivateKey(tpriv)
 		seqAddress := auth.NewBLSAddress(pubKey)
 		txActions := []chain.Action{&actions.RollupRegistration{
@@ -1061,6 +1064,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 				FeeRecipient:        seqAddress,
 				AuthoritySEQAddress: seqAddress,
 				SequencerPublicKey:  pubKeyDummy,
+				StartEpoch:          currEpoch + 2,
 			},
 			Namespace: []byte("nkit"),
 			OpCode:    actions.UpdateRollup,
@@ -1077,6 +1081,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.Equal(tx.ID(), txID)
 		require.NoError(err)
 		require.NoError(txErr)
+		require.Empty(string(result.Error))
 		require.True(result.Success)
 	})
 	ginkgo.It("test delete rollup info", func() {
@@ -1092,10 +1097,10 @@ var _ = ginkgo.Describe("[Test]", func() {
 					FeeRecipient:        rsender,
 					AuthoritySEQAddress: rsender,
 					SequencerPublicKey:  pubKeyDummy,
+					StartEpoch:          currEpoch + 5,
 				},
-				StartEpoch: currEpoch + 5,
-				Namespace:  []byte("nkit2"),
-				OpCode:     actions.CreateRollup,
+				Namespace: []byte("nkit2"),
+				OpCode:    actions.CreateRollup,
 			},
 			&actions.RollupRegistration{
 				Info: hactions.RollupInfo{
@@ -1103,6 +1108,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 					FeeRecipient:        rsender,
 					AuthoritySEQAddress: rsender,
 					SequencerPublicKey:  pubKeyDummy,
+					StartEpoch:          currEpoch + 5,
 				},
 				Namespace: []byte("nkit2"),
 				OpCode:    actions.DeleteRollup,
@@ -1121,8 +1127,8 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.Equal(tx.ID(), txID)
 		require.NoError(err)
 		require.NoError(txErr)
+		require.Empty(string(result.Error))
 		require.True(result.Success)
-		require.Empty(result.Error)
 	})
 
 	ginkgo.It("test tx fail for wrong authority modifications in rollup registration.", func() {
@@ -1144,10 +1150,10 @@ var _ = ginkgo.Describe("[Test]", func() {
 					FeeRecipient:        seqAddress,
 					AuthoritySEQAddress: seqAddress,
 					SequencerPublicKey:  pubKeyDummy,
+					StartEpoch:          currEpoch + 5,
 				},
-				StartEpoch: currEpoch + 5,
-				Namespace:  []byte("nkit3"),
-				OpCode:     actions.CreateRollup,
+				Namespace: []byte("nkit3"),
+				OpCode:    actions.CreateRollup,
 			},
 			&actions.RollupRegistration{
 				Info: hactions.RollupInfo{
@@ -1155,6 +1161,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 					FeeRecipient:        seqAddress,
 					AuthoritySEQAddress: rsender,
 					SequencerPublicKey:  pubKeyDummy,
+					StartEpoch:          currEpoch + 5,
 				},
 				Namespace: []byte("nkit3"),
 				OpCode:    actions.UpdateRollup,
@@ -1194,10 +1201,10 @@ var _ = ginkgo.Describe("[Test]", func() {
 				FeeRecipient:        seqAddress,
 				AuthoritySEQAddress: seqAddress,
 				SequencerPublicKey:  pubKeyDummy,
+				StartEpoch:          currEpoch + 5,
 			},
-			StartEpoch: currEpoch + 5,
-			Namespace:  []byte("nkit"),
-			OpCode:     actions.CreateRollup,
+			Namespace: []byte("nkit"),
+			OpCode:    actions.CreateRollup,
 		}}
 		parser, err := instances[0].tcli.Parser(ctx)
 		require.NoError(err)
@@ -1231,10 +1238,10 @@ var _ = ginkgo.Describe("[Test]", func() {
 					FeeRecipient:        rsender,
 					AuthoritySEQAddress: rsender,
 					SequencerPublicKey:  pubKeyDummy,
+					StartEpoch:          currEpoch + 10,
 				},
-				Namespace:  []byte("nkit4"),
-				StartEpoch: currEpoch + 10,
-				OpCode:     actions.CreateRollup,
+				Namespace: []byte("nkit4"),
+				OpCode:    actions.CreateRollup,
 			},
 			&actions.EpochExit{
 				Info: hactions.EpochInfo{
@@ -1258,8 +1265,8 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.NoError(err)
 		require.NoError(txErr)
 		fmt.Println("result: ", string(result.Error))
+		require.Empty(string(result.Error))
 		require.True(result.Success)
-		require.Empty(result.Error)
 	})
 
 	ginkgo.It("test delete epoch exit", func() {
@@ -1288,8 +1295,8 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.NoError(err)
 		require.NoError(txErr)
 		fmt.Println("result: ", string(result.Error))
+		require.Empty(string(result.Error))
 		require.True(result.Success)
-		require.Empty(result.Error)
 	})
 
 	ginkgo.It("test epoch exit only works for registered rollups", func() {

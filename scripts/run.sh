@@ -193,7 +193,10 @@ cat <<EOF > "${TMPDIR}"/seqvm.config
     "archiverType": "sqlite",
     "dsn": "/tmp/default.db"
   },
-  "valRPCPort": ":9321"
+  "valRPCConfig": {
+    "derivePort": true,
+    "port": 0
+  }
 }
 EOF
 mkdir -p "${TMPDIR}"/seqvm-e2e-profiles

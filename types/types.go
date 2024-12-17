@@ -242,3 +242,8 @@ type GetBuilderArgs struct {
 type GetBuilderReply struct {
 	BuilderPubKey []byte `json:"builderPubKey"`
 }
+
+type GetAllRollupInfoReply struct {
+	// epoch -> a list of rollup registration info
+	Info map[uint64][]hactions.RollupInfo `json:"info"`
+}
