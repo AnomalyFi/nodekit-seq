@@ -11,6 +11,8 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"net"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -30,7 +32,6 @@ import (
 	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/pubsub"
 	"github.com/AnomalyFi/hypersdk/rpc"
-	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/actions"
 	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/consts"
@@ -346,7 +347,13 @@ var _ = ginkgo.BeforeSuite(func() {
 			}
 		}
 		require.NoError(err)
-
+		// valuri := strings.Split(info.Uri, ":")
+		purl, err := url.Parse(info.Uri)
+		require.NoError(err)
+		host, _, err := net.SplitHostPort(purl.Host)
+		require.NoError(err)
+		valUri := "http://" + host + hutils.GetPortFromNodeID(nodeID)
+		hutils.Outf("port url: %s", valUri)
 		instances = append(instances, instance{
 			nodeID:   nodeID,
 			uri:      u,
@@ -354,6 +361,7 @@ var _ = ginkgo.BeforeSuite(func() {
 			tcli:     trpc.NewJSONRPCClient(u, networkID, bid),
 			wsCli:    wsCli,
 			multicli: trpc.NewMultiJSONRPCClientWithED25519Factory(u, networkID, bid, privBytes),
+			valCli:   rpc.NewJSONRPCValClient(valUri),
 		})
 	}
 
@@ -381,6 +389,7 @@ type instance struct {
 	tcli     *trpc.JSONRPCClient
 	wsCli    *rpc.WebSocketClient
 	multicli *trpc.MultiJSONRPCClient
+	valCli   *rpc.JSONRPCValClient
 }
 
 var _ = ginkgo.AfterSuite(func() {
@@ -431,11 +440,15 @@ var _ = ginkgo.Describe("[Network]", func() {
 })
 
 var _ = ginkgo.Describe("[Derive Port]", func() {
-	// require := require.New(ginkgo.GinkgoT())
+	require := require.New(ginkgo.GinkgoT())
 
-	ginkgo.It("can derive port", func() {
+	ginkgo.It("can derive port and ping", func() {
 		for _, inst := range instances {
-			hutils.Outf("{{green}}port number for:{{/}} %s, nodeID: %s\n", utils.GetPortFromNodeID(inst.nodeID), inst.nodeID)
+			hutils.Outf("{{green}}port number for:{{/}} %s, nodeID: %s\n", hutils.GetPortFromNodeID(inst.nodeID), inst.nodeID)
+
+			success, err := inst.valCli.Ping()
+			require.True(success)
+			require.NoError(err)
 		}
 	})
 })

@@ -12,6 +12,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/chain"
 	hconsts "github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/crypto/bls"
+	hrpc "github.com/AnomalyFi/hypersdk/rpc"
 	hutils "github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/actions"
 	"github.com/AnomalyFi/nodekit-seq/auth"
@@ -197,5 +198,22 @@ var auctionCmd = &cobra.Command{
 
 		_, err = sendAndWait(ctx, action, cli, scli, tcli, factory, 0, true)
 		return err
+	},
+}
+
+var updateArcadiaURL = &cobra.Command{
+	Use: "updateArcadiaURL",
+	RunE: func(*cobra.Command, []string) error {
+		// ctx := context.Background()
+		str, err := handler.Root().PromptString("val rpc url", 1, 100)
+		if err != nil {
+			return err
+		}
+		valCLI := hrpc.NewJSONRPCValClient(str)
+		str, err = handler.Root().PromptString("new arcadia url", 1, 150)
+		if err != nil {
+			return err
+		}
+		return valCLI.UpdateArcadiaURL(str)
 	},
 }

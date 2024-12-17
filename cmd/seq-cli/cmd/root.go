@@ -163,6 +163,7 @@ func init() {
 		sequencerMsgCmd,
 		rollupCmd,
 		auctionCmd,
+		updateArcadiaURL,
 	)
 
 	// spam
