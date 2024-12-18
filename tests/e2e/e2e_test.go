@@ -1111,7 +1111,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 					StartEpoch:          currEpoch + 5,
 				},
 				Namespace: []byte("nkit2"),
-				OpCode:    actions.DeleteRollup,
+				OpCode:    actions.ExitRollup,
 			},
 		}
 

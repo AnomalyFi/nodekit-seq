@@ -426,6 +426,12 @@ func (j *JSONRPCServer) GetAllRollupInfo(req *http.Request, _ *struct{}, reply *
 	return nil
 }
 
+func (j *JSONRPCServer) GetValidRollupsAtEpoch(req *http.Request, args *types.GetRollupsInfoAtEpochArgs, reply *types.GetRollupsInfoAtEpochReply) error {
+	registry := j.c.RollupRegistry()
+	reply.Rollups = registry.RollupsValidAtEpoch(args.Epoch)
+	return nil
+}
+
 var _ chain.Parser = (*ServerParser)(nil)
 
 type ServerParser struct {

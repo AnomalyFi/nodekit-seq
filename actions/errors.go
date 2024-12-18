@@ -14,4 +14,5 @@ var (
 	ErrNameSpaceNotRegistered          = errors.New("namespace not registered")
 	ErrNotAuthorized                   = errors.New("not authorized")
 	ErrNameSpaceAlreadyRegistered      = errors.New("namespace already registered")
+	ErrExitEpochSmallerThanStartEpoch  = errors.New("exit epoch is smaller than start epoch")
 )
