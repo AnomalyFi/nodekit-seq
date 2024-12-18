@@ -1015,6 +1015,133 @@ var _ = ginkgo.Describe("[Test]", func() {
 	pubKeyDummy := make([]byte, 48)
 	pubKeyDummy[1] = 1
 
+	ginkgo.It("test rollup registry can capture rollup registration & exits correctly", func() {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+		_, startHeight, _, err := instances[0].cli.Accepted(ctx)
+		require.NoError(err)
+
+		// submit regsitration at startHeight
+		currEpoch, err := instances[0].cli.GetCurrentEpoch()
+		require.NoError(err)
+		txActions := []chain.Action{&actions.RollupRegistration{
+			Info: hactions.RollupInfo{
+				Namespace:           []byte("1234"),
+				FeeRecipient:        rsender,
+				AuthoritySEQAddress: rsender,
+				SequencerPublicKey:  pubKeyDummy,
+				StartEpoch:          currEpoch + 5,
+			},
+			Namespace: []byte("1234"),
+			OpCode:    actions.CreateRollup,
+		}, &actions.RollupRegistration{
+			Info: hactions.RollupInfo{
+				Namespace:           []byte("1235"),
+				FeeRecipient:        rsender,
+				AuthoritySEQAddress: rsender,
+				SequencerPublicKey:  pubKeyDummy,
+				StartEpoch:          currEpoch + 5,
+			},
+			Namespace: []byte("1235"),
+			OpCode:    actions.CreateRollup,
+		}}
+		parser, err := instances[0].tcli.Parser(ctx)
+		require.NoError(err)
+		_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
+		require.NoError(err)
+		hutils.Outf("{{green}}txID of submitted data:{{/}}%s\n", tx.ID().String())
+
+		err = instances[0].wsCli.RegisterTx(tx)
+		require.NoError(err)
+		txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
+		require.Equal(tx.ID(), txID)
+		require.NoError(err)
+		require.NoError(txErr)
+		require.Empty(string(result.Error))
+		require.True(result.Success)
+
+		var h1 = startHeight
+		// Ensure all blocks processed
+		for _, inst := range instances {
+			color.Blue("checking %q", inst.uri)
+
+			// Ensure all blocks processed
+			for {
+				_, h, _, err := inst.cli.Accepted(context.Background())
+				require.NoError(err)
+				if h > startHeight {
+					h1 = h
+					break
+				}
+				time.Sleep(1 * time.Second)
+			}
+		}
+
+		validRollupResp, err := instances[0].tcli.GetValidRollupsAtEpoch(ctx, currEpoch+5)
+		require.NoError(err)
+		require.Equal(2, len(validRollupResp.Rollups))
+
+		// submit exits at height h1
+		txActions = []chain.Action{&actions.RollupRegistration{
+			Info: hactions.RollupInfo{
+				Namespace:           []byte("1234"),
+				FeeRecipient:        rsender,
+				AuthoritySEQAddress: rsender,
+				SequencerPublicKey:  pubKeyDummy,
+				ExitEpoch:           currEpoch + 6,
+			},
+			Namespace: []byte("1234"),
+			OpCode:    actions.ExitRollup,
+		}, &actions.RollupRegistration{
+			Info: hactions.RollupInfo{
+				Namespace:           []byte("1235"),
+				FeeRecipient:        rsender,
+				AuthoritySEQAddress: rsender,
+				SequencerPublicKey:  pubKeyDummy,
+				ExitEpoch:           currEpoch + 7,
+			},
+			Namespace: []byte("1235"),
+			OpCode:    actions.ExitRollup,
+		}}
+		_, tx, _, err = instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
+		require.NoError(err)
+		hutils.Outf("{{green}}txID of submitted data:{{/}}%s\n", tx.ID().String())
+
+		err = instances[0].wsCli.RegisterTx(tx)
+		require.NoError(err)
+		txID, txErr, result, err = instances[0].wsCli.ListenTx(ctx)
+		require.Equal(tx.ID(), txID)
+		require.NoError(err)
+		require.NoError(txErr)
+		require.Empty(string(result.Error))
+		require.True(result.Success)
+
+		// Ensure all blocks processed
+		for _, inst := range instances {
+			color.Blue("checking %q", inst.uri)
+
+			// Ensure all blocks processed
+			for {
+				_, h, _, err := inst.cli.Accepted(context.Background())
+				require.NoError(err)
+				if h > h1 {
+					break
+				}
+				time.Sleep(1 * time.Second)
+			}
+		}
+
+		validRollupResp, err = instances[0].tcli.GetValidRollupsAtEpoch(ctx, currEpoch+6)
+		require.NoError(err)
+		require.Equal(1, len(validRollupResp.Rollups))
+		require.Equal([]byte("1235"), validRollupResp.Rollups[0].Namespace)
+
+		validRollupResp, err = instances[0].tcli.GetValidRollupsAtEpoch(ctx, currEpoch+7)
+		require.NoError(err)
+		require.Equal(0, len(validRollupResp.Rollups))
+	})
+
 	ginkgo.It("test register rollup", func() {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
@@ -1108,7 +1235,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 					FeeRecipient:        rsender,
 					AuthoritySEQAddress: rsender,
 					SequencerPublicKey:  pubKeyDummy,
-					StartEpoch:          currEpoch + 5,
+					ExitEpoch:           currEpoch + 7,
 				},
 				Namespace: []byte("nkit2"),
 				OpCode:    actions.ExitRollup,

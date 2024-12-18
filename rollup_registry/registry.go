@@ -1,10 +1,11 @@
 package rollupregistry
 
 import (
-	"slices"
+	"maps"
 	"sync"
 
 	hactions "github.com/AnomalyFi/hypersdk/actions"
+	"github.com/ava-labs/avalanchego/ids"
 )
 
 type RollupRegistryOnlyRead interface {
@@ -19,13 +20,13 @@ type RollupRegistryAllPerm interface {
 var _ RollupRegistryAllPerm = (*RollupRegistry)(nil)
 
 type RollupRegistry struct {
-	rollups  []*hactions.RollupInfo
+	rollups  map[ids.ID]*hactions.RollupInfo
 	rollupsL sync.RWMutex
 }
 
 func NewRollupRegistr() *RollupRegistry {
 	return &RollupRegistry{
-		rollups: make([]*hactions.RollupInfo, 0),
+		rollups: make(map[ids.ID]*hactions.RollupInfo),
 	}
 }
 
@@ -49,9 +50,11 @@ func (r *RollupRegistry) Update(currentEpoch uint64, rollups []*hactions.RollupI
 	r.rollupsL.Lock()
 	defer r.rollupsL.Unlock()
 
-	r.rollups = append(r.rollups, rollups...)
-	// remove exited rollups
-	r.rollups = slices.DeleteFunc(r.rollups, func(rollup *hactions.RollupInfo) bool {
+	for _, rollup := range rollups {
+		r.rollups[rollup.ID()] = rollup
+	}
+
+	maps.DeleteFunc(r.rollups, func(_ ids.ID, rollup *hactions.RollupInfo) bool {
 		return rollup.Exited(currentEpoch)
 	})
 }

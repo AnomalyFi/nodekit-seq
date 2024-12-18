@@ -90,9 +90,10 @@ func (r *RollupRegistration) Execute(
 		if err != nil {
 			return nil, fmt.Errorf("unable to get existing rollup info(UPDATE): %s", err.Error())
 		}
-		if rollupInfoExists.ExitEpoch != r.Info.ExitEpoch || rollupInfoExists.StartEpoch != r.Info.StartEpoch {
-			return nil, fmt.Errorf("disallowed tamper for exit epoch & start epoch")
-		}
+
+		// rewrite epoch info
+		r.Info.ExitEpoch = rollupInfoExists.ExitEpoch
+		r.Info.StartEpoch = rollupInfoExists.StartEpoch
 
 		if err := storage.SetRollupInfo(ctx, mu, r.Namespace, &r.Info); err != nil {
 			return nil, fmt.Errorf("unable to set rollup info(UPDATE): %s", err.Error())
@@ -101,8 +102,12 @@ func (r *RollupRegistration) Execute(
 		if err := authorizationChecks(ctx, actor, namespaces, r.Namespace, mu); err != nil {
 			return nil, fmt.Errorf("unable to set rollup info(EXIT): %s", err.Error())
 		}
-		if r.Info.ExitEpoch < Epoch(hght, rules.GetEpochLength())+2 {
-			return nil, fmt.Errorf("(EXIT)epoch number is not valid, minimum: %d, actual: %d", Epoch(hght, rules.GetEpochLength())+2, r.Info.ExitEpoch)
+		rollupInfoExists, err := storage.GetRollupInfo(ctx, mu, r.Namespace)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get existing rollup info(UPDATE): %s", err.Error())
+		}
+		if r.Info.ExitEpoch < rollupInfoExists.StartEpoch || r.Info.ExitEpoch < Epoch(hght, rules.GetEpochLength())+2 {
+			return nil, fmt.Errorf("(EXIT)epoch number is not valid, minimum: %d, actual: %d, start: %d", Epoch(hght, rules.GetEpochLength())+2, r.Info.ExitEpoch, rollupInfoExists.StartEpoch)
 		}
 		if err := storage.SetRollupInfo(ctx, mu, r.Namespace, &r.Info); err != nil {
 			return nil, fmt.Errorf("unable to set rollup info(EXIT): %s", err.Error())
