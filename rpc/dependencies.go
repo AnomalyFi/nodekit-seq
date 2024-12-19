@@ -12,6 +12,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/fees"
 	"github.com/AnomalyFi/nodekit-seq/archiver"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
+	rollupregistry "github.com/AnomalyFi/nodekit-seq/rollup_registry"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/trace"
 	"github.com/ava-labs/avalanchego/utils/logging"
@@ -39,4 +40,5 @@ type Controller interface {
 	Logger() logging.Logger
 	// TODO: update this to only have read permission
 	Archiver() *archiver.ORMArchiver
+	RollupRegistry() *rollupregistry.RollupRegistry
 }

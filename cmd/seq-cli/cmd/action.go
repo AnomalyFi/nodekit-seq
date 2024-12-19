@@ -123,7 +123,7 @@ var rollupCmd = &cobra.Command{
 			return err
 		}
 
-		op, err := handler.Root().PromptChoice("(0)create (1)delete (2)update", 3)
+		op, err := handler.Root().PromptChoice("(0)create (1)exit (2)update", 3)
 		if err != nil {
 			return err
 		}
@@ -133,7 +133,9 @@ var rollupCmd = &cobra.Command{
 			FeeRecipient:        feeRecipient,
 			Namespace:           namespace,
 			AuthoritySEQAddress: feeRecipient,
-			StartEpoch:          e + 4,
+			SequencerPublicKey:  feeRecipient[:],
+			StartEpoch:          e + 10,
+			ExitEpoch:           0,
 		}
 		// Generate transaction
 		_, err = sendAndWait(ctx, []chain.Action{&actions.RollupRegistration{

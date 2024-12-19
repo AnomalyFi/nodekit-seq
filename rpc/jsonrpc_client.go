@@ -300,6 +300,17 @@ func (cli *JSONRPCClient) GetAllRollupInfo(ctx context.Context) (*types.GetAllRo
 	return resp, err
 }
 
+func (cli *JSONRPCClient) GetValidRollupsAtEpoch(ctx context.Context, epoch uint64) (*types.GetRollupsInfoAtEpochReply, error) {
+	resp := new(types.GetRollupsInfoAtEpochReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"getValidRollupsAtEpoch",
+		types.GetRollupsInfoAtEpochArgs{Epoch: epoch},
+		resp,
+	)
+	return resp, err
+}
+
 func (cli *JSONRPCClient) GetEpochExits(ctx context.Context, epoch uint64) (*hactions.EpochExitInfo, error) {
 	resp := new(types.EpochExitsReply)
 	args := &types.EpochExitsArgs{Epoch: epoch}

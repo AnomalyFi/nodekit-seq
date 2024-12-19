@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"slices"
 
 	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/chain"
@@ -20,7 +19,7 @@ var _ chain.Action = (*RollupRegistration)(nil)
 
 const (
 	CreateRollup = iota
-	DeleteRollup
+	ExitRollup
 	UpdateRollup
 )
 
@@ -45,6 +44,8 @@ func (*RollupRegistration) StateKeysMaxChunks() []uint16 {
 	return []uint16{hactions.RollupInfoChunks, hactions.RollupRegistryChunks}
 }
 
+// TODO: this action needs to be managed by DAO to manage deletions since we are not deleting any namespace from storage
+// but only by marking them as regsitered or exited
 func (r *RollupRegistration) Execute(
 	ctx context.Context,
 	rules chain.Rules,
@@ -69,17 +70,18 @@ func (r *RollupRegistration) Execute(
 
 	switch r.OpCode {
 	case CreateRollup:
-		if r.Info.StartEpoch < Epoch(hght, rules.GetEpochLength())+2 {
-			return nil, fmt.Errorf("epoch number is not valid, minimum: %d, actual: %d", Epoch(hght, rules.GetEpochLength())+2, r.Info.StartEpoch)
-		}
 		if contains(namespaces, r.Namespace) {
 			return nil, ErrNameSpaceAlreadyRegistered
+		}
+		if r.Info.StartEpoch < Epoch(hght, rules.GetEpochLength())+2 || r.Info.ExitEpoch != 0 {
+			return nil, fmt.Errorf("epoch number is not valid, minimum: %d, actual: %d, exit: %d", Epoch(hght, rules.GetEpochLength())+2, r.Info.StartEpoch, r.Info.ExitEpoch)
 		}
 		namespaces = append(namespaces, r.Namespace)
 		if err := storage.SetRollupInfo(ctx, mu, r.Namespace, &r.Info); err != nil {
 			return nil, fmt.Errorf("unable to set rollup info(CREATE): %s", err.Error())
 		}
 	case UpdateRollup:
+		// only allow modifing informations that are not related to ExitEpoch or StartEpoch
 		if err := authorizationChecks(ctx, actor, namespaces, r.Namespace, mu); err != nil {
 			return nil, fmt.Errorf("authorization failed(UPDATE): %s", err.Error())
 		}
@@ -88,32 +90,31 @@ func (r *RollupRegistration) Execute(
 		if err != nil {
 			return nil, fmt.Errorf("unable to get existing rollup info(UPDATE): %s", err.Error())
 		}
-		if r.Info.StartEpoch != rollupInfoExists.StartEpoch && r.Info.StartEpoch < Epoch(hght, rules.GetEpochLength())+2 {
-			return nil, fmt.Errorf("(UPDATE)epoch number is not valid, minimum: %d, actual: %d, prev: %d", Epoch(hght, rules.GetEpochLength())+2, r.Info.StartEpoch, rollupInfoExists.StartEpoch)
-		}
+
+		// rewrite epoch info
+		r.Info.ExitEpoch = rollupInfoExists.ExitEpoch
+		r.Info.StartEpoch = rollupInfoExists.StartEpoch
 
 		if err := storage.SetRollupInfo(ctx, mu, r.Namespace, &r.Info); err != nil {
 			return nil, fmt.Errorf("unable to set rollup info(UPDATE): %s", err.Error())
 		}
-	case DeleteRollup:
+	case ExitRollup:
 		if err := authorizationChecks(ctx, actor, namespaces, r.Namespace, mu); err != nil {
-			return nil, fmt.Errorf("unable to set rollup info(DELETE): %s", err.Error())
+			return nil, fmt.Errorf("unable to set rollup info(EXIT): %s", err.Error())
 		}
-		if r.Info.StartEpoch < Epoch(hght, rules.GetEpochLength())+2 {
-			return nil, fmt.Errorf("(DELETE)epoch number is not valid, minimum: %d, actual: %d", Epoch(hght, rules.GetEpochLength())+2, r.Info.StartEpoch)
+		rollupInfoExists, err := storage.GetRollupInfo(ctx, mu, r.Namespace)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get existing rollup info(UPDATE): %s", err.Error())
+		}
+		if r.Info.ExitEpoch < rollupInfoExists.StartEpoch || r.Info.ExitEpoch < Epoch(hght, rules.GetEpochLength())+2 {
+			return nil, fmt.Errorf("(EXIT)epoch number is not valid, minimum: %d, actual: %d, start: %d", Epoch(hght, rules.GetEpochLength())+2, r.Info.ExitEpoch, rollupInfoExists.StartEpoch)
 		}
 
-		nsIdx := -1
-		for i, ns := range namespaces {
-			if bytes.Equal(r.Namespace, ns) {
-				nsIdx = i
-				break
-			}
-		}
-		namespaces = slices.Delete(namespaces, nsIdx, nsIdx+1)
+		// overwrite StartEpoch
+		r.Info.StartEpoch = rollupInfoExists.StartEpoch
 
-		if err := storage.DelRollupInfo(ctx, mu, r.Namespace); err != nil {
-			return nil, err
+		if err := storage.SetRollupInfo(ctx, mu, r.Namespace, &r.Info); err != nil {
+			return nil, fmt.Errorf("unable to set rollup info(EXIT): %s", err.Error())
 		}
 	default:
 		return nil, fmt.Errorf("op code(%d) not supported", r.OpCode)

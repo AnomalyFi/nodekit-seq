@@ -247,3 +247,11 @@ type GetAllRollupInfoReply struct {
 	// epoch -> a list of rollup registration info
 	Info map[uint64][]hactions.RollupInfo `json:"info"`
 }
+
+type GetRollupsInfoAtEpochArgs struct {
+	Epoch uint64 `json:"epoch"`
+}
+
+type GetRollupsInfoAtEpochReply struct {
+	Rollups []*hactions.RollupInfo `json:"rollups"`
+}
