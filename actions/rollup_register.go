@@ -109,6 +109,10 @@ func (r *RollupRegistration) Execute(
 		if r.Info.ExitEpoch < rollupInfoExists.StartEpoch || r.Info.ExitEpoch < Epoch(hght, rules.GetEpochLength())+2 {
 			return nil, fmt.Errorf("(EXIT)epoch number is not valid, minimum: %d, actual: %d, start: %d", Epoch(hght, rules.GetEpochLength())+2, r.Info.ExitEpoch, rollupInfoExists.StartEpoch)
 		}
+
+		// overwrite StartEpoch
+		r.Info.StartEpoch = rollupInfoExists.StartEpoch
+
 		if err := storage.SetRollupInfo(ctx, mu, r.Namespace, &r.Info); err != nil {
 			return nil, fmt.Errorf("unable to set rollup info(EXIT): %s", err.Error())
 		}

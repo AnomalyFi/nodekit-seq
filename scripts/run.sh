@@ -135,9 +135,13 @@ find "${TMPDIR}"/avalanchego-"${VERSION}"
 # Make sure to replace this address with your own address
 # if you are starting your own devnet (otherwise anyone can access
 # funds using the included demo.pk)
+# total stake can allocate: 10000000000000000000, make sure it is below this or genesis won't load
 echo "creating allocations file"
 cat <<EOF > "${TMPDIR}"/allocations.json
-[{"address":"${ADDRESS}", "balance":10000000000000000000}]
+[
+  {"address":"${ADDRESS}", "balance":1000000000000000000},
+  {"address":"seq1qy94dndd0wzru9gvq3ayw52ngcd2fuhyptt58f4a3eppjzpx573qg9cr7sm", "balance":1000000000000000000}
+]
 EOF
 
 GENESIS_PATH=$2
