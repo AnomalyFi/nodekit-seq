@@ -27,12 +27,16 @@ Arcadia facilitates the Shared Block Production on The Composable Network for pa
 - Block builders participate in auction after confirming their ability to build blocks for participating rollups.
 - They build ToB chunks for different subsets of participating rollups and RoB chunks for each rollup, and send them with rollup block numbers and chunk nonce to arcadia continuosly to get them preconfed by SEQ validators.
 - Every rollup block, ideally contains many ToBs and one RoB. ToBs are ordered by the chunk nonce included along with the chunk followed by RoB.
+  
+ToB chunks containig different subset of rollups:
+<p align="center">
+    <img src="./assets/tob.png" width="40%">
+</p>
 
-ToB chunks containig different subset of rollups
-<img src="./assets/tob.png" style="display: block; margin: auto; max-width: 40%;">
-
-A rollup block built by builder.
-<img src="./assets/rollup_block.png" style="display: block; margin: auto; max-width: 40%;">
+A rollup block built by builder:
+<p align="center">
+  <img src="./assets/rollup_block.png" width="50%">
+</p>
 ## SEQ Validators:
 - SEQ validators register with arcadia to receive chunks for preconfing.
 - SEQ validators check few assertions on chunks, and issue a chunk cert if the assertions are satisfied. 
