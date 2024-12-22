@@ -29,15 +29,15 @@ Arcadia facilitates the Shared Block Production on The Composable Network for pa
 - Every rollup block, ideally contains many ToBs and one RoB. ToBs are ordered by the chunk nonce included along with the chunk followed by RoB.
 
 ToB chunks containig different subset of rollups
-![ToB](./assets/tob.png)
+<img src="./assets/tob.png" style="display: block; margin: auto; max-width: 40%;">
 
 A rollup block built by builder.
-![Rollup Blocks](./assets/rollup_block.png)
+<img src="./assets/rollup_block.png" style="display: block; margin: auto; max-width: 40%;">
 ## SEQ Validators:
 - SEQ validators register with arcadia to receive chunks for preconfing.
 - SEQ validators check few assertions on chunks, and issue a chunk cert if the assertions are satisfied. 
 - Valdiators store the signature verified txs in a emap, to prevent duplicate txs and ease signature verification while accepting the block.
-- SEQ blocks are produced every 2 seconds, validators fetch `SEQMsg` txs payload from arcadia to get included in the SEQ block and fill the rest of the block with `non SEQMsg` txs.
+- SEQ blocks are produced every 2 seconds, validators fetch `SequencerMsg` txs payload from arcadia to get included in the SEQ block and fill the rest of the block with `non SequencerMsg` txs.
 
 ## E2E Flow:
 ![E2E flow](./assets/e2e.png)
