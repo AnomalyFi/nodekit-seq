@@ -200,6 +200,7 @@ func (c *Config) GetValServerConfig() *rpc.JSONRPCValServerConfig {
 		DerivePort: true,
 	}
 }
+
 func (c *Config) GetParsedWhiteListedAddress() []codec.Address {
 	return c.parsedWhiteListedAddresses
 }

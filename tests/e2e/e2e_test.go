@@ -1061,7 +1061,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.Empty(string(result.Error))
 		require.True(result.Success)
 
-		var h1 = startHeight
+		h1 := startHeight
 		// Ensure all blocks processed
 		for _, inst := range instances {
 			color.Blue("checking %q", inst.uri)
