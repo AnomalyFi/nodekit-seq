@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
 
@@ -23,6 +24,14 @@ type AuctionInfo struct {
 	EpochNumber       uint64        `json:"epochNumber"`
 	BidPrice          uint64        `json:"bidPrice"`
 	BuilderSEQAddress codec.Address `json:"builderSEQAddress"`
+}
+
+func (a *AuctionInfo) HashAuctionInfo() ([32]byte, error) {
+	msg := binary.BigEndian.AppendUint64(nil, a.EpochNumber)
+	msg = binary.BigEndian.AppendUint64(msg, a.BidPrice)
+	msg = append(msg, a.BuilderSEQAddress[:]...)
+	hash := sha256.Sum256(msg)
+	return hash, nil
 }
 
 func (info *AuctionInfo) Marshal(p *codec.Packer) {
@@ -90,17 +99,18 @@ func (a *Auction) Execute(
 		return nil, fmt.Errorf("failed to parse public key: %w", err)
 	}
 
-	msg := make([]byte, 16)
-	binary.BigEndian.PutUint64(msg[:8], a.AuctionInfo.EpochNumber)
-	binary.BigEndian.PutUint64(msg[8:], a.AuctionInfo.BidPrice)
-	msg = append(msg, a.AuctionInfo.BuilderSEQAddress[:]...)
+	digest, err := a.AuctionInfo.HashAuctionInfo()
+	if err != nil {
+		return nil, fmt.Errorf("unable to hash auction info")
+	}
+
 	sig, err := bls.SignatureFromBytes(a.BuilderSignature)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse signature: %w", err)
 	}
 
 	// Verify the signature.
-	if !bls.Verify(msg, pubkey, sig) {
+	if !bls.Verify(digest[:], pubkey, sig) {
 		return nil, ErrInvalidBidderSignature
 	}
 
