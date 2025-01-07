@@ -93,7 +93,7 @@ func init() {
 }
 
 func TestIntegration(t *testing.T) {
-	ginkgo.RunSpecs(t, "tokenvm integration test suites")
+	ginkgo.RunSpecs(t, "seqvm integration test suites")
 }
 
 func init() {
@@ -112,15 +112,15 @@ func init() {
 }
 
 type instance struct {
-	chainID            ids.ID
-	nodeID             ids.NodeID
-	vm                 *vm.VM
-	toEngine           chan common.Message
-	JSONRPCServer      *httptest.Server
-	TokenJSONRPCServer *httptest.Server
-	WebSocketServer    *httptest.Server
-	cli                *rpc.JSONRPCClient // clients for embedded VMs
-	tcli               *trpc.JSONRPCClient
+	chainID          ids.ID
+	nodeID           ids.NodeID
+	vm               *vm.VM
+	toEngine         chan common.Message
+	JSONRPCServer    *httptest.Server
+	SEQJSONRPCServer *httptest.Server
+	WebSocketServer  *httptest.Server
+	cli              *rpc.JSONRPCClient // clients for embedded VMs
+	tcli             *trpc.JSONRPCClient
 }
 
 var _ = ginkgo.BeforeSuite(func() {
@@ -229,15 +229,15 @@ var _ = ginkgo.BeforeSuite(func() {
 		tjsonRPCServer := httptest.NewServer(hd[trpc.JSONRPCEndpoint])
 		webSocketServer := httptest.NewServer(hd[rpc.WebSocketEndpoint])
 		instances[i] = instance{
-			chainID:            snowCtx.ChainID,
-			nodeID:             snowCtx.NodeID,
-			vm:                 v,
-			toEngine:           toEngine,
-			JSONRPCServer:      jsonRPCServer,
-			TokenJSONRPCServer: tjsonRPCServer,
-			WebSocketServer:    webSocketServer,
-			cli:                rpc.NewJSONRPCClient(jsonRPCServer.URL),
-			tcli:               trpc.NewJSONRPCClient(tjsonRPCServer.URL, snowCtx.NetworkID, snowCtx.ChainID),
+			chainID:          snowCtx.ChainID,
+			nodeID:           snowCtx.NodeID,
+			vm:               v,
+			toEngine:         toEngine,
+			JSONRPCServer:    jsonRPCServer,
+			SEQJSONRPCServer: tjsonRPCServer,
+			WebSocketServer:  webSocketServer,
+			cli:              rpc.NewJSONRPCClient(jsonRPCServer.URL),
+			tcli:             trpc.NewJSONRPCClient(tjsonRPCServer.URL, snowCtx.NetworkID, snowCtx.ChainID),
 		}
 
 		// Force sync ready (to mimic bootstrapping from genesis)
@@ -270,7 +270,7 @@ var _ = ginkgo.AfterSuite(func() {
 
 	for _, iv := range instances {
 		iv.JSONRPCServer.Close()
-		iv.TokenJSONRPCServer.Close()
+		iv.SEQJSONRPCServer.Close()
 		iv.WebSocketServer.Close()
 		err := iv.vm.Shutdown(context.TODO())
 		require.NoError(err)

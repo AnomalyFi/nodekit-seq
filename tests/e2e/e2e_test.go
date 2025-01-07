@@ -11,6 +11,8 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"net"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -33,7 +35,6 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/actions"
 	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/consts"
-	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/AnomalyFi/nodekit-seq/types"
 
 	hutils "github.com/AnomalyFi/hypersdk/utils"
@@ -346,7 +347,12 @@ var _ = ginkgo.BeforeSuite(func() {
 			}
 		}
 		require.NoError(err)
-
+		purl, err := url.Parse(info.Uri)
+		require.NoError(err)
+		host, _, err := net.SplitHostPort(purl.Host)
+		require.NoError(err)
+		valURI := "http://" + host + fmt.Sprintf(":%d", hutils.GetPortFromNodeID(nodeID))
+		hutils.Outf("port url: %s", valURI)
 		instances = append(instances, instance{
 			nodeID:   nodeID,
 			uri:      u,
@@ -354,6 +360,7 @@ var _ = ginkgo.BeforeSuite(func() {
 			tcli:     trpc.NewJSONRPCClient(u, networkID, bid),
 			wsCli:    wsCli,
 			multicli: trpc.NewMultiJSONRPCClientWithED25519Factory(u, networkID, bid, privBytes),
+			valCli:   rpc.NewJSONRPCValClient(valURI),
 		})
 	}
 
@@ -381,6 +388,7 @@ type instance struct {
 	tcli     *trpc.JSONRPCClient
 	wsCli    *rpc.WebSocketClient
 	multicli *trpc.MultiJSONRPCClient
+	valCli   *rpc.JSONRPCValClient
 }
 
 var _ = ginkgo.AfterSuite(func() {
@@ -426,6 +434,20 @@ var _ = ginkgo.Describe("[Network]", func() {
 			_, _, chainID, err := cli.Network(context.Background())
 			require.NoError(err)
 			require.NotEqual(chainID, ids.Empty)
+		}
+	})
+})
+
+var _ = ginkgo.Describe("[Derive Port]", func() {
+	require := require.New(ginkgo.GinkgoT())
+
+	ginkgo.It("can derive port and ping", func() {
+		for _, inst := range instances {
+			hutils.Outf("{{green}}port number for:{{/}} %s, nodeID: %s\n", hutils.GetPortFromNodeID(inst.nodeID), inst.nodeID)
+
+			success, err := inst.valCli.Ping()
+			require.True(success)
+			require.NoError(err)
 		}
 	})
 })
@@ -832,7 +854,6 @@ var _ = ginkgo.Describe("[Test]", func() {
 			require.NoError(err)
 			require.Equal(len(resp.Blocks), 2)
 		})
-
 	})
 
 	// TODO: This is a flaky test. It passes only if the transaction is included just in right blocks. If not tests fails.
@@ -866,7 +887,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			},
 			&actions.Auction{
 				AuctionInfo: actions.AuctionInfo{
-					EpochNumber:       epochNumber + 1,
+					EpochNumber:       epochNumber + 2,
 					BidPrice:          100,
 					BuilderSEQAddress: builderSEQAddress,
 				},
@@ -991,21 +1012,39 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.Contains(string(result.Error), "invalid bidder signature")
 	})
 
-	ginkgo.It("test register rollup", func() {
+	pubKeyDummy := make([]byte, 48)
+	pubKeyDummy[1] = 1
+
+	ginkgo.It("test rollup registry can capture rollup registration & exits correctly", func() {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
+		_, startHeight, _, err := instances[0].cli.Accepted(ctx)
+		require.NoError(err)
+
+		// submit regsitration at startHeight
 		currEpoch, err := instances[0].cli.GetCurrentEpoch()
 		require.NoError(err)
 		txActions := []chain.Action{&actions.RollupRegistration{
 			Info: hactions.RollupInfo{
-				Namespace:           []byte("nkit"),
+				Namespace:           []byte("1234"),
 				FeeRecipient:        rsender,
 				AuthoritySEQAddress: rsender,
+				SequencerPublicKey:  pubKeyDummy,
+				StartEpoch:          currEpoch + 5,
 			},
-			Namespace:  []byte("nkit"),
-			StartEpoch: currEpoch + 5,
-			OpCode:     actions.CreateRollup,
+			Namespace: []byte("1234"),
+			OpCode:    actions.CreateRollup,
+		}, &actions.RollupRegistration{
+			Info: hactions.RollupInfo{
+				Namespace:           []byte("1235"),
+				FeeRecipient:        rsender,
+				AuthoritySEQAddress: rsender,
+				SequencerPublicKey:  pubKeyDummy,
+				StartEpoch:          currEpoch + 5,
+			},
+			Namespace: []byte("1235"),
+			OpCode:    actions.CreateRollup,
 		}}
 		parser, err := instances[0].tcli.Parser(ctx)
 		require.NoError(err)
@@ -1019,6 +1058,120 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.Equal(tx.ID(), txID)
 		require.NoError(err)
 		require.NoError(txErr)
+		require.Empty(string(result.Error))
+		require.True(result.Success)
+
+		h1 := startHeight
+		// Ensure all blocks processed
+		for _, inst := range instances {
+			color.Blue("checking %q", inst.uri)
+
+			// Ensure all blocks processed
+			for {
+				_, h, _, err := inst.cli.Accepted(context.Background())
+				require.NoError(err)
+				if h > startHeight {
+					h1 = h
+					break
+				}
+				time.Sleep(1 * time.Second)
+			}
+		}
+
+		validRollupResp, err := instances[0].tcli.GetValidRollupsAtEpoch(ctx, currEpoch+5)
+		require.NoError(err)
+		require.Equal(2, len(validRollupResp.Rollups))
+
+		// submit exits at height h1
+		txActions = []chain.Action{&actions.RollupRegistration{
+			Info: hactions.RollupInfo{
+				Namespace:           []byte("1234"),
+				FeeRecipient:        rsender,
+				AuthoritySEQAddress: rsender,
+				SequencerPublicKey:  pubKeyDummy,
+				ExitEpoch:           currEpoch + 6,
+			},
+			Namespace: []byte("1234"),
+			OpCode:    actions.ExitRollup,
+		}, &actions.RollupRegistration{
+			Info: hactions.RollupInfo{
+				Namespace:           []byte("1235"),
+				FeeRecipient:        rsender,
+				AuthoritySEQAddress: rsender,
+				SequencerPublicKey:  pubKeyDummy,
+				ExitEpoch:           currEpoch + 7,
+			},
+			Namespace: []byte("1235"),
+			OpCode:    actions.ExitRollup,
+		}}
+		_, tx, _, err = instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
+		require.NoError(err)
+		hutils.Outf("{{green}}txID of submitted data:{{/}}%s\n", tx.ID().String())
+
+		err = instances[0].wsCli.RegisterTx(tx)
+		require.NoError(err)
+		txID, txErr, result, err = instances[0].wsCli.ListenTx(ctx)
+		require.Equal(tx.ID(), txID)
+		require.NoError(err)
+		require.NoError(txErr)
+		require.Empty(string(result.Error))
+		require.True(result.Success)
+
+		// Ensure all blocks processed
+		for _, inst := range instances {
+			color.Blue("checking %q", inst.uri)
+
+			// Ensure all blocks processed
+			for {
+				_, h, _, err := inst.cli.Accepted(context.Background())
+				require.NoError(err)
+				if h > h1 {
+					break
+				}
+				time.Sleep(1 * time.Second)
+			}
+		}
+
+		validRollupResp, err = instances[0].tcli.GetValidRollupsAtEpoch(ctx, currEpoch+6)
+		require.NoError(err)
+		require.Equal(1, len(validRollupResp.Rollups))
+		require.Equal([]byte("1235"), validRollupResp.Rollups[0].Namespace)
+
+		validRollupResp, err = instances[0].tcli.GetValidRollupsAtEpoch(ctx, currEpoch+7)
+		require.NoError(err)
+		require.Equal(0, len(validRollupResp.Rollups))
+	})
+
+	ginkgo.It("test register rollup", func() {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+		currEpoch, err := instances[0].cli.GetCurrentEpoch()
+		require.NoError(err)
+		txActions := []chain.Action{&actions.RollupRegistration{
+			Info: hactions.RollupInfo{
+				Namespace:           []byte("nkit"),
+				FeeRecipient:        rsender,
+				AuthoritySEQAddress: rsender,
+				SequencerPublicKey:  pubKeyDummy,
+				StartEpoch:          currEpoch + 5,
+			},
+			Namespace: []byte("nkit"),
+			OpCode:    actions.CreateRollup,
+		}}
+		parser, err := instances[0].tcli.Parser(ctx)
+		require.NoError(err)
+		_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
+		require.NoError(err)
+		hutils.Outf("{{green}}txID of submitted data:{{/}}%s\n", tx.ID().String())
+
+		err = instances[0].wsCli.RegisterTx(tx)
+		require.NoError(err)
+		txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
+		require.Equal(tx.ID(), txID)
+		require.NoError(err)
+		require.NoError(txErr)
+		require.Empty(string(result.Error))
 		require.True(result.Success)
 	})
 	ginkgo.It("test update rollup info", func() {
@@ -1028,6 +1181,8 @@ var _ = ginkgo.Describe("[Test]", func() {
 		tpriv, err := bls.GeneratePrivateKey()
 		require.NoError(err)
 
+		currEpoch, err := instances[0].cli.GetCurrentEpoch()
+		require.NoError(err)
 		pubKey := bls.PublicFromPrivateKey(tpriv)
 		seqAddress := auth.NewBLSAddress(pubKey)
 		txActions := []chain.Action{&actions.RollupRegistration{
@@ -1035,6 +1190,8 @@ var _ = ginkgo.Describe("[Test]", func() {
 				Namespace:           []byte("nkit"),
 				FeeRecipient:        seqAddress,
 				AuthoritySEQAddress: seqAddress,
+				SequencerPublicKey:  pubKeyDummy,
+				StartEpoch:          currEpoch + 2,
 			},
 			Namespace: []byte("nkit"),
 			OpCode:    actions.UpdateRollup,
@@ -1051,6 +1208,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.Equal(tx.ID(), txID)
 		require.NoError(err)
 		require.NoError(txErr)
+		require.Empty(string(result.Error))
 		require.True(result.Success)
 	})
 	ginkgo.It("test delete rollup info", func() {
@@ -1065,19 +1223,22 @@ var _ = ginkgo.Describe("[Test]", func() {
 					Namespace:           []byte("nkit2"),
 					FeeRecipient:        rsender,
 					AuthoritySEQAddress: rsender,
+					SequencerPublicKey:  pubKeyDummy,
+					StartEpoch:          currEpoch + 5,
 				},
-				StartEpoch: currEpoch + 5,
-				Namespace:  []byte("nkit2"),
-				OpCode:     actions.CreateRollup,
+				Namespace: []byte("nkit2"),
+				OpCode:    actions.CreateRollup,
 			},
 			&actions.RollupRegistration{
 				Info: hactions.RollupInfo{
 					Namespace:           []byte("nkit2"),
 					FeeRecipient:        rsender,
 					AuthoritySEQAddress: rsender,
+					SequencerPublicKey:  pubKeyDummy,
+					ExitEpoch:           currEpoch + 7,
 				},
 				Namespace: []byte("nkit2"),
-				OpCode:    actions.DeleteRollup,
+				OpCode:    actions.ExitRollup,
 			},
 		}
 
@@ -1093,8 +1254,8 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.Equal(tx.ID(), txID)
 		require.NoError(err)
 		require.NoError(txErr)
+		require.Empty(string(result.Error))
 		require.True(result.Success)
-		require.Empty(result.Error)
 	})
 
 	ginkgo.It("test tx fail for wrong authority modifications in rollup registration.", func() {
@@ -1115,16 +1276,19 @@ var _ = ginkgo.Describe("[Test]", func() {
 					Namespace:           []byte("nkit3"),
 					FeeRecipient:        seqAddress,
 					AuthoritySEQAddress: seqAddress,
+					SequencerPublicKey:  pubKeyDummy,
+					StartEpoch:          currEpoch + 5,
 				},
-				StartEpoch: currEpoch + 5,
-				Namespace:  []byte("nkit3"),
-				OpCode:     actions.CreateRollup,
+				Namespace: []byte("nkit3"),
+				OpCode:    actions.CreateRollup,
 			},
 			&actions.RollupRegistration{
 				Info: hactions.RollupInfo{
 					Namespace:           []byte("nkit3"),
 					FeeRecipient:        seqAddress,
 					AuthoritySEQAddress: rsender,
+					SequencerPublicKey:  pubKeyDummy,
+					StartEpoch:          currEpoch + 5,
 				},
 				Namespace: []byte("nkit3"),
 				OpCode:    actions.UpdateRollup,
@@ -1163,10 +1327,11 @@ var _ = ginkgo.Describe("[Test]", func() {
 				Namespace:           []byte("nkit"),
 				FeeRecipient:        seqAddress,
 				AuthoritySEQAddress: seqAddress,
+				SequencerPublicKey:  pubKeyDummy,
+				StartEpoch:          currEpoch + 5,
 			},
-			StartEpoch: currEpoch + 5,
-			Namespace:  []byte("nkit"),
-			OpCode:     actions.CreateRollup,
+			Namespace: []byte("nkit"),
+			OpCode:    actions.CreateRollup,
 		}}
 		parser, err := instances[0].tcli.Parser(ctx)
 		require.NoError(err)
@@ -1199,13 +1364,14 @@ var _ = ginkgo.Describe("[Test]", func() {
 					Namespace:           []byte("nkit4"),
 					FeeRecipient:        rsender,
 					AuthoritySEQAddress: rsender,
+					SequencerPublicKey:  pubKeyDummy,
+					StartEpoch:          currEpoch + 10,
 				},
-				Namespace:  []byte("nkit4"),
-				StartEpoch: currEpoch + 10,
-				OpCode:     actions.CreateRollup,
+				Namespace: []byte("nkit4"),
+				OpCode:    actions.CreateRollup,
 			},
 			&actions.EpochExit{
-				Info: storage.EpochInfo{
+				Info: hactions.EpochInfo{
 					Epoch:     currEpoch + 15,
 					Namespace: []byte("nkit4"),
 				},
@@ -1226,8 +1392,8 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.NoError(err)
 		require.NoError(txErr)
 		fmt.Println("result: ", string(result.Error))
+		require.Empty(string(result.Error))
 		require.True(result.Success)
-		require.Empty(result.Error)
 	})
 
 	ginkgo.It("test delete epoch exit", func() {
@@ -1236,7 +1402,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		defer cancel()
 		txActions := []chain.Action{
 			&actions.EpochExit{
-				Info: storage.EpochInfo{
+				Info: hactions.EpochInfo{
 					Epoch:     currEpoch + 15,
 					Namespace: []byte("nkit4"),
 				},
@@ -1256,8 +1422,8 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.NoError(err)
 		require.NoError(txErr)
 		fmt.Println("result: ", string(result.Error))
+		require.Empty(string(result.Error))
 		require.True(result.Success)
-		require.Empty(result.Error)
 	})
 
 	ginkgo.It("test epoch exit only works for registered rollups", func() {
@@ -1266,7 +1432,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		defer cancel()
 		txActions := []chain.Action{
 			&actions.EpochExit{
-				Info: storage.EpochInfo{
+				Info: hactions.EpochInfo{
 					Epoch:     currEpoch + 15,
 					Namespace: []byte("nkit5"),
 				},

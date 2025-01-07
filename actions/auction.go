@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/consts"
@@ -51,7 +52,7 @@ func (*Auction) GetTypeID() uint8 {
 	return AuctionID
 }
 
-func (a *Auction) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
+func (a *Auction) StateKeys(_ codec.Address, _ ids.ID) state.Keys {
 	return state.Keys{
 		string(storage.BalanceKey(a.AuctionInfo.BuilderSEQAddress)): state.Read | state.Write,
 		string(storage.BalanceKey(ArcadiaFundAddress())):            state.All,
@@ -60,7 +61,7 @@ func (a *Auction) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
 }
 
 func (*Auction) StateKeysMaxChunks() []uint16 {
-	return []uint16{storage.BalanceChunks, storage.BalanceChunks, storage.EpochExitsChunks}
+	return []uint16{storage.BalanceChunks, storage.BalanceChunks, hactions.EpochExitsChunks}
 }
 
 // This is a permissioned action, only authorized address can pass the execution.
@@ -92,7 +93,7 @@ func (a *Auction) Execute(
 	msg := make([]byte, 16)
 	binary.BigEndian.PutUint64(msg[:8], a.AuctionInfo.EpochNumber)
 	binary.BigEndian.PutUint64(msg[8:], a.AuctionInfo.BidPrice)
-	msg = append(msg, a.BuilderPublicKey...)
+	msg = append(msg, a.AuctionInfo.BuilderSEQAddress[:]...)
 	sig, err := bls.SignatureFromBytes(a.BuilderSignature)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse signature: %w", err)
@@ -129,7 +130,7 @@ func (*Auction) ComputeUnits(codec.Address, chain.Rules) uint64 {
 	return AuctionComputeUnits
 }
 
-func (a *Auction) Size() int {
+func (*Auction) Size() int {
 	return 2*consts.Uint64Len + bls.PublicKeyLen + bls.SignatureLen + codec.AddressLen
 }
 

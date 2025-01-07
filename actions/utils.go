@@ -59,5 +59,5 @@ func authorizationChecks(ctx context.Context, actor codec.Address, namespaces []
 }
 
 func Epoch(blockHeight uint64, epochLength int64) uint64 {
-	return uint64(int64(blockHeight) / epochLength)
+	return blockHeight / uint64(epochLength)
 }

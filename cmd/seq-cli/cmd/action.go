@@ -12,6 +12,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/chain"
 	hconsts "github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/crypto/bls"
+	hrpc "github.com/AnomalyFi/hypersdk/rpc"
 	hutils "github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/actions"
 	"github.com/AnomalyFi/nodekit-seq/auth"
@@ -103,8 +104,8 @@ var sequencerMsgCmd = &cobra.Command{
 	},
 }
 
-var anchorCmd = &cobra.Command{
-	Use: "anchor",
+var rollupCmd = &cobra.Command{
+	Use: "rollup-register",
 	RunE: func(*cobra.Command, []string) error {
 		ctx := context.Background()
 		_, _, factory, cli, scli, tcli, err := handler.DefaultActor()
@@ -122,16 +123,20 @@ var anchorCmd = &cobra.Command{
 			return err
 		}
 
-		op, err := handler.Root().PromptChoice("(0)create (1)delete (2)update", 3)
+		op, err := handler.Root().PromptChoice("(0)create (1)exit (2)update", 3)
 		if err != nil {
 			return err
 		}
 
+		e, _ := cli.GetCurrentEpoch()
 		info := hactions.RollupInfo{
-			FeeRecipient: feeRecipient,
-			Namespace:    namespace,
+			FeeRecipient:        feeRecipient,
+			Namespace:           namespace,
+			AuthoritySEQAddress: feeRecipient,
+			SequencerPublicKey:  feeRecipient[:],
+			StartEpoch:          e + 10,
+			ExitEpoch:           0,
 		}
-
 		// Generate transaction
 		_, err = sendAndWait(ctx, []chain.Action{&actions.RollupRegistration{
 			Namespace: namespace,
@@ -160,7 +165,7 @@ var auctionCmd = &cobra.Command{
 			return err
 		}
 
-		epochNumber := uint64(hght/12*hconsts.MillisecondsPerSecond) + 1
+		epochNumber := hght/12*hconsts.MillisecondsPerSecond + 1
 
 		p, err := bls.GeneratePrivateKey()
 		if err != nil {
@@ -195,5 +200,22 @@ var auctionCmd = &cobra.Command{
 
 		_, err = sendAndWait(ctx, action, cli, scli, tcli, factory, 0, true)
 		return err
+	},
+}
+
+var updateArcadiaURL = &cobra.Command{
+	Use: "updateArcadiaURL",
+	RunE: func(*cobra.Command, []string) error {
+		// ctx := context.Background()
+		str, err := handler.Root().PromptString("val rpc url", 1, 100)
+		if err != nil {
+			return err
+		}
+		valCLI := hrpc.NewJSONRPCValClient(str)
+		str, err = handler.Root().PromptString("new arcadia url", 1, 150)
+		if err != nil {
+			return err
+		}
+		return valCLI.UpdateArcadiaURL(str)
 	},
 }

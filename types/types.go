@@ -6,7 +6,6 @@ import (
 	"math/big"
 
 	"github.com/AnomalyFi/hypersdk/chain"
-	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
 
 	hactions "github.com/AnomalyFi/hypersdk/actions"
@@ -225,7 +224,7 @@ type EpochExitsArgs struct {
 }
 
 type EpochExitsReply struct {
-	Info *storage.EpochExitInfo `json:"info"`
+	Info *hactions.EpochExitInfo `json:"info"`
 }
 
 type GetRollupInfoArgs struct {
@@ -242,4 +241,17 @@ type GetBuilderArgs struct {
 
 type GetBuilderReply struct {
 	BuilderPubKey []byte `json:"builderPubKey"`
+}
+
+type GetAllRollupInfoReply struct {
+	// epoch -> a list of rollup registration info
+	Info map[uint64][]hactions.RollupInfo `json:"info"`
+}
+
+type GetRollupsInfoAtEpochArgs struct {
+	Epoch uint64 `json:"epoch"`
+}
+
+type GetRollupsInfoAtEpochReply struct {
+	Rollups []*hactions.RollupInfo `json:"rollups"`
 }

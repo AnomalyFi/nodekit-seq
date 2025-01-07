@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"net/http"
 
+	hactions "github.com/AnomalyFi/hypersdk/actions"
+
 	"github.com/AnomalyFi/hypersdk/builder"
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/fees"
@@ -26,6 +28,7 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/config"
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
+	rollupregistry "github.com/AnomalyFi/nodekit-seq/rollup_registry"
 	"github.com/AnomalyFi/nodekit-seq/rpc"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/AnomalyFi/nodekit-seq/version"
@@ -41,8 +44,9 @@ type Controller struct {
 	config       *config.Config
 	stateManager *StateManager
 
-	jsonRPCServer *rpc.JSONRPCServer
-	archiver      *archiver.ORMArchiver
+	jsonRPCServer  *rpc.JSONRPCServer
+	archiver       *archiver.ORMArchiver
+	rollupRegistry *rollupregistry.RollupRegistry
 
 	metrics *metrics
 
@@ -134,6 +138,8 @@ func (c *Controller) Initialize(
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 
+	c.rollupRegistry = rollupregistry.NewRollupRegistr()
+
 	apis[rpc.JSONRPCEndpoint] = jsonRPCHandler
 
 	// Create builder and gossiper
@@ -199,6 +205,7 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 		}
 	}()
 
+	rollups := make([]*hactions.RollupInfo, 0)
 	results := blk.Results()
 	for i, tx := range blk.Txs {
 		result := results[i]
@@ -223,10 +230,15 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 					c.metrics.transfer.Inc()
 				case *actions.SequencerMsg:
 					c.metrics.sequencerMsg.Inc()
+				case *actions.RollupRegistration:
+					reg := act.(*actions.RollupRegistration)
+					rollups = append(rollups, &reg.Info)
 				}
 			}
 		}
 	}
+	currentEpoch := blk.Hght / uint64(c.inner.Rules(blk.Tmstmp).GetEpochLength())
+	c.rollupRegistry.Update(currentEpoch, rollups)
 	return batch.Write()
 }
 

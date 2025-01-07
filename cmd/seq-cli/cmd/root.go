@@ -154,16 +154,16 @@ func init() {
 		chainInfoCmd,
 		watchChainCmd,
 		testHeaderCmd,
-		anchorsCmd,
-		replaceAnchorCmd,
+		rollupsCmd,
 	)
 
 	// actions
 	actionCmd.AddCommand(
 		transferCmd,
 		sequencerMsgCmd,
-		anchorCmd,
+		rollupCmd,
 		auctionCmd,
+		updateArcadiaURL,
 	)
 
 	// spam

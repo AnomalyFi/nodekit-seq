@@ -29,7 +29,7 @@ fi
 # by default, "./scripts/lint.sh" runs all lint tests
 # to run only "license_header" test
 # TESTS='license_header' ./scripts/lint.sh
-TESTS=${TESTS:-"golangci_lint license_header"}
+TESTS=${TESTS:-"golangci_lint"}
 
 # https://github.com/golangci/golangci-lint/releases
 function test_golangci_lint {

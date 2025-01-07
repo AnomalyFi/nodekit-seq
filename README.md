@@ -9,6 +9,10 @@ audited.
 The `SeqVM` is built from the ground up with the shared sequencer built directly into the chain 
 enabling decentralization from the start. This enable users to easily send messages from rollups like NodeKit chain to the shared sequencer. The contents of `SequencerMSG` is just `ChainId|Data|FromAddress` where the data is the transaction data 
 from the rollup translated into a byte[]. 
+### Arcadia
+Rollups using Arcadia, will be able to produce blocks with sub second block times without losing synchronous atomic composability with other rollups using Arcadia, all thanks to Arcadia's ability to preconf rollup block chunks in 250ms and make the block available for rollups to pull instantly after preconfing.
+
+> Read more about arcadia [here](./arcadia.md).
 
 ## Demos
 The first step to running these demos is to launch your own `SeqVM` Subnet. You
@@ -59,7 +63,7 @@ When you are done, the output should look something like this:
 database: .seq-cli
 address: seq1qrzvk4zlwj9zsacqgtufx7zvapd3quufqpxk5rsdd4633m4wz2fdjlydh3t
 chainID: Em2pZtHr7rDCzii43an2bBi1M2mTFyLN33QP1Xfjy7BcWtaH9
-assetID (use DSEQ for native seq): 27grFs9vE2YP9kwLM5hQJGLDvqEY9ii71zzdoRHNGC4Appavug
+assetID (use SEQ for native seq): 27grFs9vE2YP9kwLM5hQJGLDvqEY9ii71zzdoRHNGC4Appavug
 balance: 10000 27grFs9vE2YP9kwLM5hQJGLDvqEY9ii71zzdoRHNGC4Appavug
 ```
 

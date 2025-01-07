@@ -32,6 +32,7 @@ UNLIMITED_USAGE=${UNLIMITED_USAGE:-false}
 STORE_BLOCK_RESULTS_ON_DISK=${STORE_BLOCK_RESULTS_ON_DISK:-true}
 ETHL1RPC=${ETHL1RPC:-http://localhost:8545}
 ETHL1WS=${ETHL1WS:-ws://localhost:8546}
+ARCADIA_URL=${ARCADIA_URL:-http://localhost:12345}
 ADDRESS=${ADDRESS:-seq1qrzvk4zlwj9zsacqgtufx7zvapd3quufqpxk5rsdd4633m4wz2fdjlydh3t}
 if [[ ${MODE} != "run" ]]; then
   LOG_LEVEL=INFO
@@ -50,7 +51,7 @@ if compgen -G "$DB_PATH" > /dev/null; then
 fi
 
 WINDOW_TARGET_UNITS="40000000,450000,450000,450000,450000"
-MAX_BLOCK_UNITS="1800000,15000,15000,2500,15000"
+MAX_BLOCK_UNITS="1800000,15000,15000,10000,15000"
 if ${UNLIMITED_USAGE}; then
   WINDOW_TARGET_UNITS="${MAX_UINT64},${MAX_UINT64},${MAX_UINT64},${MAX_UINT64},${MAX_UINT64}"
   # If we don't limit the block size, AvalancheGo will reject the block.
@@ -134,9 +135,13 @@ find "${TMPDIR}"/avalanchego-"${VERSION}"
 # Make sure to replace this address with your own address
 # if you are starting your own devnet (otherwise anyone can access
 # funds using the included demo.pk)
+# total stake can allocate: 10000000000000000000, make sure it is below this or genesis won't load
 echo "creating allocations file"
 cat <<EOF > "${TMPDIR}"/allocations.json
-[{"address":"${ADDRESS}", "balance":10000000000000000000}]
+[
+  {"address":"${ADDRESS}", "balance":1000000000000000000},
+  {"address":"seq1qy94dndd0wzru9gvq3ayw52ngcd2fuhyptt58f4a3eppjzpx573qg9cr7sm", "balance":1000000000000000000}
+]
 EOF
 
 GENESIS_PATH=$2
@@ -180,14 +185,21 @@ cat <<EOF > "${TMPDIR}"/seqvm.config
   "streamingBacklogSize": 10000000,
   "logLevel": "${LOG_LEVEL}",
   "continuousProfilerDir":"${TMPDIR}/seqvm-e2e-profiles/*",
+  "traceEnabled":false, 
+  "traceSampleRate":1,
   "stateSyncServerDelay": ${STATESYNC_DELAY},
   "storeBlockResultsOnDisk": ${STORE_BLOCK_RESULTS_ON_DISK},
   "ethRPCAddr": "${ETHL1RPC}",
   "ethWSAddr": "${ETHL1WS}",
+  "arcadiaURL": "${ARCADIA_URL}",
   "archiverConfig": {
     "enabled": true,
     "archiverType": "sqlite",
     "dsn": "/tmp/default.db"
+  },
+  "valRPCConfig": {
+    "derivePort": true,
+    "port": 0
   }
 }
 EOF

@@ -12,6 +12,7 @@ import (
 
 	"github.com/AnomalyFi/nodekit-seq/archiver"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
+	rollupregistry "github.com/AnomalyFi/nodekit-seq/rollup_registry"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/trace"
@@ -53,7 +54,7 @@ func (c *Controller) GetRollupRegistryFromState(
 func (c *Controller) GetEpochExitsFromState(
 	ctx context.Context,
 	epoch uint64,
-) (*storage.EpochExitInfo, error) {
+) (*hactions.EpochExitInfo, error) {
 	info, err := storage.GetEpochExitsFromState(ctx, c.inner.ReadState, epoch)
 	if err != nil {
 		return nil, err
@@ -81,6 +82,10 @@ func (c *Controller) GetAcceptedBlockWindow() int {
 
 func (c *Controller) Archiver() *archiver.ORMArchiver {
 	return c.archiver
+}
+
+func (c *Controller) RollupRegistry() *rollupregistry.RollupRegistry {
+	return c.rollupRegistry
 }
 
 func (c *Controller) NetworkID() uint32 {

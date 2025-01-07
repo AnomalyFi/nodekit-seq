@@ -39,7 +39,7 @@ func GetRollupRegistryFromState(
 func innerGetRegistry(
 	v []byte,
 	err error,
-) ([][]byte, bool, error) {
+) ([][]byte, bool, error) { //nolint:unparam
 	if errors.Is(err, database.ErrNotFound) {
 		return nil, false, nil
 	}

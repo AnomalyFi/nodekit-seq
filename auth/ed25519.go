@@ -35,7 +35,7 @@ func (d *ED25519) address() codec.Address {
 }
 
 func (*ED25519) GetTypeID() uint8 {
-	return ed25519ID
+	return Ed25519ID
 }
 
 func (*ED25519) ComputeUnits(chain.Rules) uint64 {
@@ -153,5 +153,5 @@ func (b *ED25519Batch) Done() []func() error {
 }
 
 func NewED25519Address(pk ed25519.PublicKey) codec.Address {
-	return codec.CreateAddress(ed25519ID, utils.ToID(pk[:]))
+	return codec.CreateAddress(Ed25519ID, utils.ToID(pk[:]))
 }

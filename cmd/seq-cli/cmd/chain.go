@@ -138,7 +138,7 @@ var testHeaderCmd = &cobra.Command{
 	},
 }
 
-var anchorsCmd = &cobra.Command{
+var rollupsCmd = &cobra.Command{
 	Use: "rollups",
 	RunE: func(_ *cobra.Command, args []string) error {
 		ctx := context.Background()
@@ -150,37 +150,8 @@ var anchorsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("num of anchors registered: %d\n", len(namespaces))
-		// for i := 0; i < len(namespaces); i++ {
-		// 	fmt.Printf("%s: %+v\n", string(namespaces[i]), infos[i])
-		// }
+		fmt.Printf("num of rollups registered: %d\n", len(namespaces))
 
-		return nil
-	},
-}
-
-var replaceAnchorCmd = &cobra.Command{
-	Use: "replace-anchor",
-	RunE: func(_ *cobra.Command, args []string) error {
-		anchorURL, err := handler.Root().PromptString("anchor addr", 0, 500)
-		if err != nil {
-			return err
-		}
-
-		ctx := context.Background()
-		_, _, _, hcli, _, _, err := handler.DefaultActor()
-		if err != nil {
-			return err
-		}
-		replaced, err := hcli.ReplaceAnchor(ctx, anchorURL)
-		if err != nil {
-			return err
-		}
-		if replaced {
-			fmt.Printf("replaced anchor to %s", anchorURL)
-		} else {
-			fmt.Println("unable to replace anchor")
-		}
 		return nil
 	},
 }

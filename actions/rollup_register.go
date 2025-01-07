@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"slices"
 
 	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/chain"
@@ -20,22 +19,21 @@ var _ chain.Action = (*RollupRegistration)(nil)
 
 const (
 	CreateRollup = iota
-	DeleteRollup
+	ExitRollup
 	UpdateRollup
 )
 
 type RollupRegistration struct {
-	Info       hactions.RollupInfo `json:"info"`
-	Namespace  []byte              `json:"namespace"`
-	StartEpoch uint64              `json:"startEpoch"`
-	OpCode     int                 `json:"opcode"`
+	Info      hactions.RollupInfo `json:"info"`
+	Namespace []byte              `json:"namespace"`
+	OpCode    int                 `json:"opcode"`
 }
 
 func (*RollupRegistration) GetTypeID() uint8 {
 	return hactions.RollupRegisterID
 }
 
-func (r *RollupRegistration) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
+func (r *RollupRegistration) StateKeys(_ codec.Address, _ ids.ID) state.Keys {
 	return state.Keys{
 		string(storage.RollupInfoKey(r.Namespace)): state.All,
 		string(storage.RollupRegistryKey()):        state.All,
@@ -46,6 +44,8 @@ func (*RollupRegistration) StateKeysMaxChunks() []uint16 {
 	return []uint16{hactions.RollupInfoChunks, hactions.RollupRegistryChunks}
 }
 
+// TODO: this action needs to be managed by DAO to manage deletions since we are not deleting any namespace from storage
+// but only by marking them as regsitered or exited
 func (r *RollupRegistration) Execute(
 	ctx context.Context,
 	rules chain.Rules,
@@ -65,7 +65,7 @@ func (r *RollupRegistration) Execute(
 
 	namespaces, err := storage.GetRollupRegistry(ctx, mu)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to get namespaces: %s", err.Error())
 	}
 
 	switch r.OpCode {
@@ -73,37 +73,48 @@ func (r *RollupRegistration) Execute(
 		if contains(namespaces, r.Namespace) {
 			return nil, ErrNameSpaceAlreadyRegistered
 		}
-		if r.StartEpoch < Epoch(hght, rules.GetEpochLength())+2 {
-			return nil, fmt.Errorf("epoch number is not valid, minimum: %d, actual: %d", Epoch(hght, rules.GetEpochLength())+2, r.StartEpoch)
+		if r.Info.StartEpoch < Epoch(hght, rules.GetEpochLength())+2 || r.Info.ExitEpoch != 0 {
+			return nil, fmt.Errorf("epoch number is not valid, minimum: %d, actual: %d, exit: %d", Epoch(hght, rules.GetEpochLength())+2, r.Info.StartEpoch, r.Info.ExitEpoch)
 		}
 		namespaces = append(namespaces, r.Namespace)
 		if err := storage.SetRollupInfo(ctx, mu, r.Namespace, &r.Info); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unable to set rollup info(CREATE): %s", err.Error())
 		}
 	case UpdateRollup:
+		// only allow modifing informations that are not related to ExitEpoch or StartEpoch
 		if err := authorizationChecks(ctx, actor, namespaces, r.Namespace, mu); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("authorization failed(UPDATE): %s", err.Error())
 		}
+
+		rollupInfoExists, err := storage.GetRollupInfo(ctx, mu, r.Namespace)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get existing rollup info(UPDATE): %s", err.Error())
+		}
+
+		// rewrite epoch info
+		r.Info.ExitEpoch = rollupInfoExists.ExitEpoch
+		r.Info.StartEpoch = rollupInfoExists.StartEpoch
 
 		if err := storage.SetRollupInfo(ctx, mu, r.Namespace, &r.Info); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unable to set rollup info(UPDATE): %s", err.Error())
 		}
-	case DeleteRollup:
+	case ExitRollup:
 		if err := authorizationChecks(ctx, actor, namespaces, r.Namespace, mu); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unable to set rollup info(EXIT): %s", err.Error())
+		}
+		rollupInfoExists, err := storage.GetRollupInfo(ctx, mu, r.Namespace)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get existing rollup info(UPDATE): %s", err.Error())
+		}
+		if r.Info.ExitEpoch < rollupInfoExists.StartEpoch || r.Info.ExitEpoch < Epoch(hght, rules.GetEpochLength())+2 {
+			return nil, fmt.Errorf("(EXIT)epoch number is not valid, minimum: %d, actual: %d, start: %d", Epoch(hght, rules.GetEpochLength())+2, r.Info.ExitEpoch, rollupInfoExists.StartEpoch)
 		}
 
-		nsIdx := -1
-		for i, ns := range namespaces {
-			if bytes.Equal(r.Namespace, ns) {
-				nsIdx = i
-				break
-			}
-		}
-		namespaces = slices.Delete(namespaces, nsIdx, nsIdx+1)
+		// overwrite StartEpoch
+		r.Info.StartEpoch = rollupInfoExists.StartEpoch
 
-		if err := storage.DelRollupInfo(ctx, mu, r.Namespace); err != nil {
-			return nil, err
+		if err := storage.SetRollupInfo(ctx, mu, r.Namespace, &r.Info); err != nil {
+			return nil, fmt.Errorf("unable to set rollup info(EXIT): %s", err.Error())
 		}
 	default:
 		return nil, fmt.Errorf("op code(%d) not supported", r.OpCode)
@@ -127,24 +138,18 @@ func (r *RollupRegistration) Marshal(p *codec.Packer) {
 	r.Info.Marshal(p)
 	p.PackBytes(r.Namespace)
 	p.PackInt(r.OpCode)
-	p.PackUint64(r.StartEpoch)
 }
 
 func UnmarshalRollupRegister(p *codec.Packer) (chain.Action, error) {
-	var RollupReg RollupRegistration
+	var rollupReg RollupRegistration
 	info, err := hactions.UnmarshalRollupInfo(p)
 	if err != nil {
 		return nil, err
 	}
-	RollupReg.Info = *info
-	p.UnpackBytes(-1, false, &RollupReg.Namespace)
-	RollupReg.OpCode = p.UnpackInt(false)
-	if RollupReg.OpCode == CreateRollup {
-		RollupReg.StartEpoch = p.UnpackUint64(true)
-	} else {
-		RollupReg.StartEpoch = p.UnpackUint64(false)
-	}
-	return &RollupReg, nil
+	rollupReg.Info = *info
+	p.UnpackBytes(-1, false, &rollupReg.Namespace)
+	rollupReg.OpCode = p.UnpackInt(false)
+	return &rollupReg, nil
 }
 
 func (*RollupRegistration) ValidRange(chain.Rules) (int64, int64) {

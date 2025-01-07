@@ -2,9 +2,9 @@ package storage
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 
+	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/consts"
 	"github.com/AnomalyFi/hypersdk/state"
@@ -12,11 +12,7 @@ import (
 )
 
 func EpochExitsKey(epoch uint64) []byte {
-	k := make([]byte, 1+8+consts.Uint16Len)
-	k[0] = EpochExitsPrefix
-	binary.BigEndian.PutUint64(k[1:], epoch)
-	binary.BigEndian.PutUint16(k[9:], EpochExitsChunks)
-	return k
+	return hactions.EpochExitsKey(epoch)
 }
 
 // This should get all the exits for 1 epoch
@@ -24,7 +20,7 @@ func GetEpochExits(
 	ctx context.Context,
 	im state.Immutable,
 	epoch uint64,
-) (*EpochExitInfo, bool, error) {
+) (*hactions.EpochExitInfo, bool, error) {
 	_, ep, exists, err := getEpochExits(ctx, im, epoch)
 	return ep, exists, err
 }
@@ -33,7 +29,7 @@ func getEpochExits(
 	ctx context.Context,
 	im state.Immutable,
 	epoch uint64,
-) ([]byte, *EpochExitInfo, bool, error) {
+) ([]byte, *hactions.EpochExitInfo, bool, error) {
 	k := EpochExitsKey(epoch)
 	epochExit, exists, err := innerGetEpochExits(im.GetValue(ctx, k))
 	return k, epochExit, exists, err
@@ -44,7 +40,7 @@ func GetEpochExitsFromState(
 	ctx context.Context,
 	f ReadState,
 	epoch uint64,
-) (*EpochExitInfo, error) {
+) (*hactions.EpochExitInfo, error) {
 	k := EpochExitsKey(epoch)
 	values, errs := f(ctx, [][]byte{k})
 	epochExit, _, err := innerGetEpochExits(values[0], errs[0])
@@ -54,7 +50,7 @@ func GetEpochExitsFromState(
 func innerGetEpochExits(
 	v []byte,
 	err error,
-) (*EpochExitInfo, bool, error) {
+) (*hactions.EpochExitInfo, bool, error) {
 	if errors.Is(err, database.ErrNotFound) {
 		return nil, false, nil
 	}
@@ -62,7 +58,7 @@ func innerGetEpochExits(
 		return nil, false, err
 	}
 	p := codec.NewReader(v, consts.NetworkSizeLimit)
-	info, err := UnmarshalEpochExitsInfo(p)
+	info, err := hactions.UnmarshalEpochExitsInfo(p)
 	if err != nil {
 		return nil, false, err
 	}
@@ -73,7 +69,7 @@ func SetEpochExits(
 	ctx context.Context,
 	mu state.Mutable,
 	epoch uint64,
-	info *EpochExitInfo,
+	info *hactions.EpochExitInfo,
 ) error {
 	k := EpochExitsKey(epoch)
 	return setEpochExits(ctx, mu, k, info)
@@ -83,7 +79,7 @@ func setEpochExits(
 	ctx context.Context,
 	mu state.Mutable,
 	key []byte,
-	info *EpochExitInfo,
+	info *hactions.EpochExitInfo,
 ) error {
 	var size int
 	for _, e := range info.Exits {
@@ -91,8 +87,8 @@ func setEpochExits(
 	}
 
 	p := codec.NewWriter(size, consts.NetworkSizeLimit)
-	err := info.Marshal(p)
-	if err != nil {
+	info.Marshal(p)
+	if err := p.Err(); err != nil {
 		return err
 	}
 	infoBytes := p.Bytes()

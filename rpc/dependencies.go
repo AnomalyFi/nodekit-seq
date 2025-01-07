@@ -12,7 +12,7 @@ import (
 	"github.com/AnomalyFi/hypersdk/fees"
 	"github.com/AnomalyFi/nodekit-seq/archiver"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
-	"github.com/AnomalyFi/nodekit-seq/storage"
+	rollupregistry "github.com/AnomalyFi/nodekit-seq/rollup_registry"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/trace"
 	"github.com/ava-labs/avalanchego/utils/logging"
@@ -25,7 +25,7 @@ type Controller interface {
 	Tracer() trace.Tracer
 	GetTransaction(context.Context, ids.ID) (bool, int64, bool, fees.Dimensions, uint64, error)
 	GetBalanceFromState(context.Context, codec.Address) (uint64, error)
-	GetEpochExitsFromState(ctx context.Context, epoch uint64) (*storage.EpochExitInfo, error)
+	GetEpochExitsFromState(ctx context.Context, epoch uint64) (*hactions.EpochExitInfo, error)
 	GetBuilderFromState(ctx context.Context, epoch uint64) ([]byte, error)
 	GetRollupInfoFromState(ctx context.Context, namespace []byte) (*hactions.RollupInfo, error)
 	GetRollupRegistryFromState(ctx context.Context) ([][]byte, error)
@@ -40,4 +40,5 @@ type Controller interface {
 	Logger() logging.Logger
 	// TODO: update this to only have read permission
 	Archiver() *archiver.ORMArchiver
+	RollupRegistry() *rollupregistry.RollupRegistry
 }

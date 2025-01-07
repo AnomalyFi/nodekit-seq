@@ -7,7 +7,6 @@ package actions
 const (
 	TransferID uint8 = 0
 	MsgID      uint8 = 1
-	ExitID     uint8 = 2
 	AuctionID  uint8 = 3
 )
 
