@@ -195,7 +195,7 @@ func (c *Config) Loaded() bool               { return c.loaded }
 func (c *Config) GetETHL1RPC() string        { return c.ETHRPCAddr }
 func (c *Config) GetETHL1WS() string         { return c.ETHWSAddr }
 func (c *Config) GetArcadiaURL() string      { return c.ArcadiaURL }
-func (c *Config) GetValServerConfig() *rpc.JSONRPCValServerConfig {
+func (*Config) GetValServerConfig() *rpc.JSONRPCValServerConfig {
 	return &rpc.JSONRPCValServerConfig{
 		DerivePort: true,
 	}

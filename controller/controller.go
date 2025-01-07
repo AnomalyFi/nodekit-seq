@@ -230,9 +230,15 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 					c.metrics.transfer.Inc()
 				case *actions.SequencerMsg:
 					c.metrics.sequencerMsg.Inc()
+				case *actions.Auction:
+					c.metrics.auction.Inc()
 				case *actions.RollupRegistration:
 					reg := act.(*actions.RollupRegistration)
 					rollups = append(rollups, &reg.Info)
+					c.metrics.rollupRegister.Inc()
+				case *actions.EpochExit:
+					c.metrics.epochExit.Inc()
+
 				}
 			}
 		}

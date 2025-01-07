@@ -65,7 +65,7 @@ func (r *RollupRegistration) Execute(
 
 	namespaces, err := storage.GetRollupRegistry(ctx, mu)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get namespaces: %s", err.Error())
+		return nil, fmt.Errorf("unable to get namespaces: %w", err.Error())
 	}
 
 	switch r.OpCode {
@@ -78,17 +78,17 @@ func (r *RollupRegistration) Execute(
 		}
 		namespaces = append(namespaces, r.Namespace)
 		if err := storage.SetRollupInfo(ctx, mu, r.Namespace, &r.Info); err != nil {
-			return nil, fmt.Errorf("unable to set rollup info(CREATE): %s", err.Error())
+			return nil, fmt.Errorf("unable to set rollup info(CREATE): %w", err.Error())
 		}
 	case UpdateRollup:
 		// only allow modifing informations that are not related to ExitEpoch or StartEpoch
 		if err := authorizationChecks(ctx, actor, namespaces, r.Namespace, mu); err != nil {
-			return nil, fmt.Errorf("authorization failed(UPDATE): %s", err.Error())
+			return nil, fmt.Errorf("authorization failed(UPDATE): %w", err.Error())
 		}
 
 		rollupInfoExists, err := storage.GetRollupInfo(ctx, mu, r.Namespace)
 		if err != nil {
-			return nil, fmt.Errorf("unable to get existing rollup info(UPDATE): %s", err.Error())
+			return nil, fmt.Errorf("unable to get existing rollup info(UPDATE): %w", err.Error())
 		}
 
 		// rewrite epoch info
@@ -96,15 +96,15 @@ func (r *RollupRegistration) Execute(
 		r.Info.StartEpoch = rollupInfoExists.StartEpoch
 
 		if err := storage.SetRollupInfo(ctx, mu, r.Namespace, &r.Info); err != nil {
-			return nil, fmt.Errorf("unable to set rollup info(UPDATE): %s", err.Error())
+			return nil, fmt.Errorf("unable to set rollup info(UPDATE): %w", err.Error())
 		}
 	case ExitRollup:
 		if err := authorizationChecks(ctx, actor, namespaces, r.Namespace, mu); err != nil {
-			return nil, fmt.Errorf("unable to set rollup info(EXIT): %s", err.Error())
+			return nil, fmt.Errorf("unable to set rollup info(EXIT): %w", err.Error())
 		}
 		rollupInfoExists, err := storage.GetRollupInfo(ctx, mu, r.Namespace)
 		if err != nil {
-			return nil, fmt.Errorf("unable to get existing rollup info(UPDATE): %s", err.Error())
+			return nil, fmt.Errorf("unable to get existing rollup info(UPDATE): %w", err.Error())
 		}
 		if r.Info.ExitEpoch < rollupInfoExists.StartEpoch || r.Info.ExitEpoch < Epoch(hght, rules.GetEpochLength())+2 {
 			return nil, fmt.Errorf("(EXIT)epoch number is not valid, minimum: %d, actual: %d, start: %d", Epoch(hght, rules.GetEpochLength())+2, r.Info.ExitEpoch, rollupInfoExists.StartEpoch)
@@ -114,7 +114,7 @@ func (r *RollupRegistration) Execute(
 		r.Info.StartEpoch = rollupInfoExists.StartEpoch
 
 		if err := storage.SetRollupInfo(ctx, mu, r.Namespace, &r.Info); err != nil {
-			return nil, fmt.Errorf("unable to set rollup info(EXIT): %s", err.Error())
+			return nil, fmt.Errorf("unable to set rollup info(EXIT): %w", err.Error())
 		}
 	default:
 		return nil, fmt.Errorf("op code(%d) not supported", r.OpCode)

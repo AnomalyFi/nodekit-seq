@@ -11,32 +11,17 @@ import (
 )
 
 type metrics struct {
-	createAsset prometheus.Counter
-	mintAsset   prometheus.Counter
-	burnAsset   prometheus.Counter
-
 	transfer prometheus.Counter
 
 	sequencerMsg prometheus.Counter
+	auction      prometheus.Counter
+
+	rollupRegister prometheus.Counter
+	epochExit      prometheus.Counter
 }
 
 func newMetrics(gatherer ametrics.MultiGatherer) (*metrics, error) {
 	m := &metrics{
-		createAsset: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: "actions",
-			Name:      "create_asset",
-			Help:      "number of create asset actions",
-		}),
-		mintAsset: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: "actions",
-			Name:      "mint_asset",
-			Help:      "number of mint asset actions",
-		}),
-		burnAsset: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: "actions",
-			Name:      "burn_asset",
-			Help:      "number of burn asset actions",
-		}),
 		transfer: prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: "actions",
 			Name:      "transfer",
@@ -48,17 +33,36 @@ func newMetrics(gatherer ametrics.MultiGatherer) (*metrics, error) {
 			Name:      "sequencer_msg",
 			Help:      "number of sequencer msg actions",
 		}),
+
+		auction: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: "actions",
+			Name:      "auction",
+			Help:      "number of auction actions",
+		}),
+
+		rollupRegister: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: "actions",
+			Name:      "rollup_register",
+			Help:      "number of rollup register actions",
+		}),
+
+		epochExit: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: "actions",
+			Name:      "epoch_exit",
+			Help:      "number of epoch exit actions",
+		}),
 	}
 	r := prometheus.NewRegistry()
 	errs := wrappers.Errs{}
 	errs.Add(
-		r.Register(m.createAsset),
-		r.Register(m.mintAsset),
-		r.Register(m.burnAsset),
-
 		r.Register(m.transfer),
 
 		r.Register(m.sequencerMsg),
+		r.Register(m.auction),
+
+		r.Register(m.rollupRegister),
+		r.Register(m.epochExit),
+
 		gatherer.Register(consts.Name, r),
 	)
 	return m, errs.Err
