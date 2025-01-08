@@ -225,7 +225,7 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 		}
 		if result.Success {
 			for _, act := range tx.Actions {
-				switch act.(type) {
+				switch act.(type) { //nolint:gocritic
 				case *actions.Transfer:
 					c.metrics.transfer.Inc()
 				case *actions.SequencerMsg:
@@ -233,12 +233,11 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 				case *actions.Auction:
 					c.metrics.auction.Inc()
 				case *actions.RollupRegistration:
-					reg := act.(*actions.RollupRegistration)
+					reg := act.(*actions.RollupRegistration) //nolint:gosimple
 					rollups = append(rollups, &reg.Info)
 					c.metrics.rollupRegister.Inc()
 				case *actions.EpochExit:
 					c.metrics.epochExit.Inc()
-
 				}
 			}
 		}

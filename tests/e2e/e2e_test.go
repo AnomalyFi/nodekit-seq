@@ -44,7 +44,7 @@ import (
 )
 
 const (
-	startAmount = uint64(10000000000000000000)
+	startAmount = uint64(1000000000000000000)
 	sendAmount  = uint64(5000)
 
 	healthPollInterval = 10 * time.Second
@@ -902,6 +902,14 @@ var _ = ginkgo.Describe("[Test]", func() {
 		hutils.Outf("{{green}}txID of submitted data:{{/}}%s at height:{{/}}\n", tx.ID().String(), hght)
 
 		err = instances[0].wsCli.RegisterTx(tx)
+		require.NoError(err)
+		err = instances[1].wsCli.RegisterTx(tx)
+		require.NoError(err)
+		err = instances[2].wsCli.RegisterTx(tx)
+		require.NoError(err)
+		err = instances[3].wsCli.RegisterTx(tx)
+		require.NoError(err)
+		err = instances[4].wsCli.RegisterTx(tx)
 		require.NoError(err)
 		txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
 		require.Equal(tx.ID(), txID)
