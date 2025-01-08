@@ -887,7 +887,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			},
 			&actions.Auction{
 				AuctionInfo: actions.AuctionInfo{
-					EpochNumber:       epochNumber + 2,
+					EpochNumber:       epochNumber + 1,
 					BidPrice:          100,
 					BuilderSEQAddress: builderSEQAddress,
 				},
@@ -899,7 +899,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.NoError(err)
 		_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
 		require.NoError(err)
-		hutils.Outf("{{green}}txID of submitted data:{{/}}%s at height:{{/}}\n", tx.ID().String(), hght)
+		hutils.Outf("{{green}}txID of submitted data:{{/}}%s at height:{{/}}%d\n", tx.ID().String(), hght)
 
 		err = instances[0].wsCli.RegisterTx(tx)
 		require.NoError(err)
