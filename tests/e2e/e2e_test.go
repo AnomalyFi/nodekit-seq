@@ -878,7 +878,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		msg := make([]byte, 16)
 		binary.BigEndian.PutUint64(msg[:8], epochNumber+1)
 		binary.BigEndian.PutUint64(msg[8:], 100)
-		msg = append(msg, pubKeyBytes...)
+		msg = append(msg, builderSEQAddress[:]...)
 		sig := bls.Sign(msg, tpriv)
 		txActions := []chain.Action{
 			&actions.Transfer{
