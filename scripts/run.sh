@@ -136,7 +136,6 @@ find "${TMPDIR}"/avalanchego-"${VERSION}"
 # if you are starting your own devnet (otherwise anyone can access
 # funds using the included demo.pk)
 # Sum of balances should be less than max uint64.
-# total stake can allocate: 10000000000000000000, make sure it is below this or genesis won't load
 # builder address: seq1qxg2p2au72mweweuyu3dx8dhla6gyky630azwsvnc69tvg0m6qx9uqms9wx
 # opnode address: seq1qy94dndd0wzru9gvq3ayw52ngcd2fuhyptt58f4a3eppjzpx573qg9cr7sm
 echo "creating allocations file"

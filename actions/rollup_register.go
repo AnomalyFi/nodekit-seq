@@ -88,7 +88,6 @@ func (r *RollupRegistration) Execute(
 		if err := storage.SetRollupInfo(ctx, mu, r.Namespace, &r.Info); err != nil {
 			return nil, fmt.Errorf("unable to set rollup info(CREATE): %w", err)
 		}
-	// TODO: not useful as CreateRollup now handle both creation and update
 	case UpdateRollup:
 		// only allow modifing informations that are not related to ExitEpoch or StartEpoch
 		if err := authorizationChecks(ctx, actor, namespaces, r.Namespace, mu); err != nil {
