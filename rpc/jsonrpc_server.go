@@ -399,6 +399,10 @@ func (j *JSONRPCServer) GetRollupInfo(req *http.Request, args *types.GetRollupIn
 	if err != nil {
 		return err
 	}
+	if info == nil {
+		return fmt.Errorf("not such rollup in state")
+	}
+
 	reply.Info = *info
 	return nil
 }

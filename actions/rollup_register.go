@@ -70,13 +70,21 @@ func (r *RollupRegistration) Execute(
 
 	switch r.OpCode {
 	case CreateRollup:
-		if contains(namespaces, r.Namespace) {
-			return nil, ErrNameSpaceAlreadyRegistered
+		if !contains(namespaces, r.Namespace) {
+			namespaces = append(namespaces, r.Namespace)
+		} else {
+			// only allow modifing informations that are not related to ExitEpoch or StartEpoch
+			if err := authorizationChecks(ctx, actor, namespaces, r.Namespace, mu); err != nil {
+				return nil, fmt.Errorf("authorization failed: %s", err.Error())
+			}
 		}
 		if r.Info.StartEpoch < Epoch(hght, rules.GetEpochLength())+2 || r.Info.ExitEpoch != 0 {
 			return nil, fmt.Errorf("epoch number is not valid, minimum: %d, actual: %d, exit: %d", Epoch(hght, rules.GetEpochLength())+2, r.Info.StartEpoch, r.Info.ExitEpoch)
 		}
-		namespaces = append(namespaces, r.Namespace)
+		if r.Info.ExitEpoch != 0 {
+			return nil, fmt.Errorf("exit epoch not 0")
+		}
+
 		if err := storage.SetRollupInfo(ctx, mu, r.Namespace, &r.Info); err != nil {
 			return nil, fmt.Errorf("unable to set rollup info(CREATE): %w", err)
 		}
