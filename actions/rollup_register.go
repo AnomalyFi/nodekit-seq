@@ -75,7 +75,7 @@ func (r *RollupRegistration) Execute(
 		} else {
 			// only allow modifing informations that are not related to ExitEpoch or StartEpoch
 			if err := authorizationChecks(ctx, actor, namespaces, r.Namespace, mu); err != nil {
-				return nil, fmt.Errorf("authorization failed: %s", err.Error())
+				return nil, fmt.Errorf("authorization failed: %w", err)
 			}
 		}
 		if r.Info.StartEpoch < Epoch(hght, rules.GetEpochLength())+2 || r.Info.ExitEpoch != 0 {

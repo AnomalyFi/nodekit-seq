@@ -26,10 +26,10 @@ type AuctionInfo struct {
 	BuilderSEQAddress codec.Address `json:"builderSEQAddress"`
 }
 
-func (a *AuctionInfo) HashAuctionInfo() ([32]byte, error) {
-	msg := binary.BigEndian.AppendUint64(nil, a.EpochNumber)
-	msg = binary.BigEndian.AppendUint64(msg, a.BidPrice)
-	msg = append(msg, a.BuilderSEQAddress[:]...)
+func (info *AuctionInfo) HashAuctionInfo() ([32]byte, error) {
+	msg := binary.BigEndian.AppendUint64(nil, info.EpochNumber)
+	msg = binary.BigEndian.AppendUint64(msg, info.BidPrice)
+	msg = append(msg, info.BuilderSEQAddress[:]...)
 	hash := sha256.Sum256(msg)
 	return hash, nil
 }
