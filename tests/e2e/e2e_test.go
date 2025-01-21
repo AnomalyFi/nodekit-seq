@@ -875,22 +875,21 @@ var _ = ginkgo.Describe("[Test]", func() {
 		}
 		epochNumber, err := instances[0].cli.GetCurrentEpoch()
 		require.NoError(err)
-		msg := make([]byte, 16)
-		binary.BigEndian.PutUint64(msg[:8], epochNumber+1)
-		binary.BigEndian.PutUint64(msg[8:], 100)
-		msg = append(msg, builderSEQAddress[:]...)
-		sig := bls.Sign(msg, tpriv)
+		auctionInfo := actions.AuctionInfo{
+			EpochNumber:       epochNumber + 1,
+			BidPrice:          100,
+			BuilderSEQAddress: builderSEQAddress,
+		}
+		digest, err := auctionInfo.HashAuctionInfo()
+		require.NoError(err)
+		sig := bls.Sign(digest[:], tpriv)
 		txActions := []chain.Action{
 			&actions.Transfer{
 				To:    builderSEQAddress,
 				Value: 200,
 			},
 			&actions.Auction{
-				AuctionInfo: actions.AuctionInfo{
-					EpochNumber:       epochNumber + 1,
-					BidPrice:          100,
-					BuilderSEQAddress: builderSEQAddress,
-				},
+				AuctionInfo:      auctionInfo,
 				BuilderPublicKey: pubKeyBytes,
 				BuilderSignature: bls.SignatureToBytes(sig),
 			},
@@ -1318,44 +1317,45 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.Contains(string(result.Error), "not authorized")
 	})
 
-	ginkgo.It("test already existing namespace in rollup registration", func() {
-		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
-		defer cancel()
-		tpriv, err := bls.GeneratePrivateKey()
-		require.NoError(err)
+	// with previous changes focused on devops ease, this test is irrelevant now.
+	// ginkgo.It("test already existing namespace in rollup registration", func() {
+	// 	ctx := context.Background()
+	// 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	// 	defer cancel()
+	// 	tpriv, err := bls.GeneratePrivateKey()
+	// 	require.NoError(err)
 
-		pubKey := bls.PublicFromPrivateKey(tpriv)
-		seqAddress := auth.NewBLSAddress(pubKey)
+	// 	pubKey := bls.PublicFromPrivateKey(tpriv)
+	// 	seqAddress := auth.NewBLSAddress(pubKey)
 
-		currEpoch, err := instances[0].cli.GetCurrentEpoch()
-		require.NoError(err)
-		txActions := []chain.Action{&actions.RollupRegistration{
-			Info: hactions.RollupInfo{
-				Namespace:           []byte("nkit"),
-				FeeRecipient:        seqAddress,
-				AuthoritySEQAddress: seqAddress,
-				SequencerPublicKey:  pubKeyDummy,
-				StartEpoch:          currEpoch + 5,
-			},
-			Namespace: []byte("nkit"),
-			OpCode:    actions.CreateRollup,
-		}}
-		parser, err := instances[0].tcli.Parser(ctx)
-		require.NoError(err)
-		_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
-		require.NoError(err)
-		hutils.Outf("{{green}}txID of submitted data:{{/}}%s\n", tx.ID().String())
+	// 	currEpoch, err := instances[0].cli.GetCurrentEpoch()
+	// 	require.NoError(err)
+	// 	txActions := []chain.Action{&actions.RollupRegistration{
+	// 		Info: hactions.RollupInfo{
+	// 			Namespace:           []byte("nkit"),
+	// 			FeeRecipient:        seqAddress,
+	// 			AuthoritySEQAddress: seqAddress,
+	// 			SequencerPublicKey:  pubKeyDummy,
+	// 			StartEpoch:          currEpoch + 5,
+	// 		},
+	// 		Namespace: []byte("nkit"),
+	// 		OpCode:    actions.CreateRollup,
+	// 	}}
+	// 	parser, err := instances[0].tcli.Parser(ctx)
+	// 	require.NoError(err)
+	// 	_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
+	// 	require.NoError(err)
+	// 	hutils.Outf("{{green}}txID of submitted data:{{/}}%s\n", tx.ID().String())
 
-		err = instances[0].wsCli.RegisterTx(tx)
-		require.NoError(err)
-		txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
-		require.Equal(tx.ID(), txID)
-		require.NoError(err)
-		require.NoError(txErr)
-		require.False(result.Success)
-		require.Contains(string(result.Error), "namespace already registered")
-	})
+	// 	err = instances[0].wsCli.RegisterTx(tx)
+	// 	require.NoError(err)
+	// 	txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
+	// 	require.Equal(tx.ID(), txID)
+	// 	require.NoError(err)
+	// 	require.NoError(txErr)
+	// 	require.False(result.Success)
+	// 	require.Contains(string(result.Error), "namespace already registered")
+	// })
 
 	var currEpoch uint64
 
