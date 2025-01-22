@@ -5,15 +5,22 @@ import (
 	"fmt"
 	"math/big"
 
-	// "github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/ava-labs/avalanchego/ids"
+
+	hactions "github.com/AnomalyFi/hypersdk/actions"
 )
 
 type SEQTransaction struct {
 	Namespace   string `json:"namespace"`
-	Tx_id       string `json:"tx_id"`
+	TxID        string `json:"tx_id"`
 	Index       uint64 `json:"tx_index"`
 	Transaction []byte `json:"transaction"`
+}
+
+type SEQTransactionResponse struct {
+	Txs     []*SEQTransaction `json:"txs"`
+	BlockID string            `json:"id"`
 }
 
 type SequencerBlock struct {
@@ -106,12 +113,12 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (self *Header) Commit() Commitment {
+func (h *Header) Commit() Commitment {
 	return NewRawCommitmentBuilder("BLOCK").
-		Uint64Field("height", self.Height).
-		Uint64Field("timestamp", self.Timestamp).
-		Uint64Field("l1_head", self.L1Head).
-		Field("transactions_root", self.TransactionsRoot.Commit()).
+		Uint64Field("height", h.Height).
+		Uint64Field("timestamp", h.Timestamp).
+		Uint64Field("l1_head", h.L1Head).
+		Field("transactions_root", h.TransactionsRoot.Commit()).
 		Finalize()
 }
 
@@ -138,10 +145,113 @@ func (r *NmtRoot) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (self *NmtRoot) Commit() Commitment {
+func (r *NmtRoot) Commit() Commitment {
 	return NewRawCommitmentBuilder("NMTROOT").
-		VarSizeField("root", self.Root).
+		VarSizeField("root", r.Root).
 		Finalize()
 }
 
 type Bytes []byte
+
+type BlockInfo struct {
+	BlockID   string `json:"id"`
+	Timestamp int64  `json:"timestamp"`
+	L1Head    uint64 `json:"l1_head"`
+	Height    uint64 `json:"height"`
+}
+
+type BlockHeadersResponse struct {
+	From   uint64      `json:"from"`
+	Blocks []BlockInfo `json:"blocks"`
+	Prev   BlockInfo   `json:"prev"`
+	Next   BlockInfo   `json:"next"`
+}
+
+type GetBlockHeadersIDArgs struct {
+	ID           string `json:"id"`
+	EndTimeStamp int64  `json:"end_timestamp"`
+}
+
+type GetBlockHeadersByHeightArgs struct {
+	Height       uint64 `json:"height"`
+	EndTimeStamp int64  `json:"end_timestamp"`
+}
+
+type GetBlockHeadersByStartTimeStampArgs struct {
+	StartTimeStamp int64 `json:"start_timestamp"`
+	EndTimeStamp   int64 `json:"end_timestamp"`
+}
+
+type GetBlockCommitmentArgs struct {
+	First         uint64 `json:"first"`
+	CurrentHeight uint64 `json:"current_height"`
+	MaxBlocks     int    `json:"max_blocks"`
+}
+
+type SequencerWarpBlockResponse struct {
+	Blocks []SequencerWarpBlock `json:"blocks"`
+}
+
+type SequencerWarpBlock struct {
+	BlockID    string   `json:"id"`
+	Timestamp  int64    `json:"timestamp"`
+	L1Head     uint64   `json:"l1_head"`
+	Height     *big.Int `json:"height"`
+	BlockRoot  *big.Int `json:"root"`
+	ParentRoot *big.Int `json:"parent"`
+}
+
+type GetBlockTransactionsArgs struct {
+	ID string `json:"block_id"`
+}
+
+type TransactionResponse struct {
+	Txs     []*chain.Transaction `json:"txs"`
+	BlockID string               `json:"id"`
+}
+
+type GetBlockTransactionsByNamespaceArgs struct {
+	Height    uint64 `json:"height"`
+	Namespace string `json:"namespace"`
+}
+
+type RegistryReply struct {
+	Namespaces [][]byte `json:"namespaces"`
+}
+
+type EpochExitsArgs struct {
+	Epoch uint64 `json:"epoch"`
+}
+
+type EpochExitsReply struct {
+	Info *hactions.EpochExitInfo `json:"info"`
+}
+
+type GetRollupInfoArgs struct {
+	Namespace []byte `json:"namespace"`
+}
+
+type GetRollupInfoReply struct {
+	Info hactions.RollupInfo `json:"rollupInfo"`
+}
+
+type GetBuilderArgs struct {
+	Epoch uint64 `json:"epoch"`
+}
+
+type GetBuilderReply struct {
+	BuilderPubKey []byte `json:"builderPubKey"`
+}
+
+type GetAllRollupInfoReply struct {
+	// epoch -> a list of rollup registration info
+	Info map[uint64][]hactions.RollupInfo `json:"info"`
+}
+
+type GetRollupsInfoAtEpochArgs struct {
+	Epoch uint64 `json:"epoch"`
+}
+
+type GetRollupsInfoAtEpochReply struct {
+	Rollups []*hactions.RollupInfo `json:"rollups"`
+}

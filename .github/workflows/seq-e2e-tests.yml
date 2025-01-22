@@ -1,0 +1,40 @@
+name: SEQ e2e tests
+
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+    types: [labeled,synchronize,reopened]
+
+jobs:
+  seq-e2e-tests:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v3
+      - name: Install killall
+        run: |
+          sudo apt-get update
+          sudo apt-get install psmisc
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.21"
+          check-latest: true
+          cache: true
+          cache-dependency-path: |
+            go.sum
+      - name: Run ETH L1
+        uses: hoverkraft-tech/compose-action@v2.0.1
+        with:
+          compose-file: "./compose.yml"
+          down-flags: |
+            -v
+          services: |
+            l1
+      - name: Run e2e tests
+        run: |
+          chmod +x ./scripts/run.sh
+          MODE="test" ./scripts/run.sh
+        shell: bash

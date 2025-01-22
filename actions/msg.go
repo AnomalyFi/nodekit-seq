@@ -9,85 +9,67 @@ import (
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/consts"
-	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
 	"github.com/AnomalyFi/hypersdk/state"
-	"github.com/AnomalyFi/nodekit-seq/auth"
-	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
 )
 
 var _ chain.Action = (*SequencerMsg)(nil)
 
 type SequencerMsg struct {
-	ChainId     []byte            `protobuf:"bytes,1,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
-	Data        []byte            `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
-	FromAddress ed25519.PublicKey `json:"from_address"`
-	// `protobuf:"bytes,3,opt,name=from_address,json=fromAddress,proto3" json:"from_address,omitempty"`
+	ChainID     []byte        `json:"chain_id"` // little endian encoded uint64
+	Data        []byte        `json:"data"`
+	FromAddress codec.Address `json:"from_address"`
+	RelayerID   int           `json:"relayer_id"`
 }
 
 func (*SequencerMsg) GetTypeID() uint8 {
-	return msgID
+	return MsgID
 }
 
-func (t *SequencerMsg) StateKeys(rauth chain.Auth, _ ids.ID) []string {
-	// owner, err := utils.ParseAddress(t.FromAddress)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	return []string{
-		// We always pay fees with the native asset (which is [ids.Empty])
-		string(storage.BalanceKey(auth.GetActor(rauth), ids.Empty)),
-		// string(t.ChainId),
-		// string(t.Data),
-	}
+func (*SequencerMsg) StateKeys(_ codec.Address, _ ids.ID) state.Keys {
+	return state.Keys{}
 }
 
 // TODO fix this
 func (*SequencerMsg) StateKeysMaxChunks() []uint16 {
-	return []uint16{storage.BalanceChunks}
+	return []uint16{}
 }
 
-func (*SequencerMsg) OutputsWarpMessage() bool {
-	return false
-}
-
-func (t *SequencerMsg) Execute(
-	ctx context.Context,
+func (*SequencerMsg) Execute(
+	_ context.Context,
 	_ chain.Rules,
-	mu state.Mutable,
+	_ state.Mutable,
 	_ int64,
-	rauth chain.Auth,
+	_ uint64,
+	_ codec.Address,
 	_ ids.ID,
-	_ bool,
-) (bool, uint64, []byte, *warp.UnsignedMessage, error) {
-	return true, MsgComputeUnits, nil, nil, nil
+) ([][]byte, error) {
+	return nil, nil
 }
 
-func (*SequencerMsg) MaxComputeUnits(chain.Rules) uint64 {
+func (*SequencerMsg) ComputeUnits(codec.Address, chain.Rules) uint64 {
 	return MsgComputeUnits
 }
 
-func (*SequencerMsg) Size() int {
-	// TODO this should be larger because it should consider the max byte array length
-	// We use size as the price of this transaction but we could just as easily
-	// use any other calculation.
-	return ed25519.PublicKeyLen + consts.IDLen + consts.Uint64Len
+func (msg *SequencerMsg) Size() int {
+	return codec.BytesLen(msg.ChainID) + codec.BytesLen(msg.Data) + codec.AddressLen + consts.IntLen
 }
 
-func (t *SequencerMsg) Marshal(p *codec.Packer) {
-	p.PackPublicKey(t.FromAddress)
-	p.PackBytes(t.Data)
-	p.PackBytes(t.ChainId)
+func (msg *SequencerMsg) Marshal(p *codec.Packer) {
+	p.PackAddress(msg.FromAddress)
+	p.PackBytes(msg.Data)
+	p.PackBytes(msg.ChainID)
+	p.PackInt(msg.RelayerID)
 }
 
-func UnmarshalSequencerMsg(p *codec.Packer, _ *warp.Message) (chain.Action, error) {
+func UnmarshalSequencerMsg(p *codec.Packer) (chain.Action, error) {
 	var sequencermsg SequencerMsg
-	p.UnpackPublicKey(false, &sequencermsg.FromAddress)
+	p.UnpackAddress(&sequencermsg.FromAddress)
 	// TODO need to correct this and check byte count
 	p.UnpackBytes(-1, true, &sequencermsg.Data)
-	p.UnpackBytes(-1, true, &sequencermsg.ChainId)
+	p.UnpackBytes(-1, true, &sequencermsg.ChainID)
+	// Note, required has to be false or RelayerID of 0 will report ID not populated
+	sequencermsg.RelayerID = p.UnpackInt(false)
 	return &sequencermsg, p.Err()
 }
 
@@ -96,6 +78,10 @@ func (*SequencerMsg) ValidRange(chain.Rules) (int64, int64) {
 	return -1, -1
 }
 
-func (t *SequencerMsg) NMTNamespace() []byte {
-	return t.ChainId
+func (msg *SequencerMsg) NMTNamespace() []byte {
+	return msg.ChainID
+}
+
+func (*SequencerMsg) UseFeeMarket() bool {
+	return true
 }

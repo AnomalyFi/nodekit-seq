@@ -6,25 +6,39 @@ package rpc
 import (
 	"context"
 
+	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/chain"
-	"github.com/AnomalyFi/hypersdk/crypto/ed25519"
+	"github.com/AnomalyFi/hypersdk/codec"
+	"github.com/AnomalyFi/hypersdk/fees"
+	"github.com/AnomalyFi/nodekit-seq/archiver"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
+	rollupregistry "github.com/AnomalyFi/nodekit-seq/rollup_registry"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/trace"
+	"github.com/ava-labs/avalanchego/utils/logging"
 )
 
 type Controller interface {
+	NetworkID() uint32
+	ChainID() ids.ID
 	Genesis() *genesis.Genesis
 	Tracer() trace.Tracer
-	GetTransaction(context.Context, ids.ID) (bool, int64, bool, chain.Dimensions, uint64, error)
-	GetAssetFromState(context.Context, ids.ID) (bool, []byte, uint8, []byte, uint64, ed25519.PublicKey, bool, error)
-	GetBalanceFromState(context.Context, ed25519.PublicKey, ids.ID) (uint64, error)
-	GetLoanFromState(context.Context, ids.ID, ids.ID) (uint64, error)
-	UnitPrices(ctx context.Context) (chain.Dimensions, error)
+	GetTransaction(context.Context, ids.ID) (bool, int64, bool, fees.Dimensions, uint64, error)
+	GetBalanceFromState(context.Context, codec.Address) (uint64, error)
+	GetEpochExitsFromState(ctx context.Context, epoch uint64) (*hactions.EpochExitInfo, error)
+	GetBuilderFromState(ctx context.Context, epoch uint64) ([]byte, error)
+	GetRollupInfoFromState(ctx context.Context, namespace []byte) (*hactions.RollupInfo, error)
+	GetRollupRegistryFromState(ctx context.Context) ([][]byte, error)
+	UnitPrices(ctx context.Context) (fees.Dimensions, error)
+	NameSpacesPrice(ctx context.Context, namespaces []string) ([]uint64, error)
 	GetAcceptedBlockWindow() int
 	Submit(
 		ctx context.Context,
 		verifySig bool,
 		txs []*chain.Transaction,
 	) (errs []error)
+	Logger() logging.Logger
+	// TODO: update this to only have read permission
+	Archiver() *archiver.ORMArchiver
+	RollupRegistry() *rollupregistry.RollupRegistry
 }

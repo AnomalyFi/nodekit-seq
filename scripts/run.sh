@@ -17,27 +17,41 @@ if ! [[ "$0" =~ scripts/run.sh ]]; then
   exit 255
 fi
 
-VERSION=v1.10.10-beta.2
+VERSION=v1.11.10
 MAX_UINT64=18446744073709551615
 MODE=${MODE:-run}
-LOGLEVEL=${LOGLEVEL:-info}
+LOG_LEVEL=${LOG_LEVEL:-INFO}
+AGO_LOG_LEVEL=${AGO_LOG_LEVEL:-INFO}
+AGO_LOG_DISPLAY_LEVEL=${AGO_LOG_DISPLAY_LEVEL:-INFO}
 STATESYNC_DELAY=${STATESYNC_DELAY:-0}
-MIN_BLOCK_GAP=${MIN_BLOCK_GAP:-100}
+MIN_BLOCK_GAP=${MIN_BLOCK_GAP:-2000}
+MIN_EMPTY_BLOCK_GAP=${MIN_EMPTY_BLOCK_GAP:-2000}
+EPOCH_LENGTH=${EPOCH_LENGTH:-6} # 6 SEQ blocks
 STORE_TXS=${STORE_TXS:-false}
 UNLIMITED_USAGE=${UNLIMITED_USAGE:-false}
 STORE_BLOCK_RESULTS_ON_DISK=${STORE_BLOCK_RESULTS_ON_DISK:-true}
 ETHL1RPC=${ETHL1RPC:-http://localhost:8545}
 ETHL1WS=${ETHL1WS:-ws://localhost:8546}
-if [[ ${MODE} != "run" && ${MODE} != "run-single" ]]; then
-  LOGLEVEL=debug
+ARCADIA_URL=${ARCADIA_URL:-http://localhost:12345}
+ADDRESS=${ADDRESS:-seq1qrzvk4zlwj9zsacqgtufx7zvapd3quufqpxk5rsdd4633m4wz2fdjlydh3t}
+if [[ ${MODE} != "run" ]]; then
+  LOG_LEVEL=INFO
+  AGO_LOG_DISPLAY_LEVEL=INFO
   STATESYNC_DELAY=100000000 # 100ms
   MIN_BLOCK_GAP=250 #ms
+  MIN_EMPTY_BLOCK_GAP=250 #ms
+  EPOCH_LENGTH=48
   STORE_TXS=true
   UNLIMITED_USAGE=true
 fi
 
+DB_PATH="/tmp/sqlite.NodeID*.db"
+if compgen -G "$DB_PATH" > /dev/null; then
+  rm $DB_PATH
+fi
+
 WINDOW_TARGET_UNITS="40000000,450000,450000,450000,450000"
-MAX_BLOCK_UNITS="1800000,15000,15000,2500,15000"
+MAX_BLOCK_UNITS="1800000,15000,15000,10000,15000"
 if ${UNLIMITED_USAGE}; then
   WINDOW_TARGET_UNITS="${MAX_UINT64},${MAX_UINT64},${MAX_UINT64},${MAX_UINT64},${MAX_UINT64}"
   # If we don't limit the block size, AvalancheGo will reject the block.
@@ -45,20 +59,22 @@ if ${UNLIMITED_USAGE}; then
 fi
 
 echo "Running with:"
-echo LOGLEVEL: ${LOGLEVEL}
-echo VERSION: ${VERSION}
-echo MODE: ${MODE}
-echo STATESYNC_DELAY \(ns\): ${STATESYNC_DELAY}
-echo MIN_BLOCK_GAP \(ms\): ${MIN_BLOCK_GAP}
-echo STORE_TXS: ${STORE_TXS}
-echo WINDOW_TARGET_UNITS: ${WINDOW_TARGET_UNITS}
-echo MAX_BLOCK_UNITS: ${MAX_BLOCK_UNITS}
+echo LOG_LEVEL: "${LOG_LEVEL}"
+echo AGO_LOG_LEVEL: "${AGO_LOG_LEVEL}"
+echo AGO_LOG_DISPLAY_LEVEL: "${AGO_LOG_DISPLAY_LEVEL}"
+echo VERSION: "${VERSION}"
+echo MODE: "${MODE}"
+echo STATESYNC_DELAY \(ns\): "${STATESYNC_DELAY}"
+echo MIN_BLOCK_GAP \(ms\): "${MIN_BLOCK_GAP}"
+echo EPOCH_LENGTH : "${EPOCH_LENGTH}"
+echo STORE_TXS: "${STORE_TXS}"
+echo WINDOW_TARGET_UNITS: "${WINDOW_TARGET_UNITS}"
+echo MAX_BLOCK_UNITS: "${MAX_BLOCK_UNITS}"
+echo ADDRESS: "${ADDRESS}"
 
 ############################
 # build avalanchego
 # https://github.com/ava-labs/avalanchego/releases
-GOARCH=$(go env GOARCH)
-GOOS=$(go env GOOS)
 TMPDIR=/tmp/hypersdk
 
 echo "working directory: $TMPDIR"
@@ -71,22 +87,22 @@ if [ ! -f "$AVALANCHEGO_PATH" ]; then
   CWD=$(pwd)
 
   # Clear old folders
-  rm -rf ${TMPDIR}/avalanchego-${VERSION}
-  mkdir -p ${TMPDIR}/avalanchego-${VERSION}
-  rm -rf ${TMPDIR}/avalanchego-src
-  mkdir -p ${TMPDIR}/avalanchego-src
+  rm -rf "${TMPDIR}"/avalanchego-"${VERSION}"
+  mkdir -p "${TMPDIR}"/avalanchego-"${VERSION}"
+  rm -rf "${TMPDIR}"/avalanchego-src
+  mkdir -p "${TMPDIR}"/avalanchego-src
 
   # Download src
-  cd ${TMPDIR}/avalanchego-src
-  git clone https://github.com/AnomalyFi/avalanchego.git
+  cd "${TMPDIR}"/avalanchego-src
+  git clone https://github.com/ava-labs/avalanchego.git
   cd avalanchego
-  git checkout ${VERSION}
+  git checkout "${VERSION}"
 
   # Build avalanchego
   ./scripts/build.sh
-  mv build/avalanchego ${TMPDIR}/avalanchego-${VERSION}
+  mv build/avalanchego "${TMPDIR}"/avalanchego-"${VERSION}"
 
-  cd ${CWD}
+  cd "${CWD}"
 else
   echo "using previously built avalanchego"
 fi
@@ -94,21 +110,21 @@ fi
 ############################
 
 ############################
-echo "building tokenvm"
+echo "building seqvm"
 
 # delete previous (if exists)
-rm -f ${TMPDIR}/avalanchego-${VERSION}/plugins/tHBYNu8ikqo4MWMHehC9iKB9mR5tB3DWzbkYmTfe9buWQ5GZ8
+rm -f "${TMPDIR}"/avalanchego-"${VERSION}"/plugins/speGsUhsx6qC4P2vCCcneVKm57DJNxWgGdGydxAZW53jzaNHj
 
 # rebuild with latest code
 go build \
--o ${TMPDIR}/avalanchego-${VERSION}/plugins/tHBYNu8ikqo4MWMHehC9iKB9mR5tB3DWzbkYmTfe9buWQ5GZ8 \
-./cmd/tokenvm
+-o "${TMPDIR}"/avalanchego-"${VERSION}"/plugins/speGsUhsx6qC4P2vCCcneVKm57DJNxWgGdGydxAZW53jzaNHj \
+./cmd/seqvm
 
-echo "building token-cli"
-go build -v -o ${TMPDIR}/token-cli ./cmd/token-cli
+echo "building seq-cli"
+go build -v -o "${TMPDIR}"/seq-cli ./cmd/seq-cli
 
 # log everything in the avalanchego directory
-find ${TMPDIR}/avalanchego-${VERSION}
+find "${TMPDIR}"/avalanchego-"${VERSION}"
 
 ############################
 
@@ -119,24 +135,33 @@ find ${TMPDIR}/avalanchego-${VERSION}
 # Make sure to replace this address with your own address
 # if you are starting your own devnet (otherwise anyone can access
 # funds using the included demo.pk)
+# Sum of balances should be less than max uint64.
+# builder address: seq1qxg2p2au72mweweuyu3dx8dhla6gyky630azwsvnc69tvg0m6qx9uqms9wx
+# opnode address: seq1qy94dndd0wzru9gvq3ayw52ngcd2fuhyptt58f4a3eppjzpx573qg9cr7sm
 echo "creating allocations file"
-cat <<EOF > ${TMPDIR}/allocations.json
-[{"address":"token1rvzhmceq997zntgvravfagsks6w0ryud3rylh4cdvayry0dl97nsjzf3yp", "balance":10000000000000000000}]
+cat <<EOF > "${TMPDIR}"/allocations.json
+[
+  {"address":"${ADDRESS}", "balance":1000000000000000000},
+  {"address":"seq1qy94dndd0wzru9gvq3ayw52ngcd2fuhyptt58f4a3eppjzpx573qg9cr7sm", "balance":1000000000000000000},
+  {"address":"seq1qxg2p2au72mweweuyu3dx8dhla6gyky630azwsvnc69tvg0m6qx9uqms9wx", "balance":1000000000000000000}
+]
 EOF
 
 GENESIS_PATH=$2
 if [[ -z "${GENESIS_PATH}" ]]; then
   echo "creating VM genesis file with allocations"
-  rm -f ${TMPDIR}/tokenvm.genesis
-  ${TMPDIR}/token-cli genesis generate ${TMPDIR}/allocations.json \
-  --window-target-units ${WINDOW_TARGET_UNITS} \
-  --max-block-units ${MAX_BLOCK_UNITS} \
-  --min-block-gap ${MIN_BLOCK_GAP} \
-  --genesis-file ${TMPDIR}/tokenvm.genesis
+  rm -f "${TMPDIR}"/seqvm.genesis
+  "${TMPDIR}"/seq-cli genesis generate "${TMPDIR}"/allocations.json \
+  --window-target-units "${WINDOW_TARGET_UNITS}" \
+  --max-block-units "${MAX_BLOCK_UNITS}" \
+  --min-block-gap "${MIN_BLOCK_GAP}" \
+  --min-empty-block-gap "${MIN_EMPTY_BLOCK_GAP}" \
+  --epoch-length "${EPOCH_LENGTH}" \
+  --genesis-file "${TMPDIR}"/seqvm.genesis
 else
   echo "copying custom genesis file"
-  rm -f ${TMPDIR}/tokenvm.genesis
-  cp ${GENESIS_PATH} ${TMPDIR}/tokenvm.genesis
+  rm -f "${TMPDIR}"/seqvm.genesis
+  cp "${GENESIS_PATH}" "${TMPDIR}"/seqvm.genesis
 fi
 
 ############################
@@ -147,38 +172,52 @@ fi
 # else malicious entities can attempt to stuff memory with dust orders to cause
 # an OOM.
 echo "creating vm config"
-rm -f ${TMPDIR}/tokenvm.config
-rm -rf ${TMPDIR}/tokenvm-e2e-profiles
-cat <<EOF > ${TMPDIR}/tokenvm.config
+rm -f "${TMPDIR}"/seqvm.config
+rm -rf "${TMPDIR}"/seqvm-e2e-profiles
+cat <<EOF > "${TMPDIR}"/seqvm.config
 {
   "mempoolSize": 10000000,
-  "mempoolPayerSize": 10000000,
-  "mempoolExemptPayers":["token1rvzhmceq997zntgvravfagsks6w0ryud3rylh4cdvayry0dl97nsjzf3yp"],
-  "parallelism": 5,
-  "verifySignatures":true,
+  "mempoolSponsorSize": 10000000,
+  "mempoolExemptSponsors":["${ADDRESS}"],
+  "whitelistedAddresses":["${ADDRESS}"],
+  "authVerificationCores": 2,
+  "rootGenerationCores": 2,
+  "transactionExecutionCores": 2,
+  "verifyAuth": true,
   "storeTransactions": ${STORE_TXS},
   "streamingBacklogSize": 10000000,
-  "trackedPairs":["*"],
-  "logLevel": "${LOGLEVEL}",
-  "continuousProfilerDir":"${TMPDIR}/tokenvm-e2e-profiles/*",
+  "logLevel": "${LOG_LEVEL}",
+  "continuousProfilerDir":"${TMPDIR}/seqvm-e2e-profiles/*",
+  "traceEnabled":false, 
+  "traceSampleRate":1,
   "stateSyncServerDelay": ${STATESYNC_DELAY},
   "storeBlockResultsOnDisk": ${STORE_BLOCK_RESULTS_ON_DISK},
   "ethRPCAddr": "${ETHL1RPC}",
-  "ethWSAddr": "${ETHL1WS}"
+  "ethWSAddr": "${ETHL1WS}",
+  "arcadiaURL": "${ARCADIA_URL}",
+  "archiverConfig": {
+    "enabled": true,
+    "archiverType": "sqlite",
+    "dsn": "/tmp/default.db"
+  },
+  "valRPCConfig": {
+    "derivePort": true,
+    "port": 0
+  }
 }
 EOF
-mkdir -p ${TMPDIR}/tokenvm-e2e-profiles
+mkdir -p "${TMPDIR}"/seqvm-e2e-profiles
 
 ############################
 
 ############################
 
 echo "creating subnet config"
-rm -f ${TMPDIR}/tokenvm.subnet
-cat <<EOF > ${TMPDIR}/tokenvm.subnet
+rm -f "${TMPDIR}"/seqvm.subnet
+cat <<EOF > "${TMPDIR}"/seqvm.subnet
 {
   "proposerMinBlockDelay": 0,
-  "proposerNumHistoricalBlocks": 768
+  "proposerNumHistoricalBlocks": 50000
 }
 EOF
 
@@ -187,7 +226,7 @@ EOF
 ############################
 echo "building e2e.test"
 # to install the ginkgo binary (required for test build and run)
-go install -v github.com/onsi/ginkgo/v2/ginkgo@v2.1.4
+go install -v github.com/onsi/ginkgo/v2/ginkgo@v2.13.1
 
 # alert the user if they do not have $GOPATH properly configured
 if ! command -v ginkgo &> /dev/null
@@ -204,9 +243,9 @@ ACK_GINKGO_RC=true ginkgo build ./tests/e2e
 # download avalanche-network-runner
 # https://github.com/ava-labs/avalanche-network-runner
 ANR_REPO_PATH=github.com/ava-labs/avalanche-network-runner
-ANR_VERSION=v1.7.2
+ANR_VERSION=v1.8.1
 # version set
-go install -v ${ANR_REPO_PATH}@${ANR_VERSION}
+go install -v "${ANR_REPO_PATH}"@"${ANR_VERSION}"
 
 #################################
 # run "avalanche-network-runner" server
@@ -226,7 +265,6 @@ $BIN server \
 --log-level verbo \
 --port=":12352" \
 --grpc-gateway-port=":12353" &
-PID=${!}
 
 ############################
 # By default, it runs all e2e test cases!
@@ -254,18 +292,20 @@ echo "running e2e tests"
 ./tests/e2e/e2e.test \
 --ginkgo.v \
 --network-runner-log-level verbo \
---network-runner-grpc-endpoint="0.0.0.0:12352" \
---network-runner-grpc-gateway-endpoint="0.0.0.0:12353" \
---avalanchego-path=${AVALANCHEGO_PATH} \
---avalanchego-plugin-dir=${AVALANCHEGO_PLUGIN_DIR} \
---vm-genesis-path=${TMPDIR}/tokenvm.genesis \
---vm-config-path=${TMPDIR}/tokenvm.config \
---subnet-config-path=${TMPDIR}/tokenvm.subnet \
---output-path=${TMPDIR}/avalanchego-${VERSION}/output.yaml \
---mode=${MODE}
+--avalanchego-log-level "${AGO_LOG_LEVEL}" \
+--avalanchego-log-display-level "${AGO_LOG_DISPLAY_LEVEL}" \
+--network-runner-grpc-endpoint="127.0.0.1:12352" \
+--network-runner-grpc-gateway-endpoint="127.0.0.1:12353" \
+--avalanchego-path="${AVALANCHEGO_PATH}" \
+--avalanchego-plugin-dir="${AVALANCHEGO_PLUGIN_DIR}" \
+--vm-genesis-path="${TMPDIR}"/seqvm.genesis \
+--vm-config-path="${TMPDIR}"/seqvm.config \
+--subnet-config-path="${TMPDIR}"/seqvm.subnet \
+--output-path="${TMPDIR}"/avalanchego-"${VERSION}"/output.yaml \
+--mode="${MODE}"
 
 ############################
-if [[ ${MODE} == "run" || ${MODE} == "run-single" ]]; then
+if [[ ${MODE} == "run" ]]; then
   echo "cluster is ready!"
   # We made it past initialization and should avoid shutting down the network
   KEEPALIVE=true

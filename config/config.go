@@ -9,16 +9,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/config"
 	"github.com/AnomalyFi/hypersdk/gossiper"
+	"github.com/AnomalyFi/hypersdk/rpc"
 	"github.com/AnomalyFi/hypersdk/trace"
 	"github.com/AnomalyFi/hypersdk/vm"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/ava-labs/avalanchego/utils/profiler"
 
+	"github.com/AnomalyFi/nodekit-seq/archiver"
 	"github.com/AnomalyFi/nodekit-seq/consts"
-	"github.com/AnomalyFi/nodekit-seq/utils"
 	"github.com/AnomalyFi/nodekit-seq/version"
 )
 
@@ -33,6 +35,12 @@ const (
 
 type Config struct {
 	*config.Config
+
+	// Concurrency
+	AuthVerificationCores     int `json:"authVerificationCores"`
+	RootGenerationCores       int `json:"rootGenerationCores"`
+	TransactionExecutionCores int `json:"transactionExecutionCores"`
+	StateFetchConcurrency     int `json:"stateFetchConcurrency"`
 
 	// Gossip
 	GossipMaxSize       int   `json:"gossipMaxSize"`
@@ -49,25 +57,22 @@ type Config struct {
 	ContinuousProfilerDir string `json:"continuousProfilerDir"` // "*" is replaced with rand int
 
 	// Streaming settings
-	StreamingBacklogSize int `json:"streamingBacklogSize"`
+	StreamingBacklogSize    int  `json:"streamingBacklogSize"`
+	StoreBlockResultsOnDisk bool `json:"storeBlockResultsOnDisk"`
 
 	// Mempool
-	MempoolSize         int      `json:"mempoolSize"`
-	MempoolPayerSize    int      `json:"mempoolPayerSize"`
-	MempoolExemptPayers []string `json:"mempoolExemptPayers"`
+	MempoolSize           int      `json:"mempoolSize"`
+	MempoolSponsorSize    int      `json:"mempoolSponsorSize"`
+	MempoolExemptSponsors []string `json:"mempoolExemptSponsors"`
 
-	// Order Book
-	//
-	// This is denoted as <asset 1>-<asset 2>
-	MaxOrdersPerPair int      `json:"maxOrdersPerPair"`
-	TrackedPairs     []string `json:"trackedPairs"` // which asset ID pairs we care about
+	// Whitelisted Address: Address used to get fee discounts, or are allowed to perform specific actions like submitting proofs.
+	WhitelistedAddresses []string `json:"whitelistedAddresses"`
 
 	// Misc
-	VerifySignatures  bool          `json:"verifySignatures"`
+	VerifyAuth        bool          `json:"verifyAuth"`
 	StoreTransactions bool          `json:"storeTransactions"`
 	TestMode          bool          `json:"testMode"` // makes gossip/building manual
 	LogLevel          logging.Level `json:"logLevel"`
-	Parallelism       int           `json:"parallelism"`
 
 	// State Sync
 	StateSyncServerDelay time.Duration `json:"stateSyncServerDelay"` // for testing
@@ -76,9 +81,19 @@ type Config struct {
 	ETHRPCAddr string `json:"ethRPCAddr"`
 	ETHWSAddr  string `json:"ethWSAddr"`
 
-	loaded             bool
-	nodeID             ids.NodeID
-	parsedExemptPayers [][]byte
+	// Archiver
+	ArchiverConfig archiver.ORMArchiverConfig `json:"archiverConfig"`
+
+	// Arcadia
+	ArcadiaURL string `json:"arcadiaURL"`
+
+	// Validator RPC Port
+	ValRPCConfig rpc.JSONRPCValServerConfig `json:"valRPCConfig"`
+
+	loaded                     bool
+	nodeID                     ids.NodeID
+	parsedExemptSponsors       []codec.Address
+	parsedWhiteListedAddresses []codec.Address
 }
 
 func New(nodeID ids.NodeID, b []byte) (*Config, error) {
@@ -91,15 +106,25 @@ func New(nodeID ids.NodeID, b []byte) (*Config, error) {
 		c.loaded = true
 	}
 
-	// Parse any exempt payers (usually used when a single account is
+	// Parse any exempt sponsors (usually used when a single account is
 	// broadcasting many txs at once)
-	c.parsedExemptPayers = make([][]byte, len(c.MempoolExemptPayers))
-	for i, payer := range c.MempoolExemptPayers {
-		p, err := utils.ParseAddress(payer)
+	c.parsedExemptSponsors = make([]codec.Address, len(c.MempoolExemptSponsors))
+	for i, sponsor := range c.MempoolExemptSponsors {
+		p, err := codec.ParseAddressBech32(consts.HRP, sponsor)
 		if err != nil {
 			return nil, err
 		}
-		c.parsedExemptPayers[i] = p[:]
+		c.parsedExemptSponsors[i] = p
+	}
+
+	// Parse whitelisted address. These addresses are authorized to perform certain actions.
+	c.parsedWhiteListedAddresses = make([]codec.Address, len(c.WhitelistedAddresses))
+	for i, addr := range c.WhitelistedAddresses {
+		p, err := codec.ParseAddressBech32(consts.HRP, addr)
+		if err != nil {
+			return nil, err
+		}
+		c.parsedWhiteListedAddresses[i] = p
 	}
 	return c, nil
 }
@@ -112,24 +137,32 @@ func (c *Config) setDefault() {
 	c.GossipProposerDepth = gcfg.GossipProposerDepth
 	c.NoGossipBuilderDiff = gcfg.NoGossipBuilderDiff
 	c.VerifyTimeout = gcfg.VerifyTimeout
-	c.Parallelism = c.Config.GetParallelism()
+	c.AuthVerificationCores = c.Config.GetAuthVerificationCores()
+	c.RootGenerationCores = c.Config.GetRootGenerationCores()
+	c.TransactionExecutionCores = c.Config.GetTransactionExecutionCores()
+	c.StateFetchConcurrency = c.Config.GetStateFetchConcurrency()
 	c.MempoolSize = c.Config.GetMempoolSize()
-	c.MempoolPayerSize = c.Config.GetMempoolPayerSize()
+	c.MempoolSponsorSize = c.Config.GetMempoolSponsorSize()
 	c.StateSyncServerDelay = c.Config.GetStateSyncServerDelay()
 	c.StreamingBacklogSize = c.Config.GetStreamingBacklogSize()
-	c.VerifySignatures = c.Config.GetVerifySignatures()
+	c.VerifyAuth = c.Config.GetVerifyAuth()
 	c.StoreTransactions = defaultStoreTransactions
-	c.MaxOrdersPerPair = defaultMaxOrdersPerPair
+	c.StoreBlockResultsOnDisk = c.Config.GetStoreBlockResultsOnDisk()
 	c.ETHRPCAddr = c.Config.GetETHL1RPC()
 	c.ETHWSAddr = c.Config.GetETHL1WS()
+	c.ArcadiaURL = c.Config.GetArcadiaURL()
+	c.ValRPCConfig = *c.Config.GetValServerConfig()
 }
 
-func (c *Config) GetLogLevel() logging.Level       { return c.LogLevel }
-func (c *Config) GetTestMode() bool                { return c.TestMode }
-func (c *Config) GetParallelism() int              { return c.Parallelism }
-func (c *Config) GetMempoolSize() int              { return c.MempoolSize }
-func (c *Config) GetMempoolPayerSize() int         { return c.MempoolPayerSize }
-func (c *Config) GetMempoolExemptPayers() [][]byte { return c.parsedExemptPayers }
+func (c *Config) GetLogLevel() logging.Level                { return c.LogLevel }
+func (c *Config) GetTestMode() bool                         { return c.TestMode }
+func (c *Config) GetAuthVerificationCores() int             { return c.AuthVerificationCores }
+func (c *Config) GetRootGenerationCores() int               { return c.RootGenerationCores }
+func (c *Config) GetTransactionExecutionCores() int         { return c.TransactionExecutionCores }
+func (c *Config) GetStateFetchConcurrency() int             { return c.StateFetchConcurrency }
+func (c *Config) GetMempoolSize() int                       { return c.MempoolSize }
+func (c *Config) GetMempoolSponsorSize() int                { return c.MempoolSponsorSize }
+func (c *Config) GetMempoolExemptSponsors() []codec.Address { return c.parsedExemptSponsors }
 func (c *Config) GetTraceConfig() *trace.Config {
 	return &trace.Config{
 		Enabled:         c.TraceEnabled,
@@ -141,12 +174,13 @@ func (c *Config) GetTraceConfig() *trace.Config {
 }
 func (c *Config) GetStateSyncServerDelay() time.Duration { return c.StateSyncServerDelay }
 func (c *Config) GetStreamingBacklogSize() int           { return c.StreamingBacklogSize }
+func (c *Config) GetStoreBlockResultsOnDisk() bool       { return c.StoreBlockResultsOnDisk }
 func (c *Config) GetContinuousProfilerConfig() *profiler.Config {
 	if len(c.ContinuousProfilerDir) == 0 {
 		return &profiler.Config{Enabled: false}
 	}
 	// Replace all instances of "*" with nodeID. This is useful when
-	// running multiple instances of tokenvm on the same machine.
+	// running multiple instances of seqvm on the same machine.
 	c.ContinuousProfilerDir = strings.ReplaceAll(c.ContinuousProfilerDir, "*", c.nodeID.String())
 	return &profiler.Config{
 		Enabled:     true,
@@ -155,8 +189,18 @@ func (c *Config) GetContinuousProfilerConfig() *profiler.Config {
 		MaxNumFiles: defaultContinuousProfilerMaxFiles,
 	}
 }
-func (c *Config) GetVerifySignatures() bool  { return c.VerifySignatures }
+func (c *Config) GetVerifyAuth() bool        { return c.VerifyAuth }
 func (c *Config) GetStoreTransactions() bool { return c.StoreTransactions }
 func (c *Config) Loaded() bool               { return c.loaded }
 func (c *Config) GetETHL1RPC() string        { return c.ETHRPCAddr }
 func (c *Config) GetETHL1WS() string         { return c.ETHWSAddr }
+func (c *Config) GetArcadiaURL() string      { return c.ArcadiaURL }
+func (*Config) GetValServerConfig() *rpc.JSONRPCValServerConfig {
+	return &rpc.JSONRPCValServerConfig{
+		DerivePort: true,
+	}
+}
+
+func (c *Config) GetParsedWhiteListedAddress() []codec.Address {
+	return c.parsedWhiteListedAddresses
+}

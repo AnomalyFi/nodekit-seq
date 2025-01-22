@@ -5,7 +5,11 @@ package genesis
 
 import (
 	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/codec"
+	"github.com/AnomalyFi/hypersdk/fees"
 	"github.com/ava-labs/avalanchego/ids"
+
+	"github.com/AnomalyFi/nodekit-seq/storage"
 )
 
 var _ chain.Rules = (*Rules)(nil)
@@ -13,21 +17,14 @@ var _ chain.Rules = (*Rules)(nil)
 type Rules struct {
 	g *Genesis
 
-	networkID uint32
-	chainID   ids.ID
+	networkID                uint32
+	chainID                  ids.ID
+	parsedWhiteListedAddress []codec.Address
 }
 
 // TODO: use upgradeBytes
-func (g *Genesis) Rules(_ int64, networkID uint32, chainID ids.ID) *Rules {
-	return &Rules{g, networkID, chainID}
-}
-
-func (*Rules) GetWarpConfig(ids.ID) (bool, uint64, uint64) {
-	// We allow inbound transfers from all sources as long as 80% of stake has
-	// signed a message.
-	//
-	// This is safe because the tokenvm scopes all assets by their source chain.
-	return true, 4, 5
+func (g *Genesis) Rules(_ int64, networkID uint32, chainID ids.ID, parsedWhiteListedAddresses []codec.Address) *Rules {
+	return &Rules{g, networkID, chainID, parsedWhiteListedAddresses}
 }
 
 func (r *Rules) NetworkID() uint32 {
@@ -50,7 +47,19 @@ func (r *Rules) GetValidityWindow() int64 {
 	return r.g.ValidityWindow
 }
 
-func (r *Rules) GetMaxBlockUnits() chain.Dimensions {
+func (r *Rules) GetEpochLength() int64 {
+	return r.g.EpochLength
+}
+
+func (r *Rules) GetMaxActionsPerTx() uint8 {
+	return r.g.MaxActionsPerTx
+}
+
+func (r *Rules) GetMaxOutputsPerAction() uint8 {
+	return r.g.MaxOutputsPerAction
+}
+
+func (r *Rules) GetMaxBlockUnits() fees.Dimensions {
 	return r.g.MaxBlockUnits
 }
 
@@ -58,70 +67,61 @@ func (r *Rules) GetBaseComputeUnits() uint64 {
 	return r.g.BaseComputeUnits
 }
 
-func (r *Rules) GetBaseWarpComputeUnits() uint64 {
-	return r.g.BaseWarpComputeUnits
+func (*Rules) GetSponsorStateKeysMaxChunks() []uint16 {
+	return []uint16{storage.BalanceChunks}
 }
 
-func (r *Rules) GetWarpComputeUnitsPerSigner() uint64 {
-	return r.g.WarpComputeUnitsPerSigner
+func (r *Rules) GetStorageKeyReadUnits() uint64 {
+	return r.g.StorageKeyReadUnits
 }
 
-func (r *Rules) GetOutgoingWarpComputeUnits() uint64 {
-	return r.g.OutgoingWarpComputeUnits
+func (r *Rules) GetStorageValueReadUnits() uint64 {
+	return r.g.StorageValueReadUnits
 }
 
-func (r *Rules) GetColdStorageKeyReadUnits() uint64 {
-	return r.g.ColdStorageKeyReadUnits
+func (r *Rules) GetStorageKeyAllocateUnits() uint64 {
+	return r.g.StorageKeyAllocateUnits
 }
 
-func (r *Rules) GetColdStorageValueReadUnits() uint64 {
-	return r.g.ColdStorageValueReadUnits
+func (r *Rules) GetStorageValueAllocateUnits() uint64 {
+	return r.g.StorageValueAllocateUnits
 }
 
-func (r *Rules) GetWarmStorageKeyReadUnits() uint64 {
-	return r.g.WarmStorageKeyReadUnits
+func (r *Rules) GetStorageKeyWriteUnits() uint64 {
+	return r.g.StorageKeyWriteUnits
 }
 
-func (r *Rules) GetWarmStorageValueReadUnits() uint64 {
-	return r.g.WarmStorageValueReadUnits
+func (r *Rules) GetStorageValueWriteUnits() uint64 {
+	return r.g.StorageValueWriteUnits
 }
 
-func (r *Rules) GetStorageKeyCreateUnits() uint64 {
-	return r.g.StorageKeyCreateUnits
-}
-
-func (r *Rules) GetStorageValueCreateUnits() uint64 {
-	return r.g.StorageValueCreateUnits
-}
-
-func (r *Rules) GetColdStorageKeyModificationUnits() uint64 {
-	return r.g.ColdStorageKeyModificationUnits
-}
-
-func (r *Rules) GetColdStorageValueModificationUnits() uint64 {
-	return r.g.ColdStorageValueModificationUnits
-}
-
-func (r *Rules) GetWarmStorageKeyModificationUnits() uint64 {
-	return r.g.WarmStorageKeyModificationUnits
-}
-
-func (r *Rules) GetWarmStorageValueModificationUnits() uint64 {
-	return r.g.WarmStorageValueModificationUnits
-}
-
-func (r *Rules) GetMinUnitPrice() chain.Dimensions {
+func (r *Rules) GetMinUnitPrice() fees.Dimensions {
 	return r.g.MinUnitPrice
 }
 
-func (r *Rules) GetUnitPriceChangeDenominator() chain.Dimensions {
+func (r *Rules) GetUnitPriceChangeDenominator() fees.Dimensions {
 	return r.g.UnitPriceChangeDenominator
 }
 
-func (r *Rules) GetWindowTargetUnits() chain.Dimensions {
+func (r *Rules) GetWindowTargetUnits() fees.Dimensions {
 	return r.g.WindowTargetUnits
 }
 
-func (*Rules) FetchCustom(string) (any, bool) {
+func (r *Rules) GetFeeMarketPriceChangeDenominator() uint64 {
+	return r.g.FeeMarketPriceChangeDenominator
+}
+
+func (r *Rules) GetFeeMarketWindowTargetUnits() uint64 {
+	return r.g.FeeMarketWindowTargetUnits
+}
+
+func (r *Rules) GetFeeMarketMinUnitPrice() uint64 {
+	return r.g.FeeMarketMinUnits
+}
+
+func (r *Rules) FetchCustom(s string) (any, bool) {
+	if s == "whitelisted.Addresses" {
+		return r.parsedWhiteListedAddress, false
+	}
 	return nil, false
 }

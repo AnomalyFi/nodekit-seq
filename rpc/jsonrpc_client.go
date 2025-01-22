@@ -5,19 +5,20 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 	"strings"
-	"sync"
 
 	"github.com/ava-labs/avalanchego/ids"
 
+	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/requester"
 	"github.com/AnomalyFi/hypersdk/rpc"
 	"github.com/AnomalyFi/hypersdk/utils"
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	_ "github.com/AnomalyFi/nodekit-seq/registry" // ensure registry populated
+	"github.com/AnomalyFi/nodekit-seq/types"
 )
 
 type JSONRPCClient struct {
@@ -26,8 +27,6 @@ type JSONRPCClient struct {
 	networkID uint32
 	chainID   ids.ID
 	g         *genesis.Genesis
-	assetsL   sync.Mutex
-	assets    map[ids.ID]*AssetReply
 }
 
 // New creates a new client object.
@@ -39,8 +38,23 @@ func NewJSONRPCClient(uri string, networkID uint32, chainID ids.ID) *JSONRPCClie
 		requester: req,
 		networkID: networkID,
 		chainID:   chainID,
-		assets:    map[ids.ID]*AssetReply{},
 	}
+}
+
+func (cli *JSONRPCClient) SubmitMsgTx(ctx context.Context, chainID string, networkID uint32, secondaryChainID []byte, data [][]byte) (string, error) {
+	resp := new(SubmitMsgTxReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"submitMsgTx",
+		&SubmitMsgTxArgs{
+			ChainID:          chainID,
+			NetworkID:        networkID,
+			SecondaryChainID: secondaryChainID,
+			Data:             data,
+		},
+		resp,
+	)
+	return resp.TxID, err
 }
 
 func (cli *JSONRPCClient) Genesis(ctx context.Context) (*genesis.Genesis, error) {
@@ -81,66 +95,13 @@ func (cli *JSONRPCClient) Tx(ctx context.Context, id ids.ID) (bool, bool, int64,
 	return true, resp.Success, resp.Timestamp, resp.Fee, nil
 }
 
-func (cli *JSONRPCClient) Asset(
-	ctx context.Context,
-	asset ids.ID,
-	useCache bool,
-) (bool, []byte, uint8, []byte, uint64, string, bool, error) {
-	cli.assetsL.Lock()
-	r, ok := cli.assets[asset]
-	cli.assetsL.Unlock()
-	if ok && useCache {
-		return true, r.Symbol, r.Decimals, r.Metadata, r.Supply, r.Owner, r.Warp, nil
-	}
-	resp := new(AssetReply)
-	err := cli.requester.SendRequest(
-		ctx,
-		"asset",
-		&AssetArgs{
-			Asset: asset,
-		},
-		resp,
-	)
-	switch {
-	// We use string parsing here because the JSON-RPC library we use may not
-	// allows us to perform errors.Is.
-	case err != nil && strings.Contains(err.Error(), ErrAssetNotFound.Error()):
-		return false, nil, 0, nil, 0, "", false, nil
-	case err != nil:
-		return false, nil, 0, nil, 0, "", false, err
-	}
-	cli.assetsL.Lock()
-	cli.assets[asset] = resp
-	cli.assetsL.Unlock()
-	return true, resp.Symbol, resp.Decimals, resp.Metadata, resp.Supply, resp.Owner, resp.Warp, nil
-}
-
-func (cli *JSONRPCClient) Balance(ctx context.Context, addr string, asset ids.ID) (uint64, error) {
+func (cli *JSONRPCClient) Balance(ctx context.Context, addr string) (uint64, error) {
 	resp := new(BalanceReply)
 	err := cli.requester.SendRequest(
 		ctx,
 		"balance",
 		&BalanceArgs{
 			Address: addr,
-			Asset:   asset,
-		},
-		resp,
-	)
-	return resp.Amount, err
-}
-
-func (cli *JSONRPCClient) Loan(
-	ctx context.Context,
-	asset ids.ID,
-	destination ids.ID,
-) (uint64, error) {
-	resp := new(LoanReply)
-	err := cli.requester.SendRequest(
-		ctx,
-		"loan",
-		&LoanArgs{
-			Asset:       asset,
-			Destination: destination,
 		},
 		resp,
 	)
@@ -150,16 +111,15 @@ func (cli *JSONRPCClient) Loan(
 func (cli *JSONRPCClient) GetBlockHeadersByHeight(
 	ctx context.Context,
 	height uint64,
-	end int64,
-) (*BlockHeadersResponse, error) {
-	resp := new(BlockHeadersResponse)
-	// TODO does this need to be lowercase for the string?
+	endTimeStamp int64,
+) (*types.BlockHeadersResponse, error) {
+	resp := new(types.BlockHeadersResponse)
 	err := cli.requester.SendRequest(
 		ctx,
-		"getblockheadersbyheight",
-		&GetBlockHeadersByHeightArgs{
-			Height: height,
-			End:    end,
+		"getBlockHeadersByHeight",
+		&types.GetBlockHeadersByHeightArgs{
+			Height:       height,
+			EndTimeStamp: endTimeStamp,
 		},
 		resp,
 	)
@@ -169,35 +129,33 @@ func (cli *JSONRPCClient) GetBlockHeadersByHeight(
 func (cli *JSONRPCClient) GetBlockHeadersID(
 	ctx context.Context,
 	id string,
-	end int64,
-) (*BlockHeadersResponse, error) {
-	resp := new(BlockHeadersResponse)
-	// TODO does this need to be lowercase for the string?
+	endTimeStamp int64,
+) (*types.BlockHeadersResponse, error) {
+	resp := new(types.BlockHeadersResponse)
 	err := cli.requester.SendRequest(
 		ctx,
-		"getblockheadersid",
-		&GetBlockHeadersIDArgs{
-			ID:  id,
-			End: end,
+		"getBlockHeadersID",
+		&types.GetBlockHeadersIDArgs{
+			ID:           id,
+			EndTimeStamp: endTimeStamp,
 		},
 		resp,
 	)
 	return resp, err
 }
 
-func (cli *JSONRPCClient) GetBlockHeadersByStart(
+func (cli *JSONRPCClient) GetBlockHeadersByStartTimeStamp(
 	ctx context.Context,
-	start int64,
-	end int64,
-) (*BlockHeadersResponse, error) {
-	resp := new(BlockHeadersResponse)
-	// TODO does this need to be lowercase for the string?
+	startTimeStamp int64,
+	endTimeStamp int64,
+) (*types.BlockHeadersResponse, error) {
+	resp := new(types.BlockHeadersResponse)
 	err := cli.requester.SendRequest(
 		ctx,
-		"getBlockHeadersByStart",
-		&GetBlockHeadersByStartArgs{
-			Start: start,
-			End:   end,
+		"getBlockHeadersByStartTimeStamp",
+		&types.GetBlockHeadersByStartTimeStampArgs{
+			StartTimeStamp: startTimeStamp,
+			EndTimeStamp:   endTimeStamp,
 		},
 		resp,
 	)
@@ -207,13 +165,12 @@ func (cli *JSONRPCClient) GetBlockHeadersByStart(
 func (cli *JSONRPCClient) GetBlockTransactions(
 	ctx context.Context,
 	id string,
-) (*TransactionResponse, error) {
-	resp := new(TransactionResponse)
-	// TODO does this need to be lowercase for the string?
+) (*types.SEQTransactionResponse, error) {
+	resp := new(types.SEQTransactionResponse)
 	err := cli.requester.SendRequest(
 		ctx,
-		"getblocktransactions",
-		&GetBlockTransactionsArgs{
+		"getBlockTransactions",
+		&types.GetBlockTransactionsArgs{
 			ID: id,
 		},
 		resp,
@@ -225,13 +182,12 @@ func (cli *JSONRPCClient) GetBlockTransactionsByNamespace(
 	ctx context.Context,
 	height uint64,
 	namespace string,
-) (*SEQTransactionResponse, error) {
-	resp := new(SEQTransactionResponse)
-	// TODO does this need to be lowercase for the string?
+) (*types.SEQTransactionResponse, error) {
+	resp := new(types.SEQTransactionResponse)
 	err := cli.requester.SendRequest(
 		ctx,
-		"getblocktransactions",
-		&GetBlockTransactionsByNamespaceArgs{
+		"getBlockTransactionsByNamespace",
+		&types.GetBlockTransactionsByNamespaceArgs{
 			Height:    height,
 			Namespace: namespace,
 		},
@@ -245,12 +201,12 @@ func (cli *JSONRPCClient) GetCommitmentBlocks(
 	first uint64,
 	height uint64,
 	maxBlocks int,
-) (*SequencerWarpBlockResponse, error) {
-	resp := new(SequencerWarpBlockResponse)
+) (*types.SequencerWarpBlockResponse, error) {
+	resp := new(types.SequencerWarpBlockResponse)
 	err := cli.requester.SendRequest(
 		ctx,
 		"getCommitmentBlocks",
-		&GetBlockCommitmentArgs{
+		&types.GetBlockCommitmentArgs{
 			First:         first,
 			CurrentHeight: height,
 			MaxBlocks:     maxBlocks,
@@ -271,48 +227,22 @@ func (cli *JSONRPCClient) GetAcceptedBlockWindow(ctx context.Context) (int, erro
 	return *resp, err
 }
 
-func (cli *JSONRPCClient) SubmitMsgTx(ctx context.Context, chainID string, networkID uint32, secondaryChainID []byte, data []byte) (string, error) {
-	resp := new(SubmitMsgTxReply)
-	err := cli.requester.SendRequest(
-		ctx,
-		"submitMsgTx",
-		&SubmitMsgTxArgs{
-			ChainId:          chainID,
-			NetworkID:        networkID,
-			SecondaryChainId: secondaryChainID,
-			Data:             data,
-		},
-		resp,
-	)
-	return resp.TxID, err
-}
-
 // TODO add more methods
 func (cli *JSONRPCClient) WaitForBalance(
 	ctx context.Context,
 	addr string,
-	asset ids.ID,
 	min uint64,
 ) error {
-	exists, symbol, decimals, _, _, _, _, err := cli.Asset(ctx, asset, true)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return fmt.Errorf("%s does not exist", asset)
-	}
-
 	return rpc.Wait(ctx, func(ctx context.Context) (bool, error) {
-		balance, err := cli.Balance(ctx, addr, asset)
+		balance, err := cli.Balance(ctx, addr)
 		if err != nil {
 			return false, err
 		}
 		shouldExit := balance >= min
 		if !shouldExit {
 			utils.Outf(
-				"{{yellow}}waiting for %s %s on %s{{/}}\n",
-				utils.FormatBalance(min, decimals),
-				symbol,
+				"{{yellow}}waiting for %s balance: %s{{/}}\n",
+				utils.FormatBalance(min, consts.Decimals),
 				addr,
 			)
 		}
@@ -337,6 +267,74 @@ func (cli *JSONRPCClient) WaitForTransaction(ctx context.Context, txID ids.ID) (
 	return success, fee, nil
 }
 
+func (cli *JSONRPCClient) RollupRegistry(ctx context.Context) ([][]byte, error) {
+	resp := new(types.RegistryReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"getRollupRegistry",
+		nil,
+		resp,
+	)
+	return resp.Namespaces, err
+}
+
+func (cli *JSONRPCClient) GetRollupInfo(ctx context.Context, namespace []byte) (*hactions.RollupInfo, error) {
+	resp := new(types.GetRollupInfoReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"getRollupInfo",
+		&types.GetRollupInfoArgs{Namespace: namespace},
+		resp,
+	)
+	return &resp.Info, err
+}
+
+func (cli *JSONRPCClient) GetAllRollupInfo(ctx context.Context) (*types.GetAllRollupInfoReply, error) {
+	resp := new(types.GetAllRollupInfoReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"getAllRollupInfo",
+		nil,
+		resp,
+	)
+	return resp, err
+}
+
+func (cli *JSONRPCClient) GetValidRollupsAtEpoch(ctx context.Context, epoch uint64) (*types.GetRollupsInfoAtEpochReply, error) {
+	resp := new(types.GetRollupsInfoAtEpochReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"getValidRollupsAtEpoch",
+		types.GetRollupsInfoAtEpochArgs{Epoch: epoch},
+		resp,
+	)
+	return resp, err
+}
+
+func (cli *JSONRPCClient) GetEpochExits(ctx context.Context, epoch uint64) (*hactions.EpochExitInfo, error) {
+	resp := new(types.EpochExitsReply)
+	args := &types.EpochExitsArgs{Epoch: epoch}
+	err := cli.requester.SendRequest(
+		ctx,
+		"getEpochExits",
+		args,
+		resp,
+	)
+	return resp.Info, err
+}
+
+func (cli *JSONRPCClient) GetBuilder(ctx context.Context, epoch uint64) (*[]byte, error) {
+	resp := new(types.GetBuilderReply)
+	args := &types.GetBuilderArgs{Epoch: epoch}
+	err := cli.requester.SendRequest(
+		ctx,
+		"getBuilder",
+		args,
+		resp,
+	)
+	return &resp.BuilderPubKey, err
+}
+
 var _ chain.Parser = (*Parser)(nil)
 
 type Parser struct {
@@ -350,7 +348,7 @@ func (p *Parser) ChainID() ids.ID {
 }
 
 func (p *Parser) Rules(t int64) chain.Rules {
-	return p.genesis.Rules(t, p.networkID, p.chainID)
+	return p.genesis.Rules(t, p.networkID, p.chainID, []codec.Address{})
 }
 
 func (*Parser) Registry() (chain.ActionRegistry, chain.AuthRegistry) {

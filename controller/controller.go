@@ -6,9 +6,13 @@ package controller
 import (
 	"context"
 	"fmt"
+	"net/http"
+
+	hactions "github.com/AnomalyFi/hypersdk/actions"
 
 	"github.com/AnomalyFi/hypersdk/builder"
 	"github.com/AnomalyFi/hypersdk/chain"
+	"github.com/AnomalyFi/hypersdk/fees"
 	"github.com/AnomalyFi/hypersdk/gossiper"
 	hrpc "github.com/AnomalyFi/hypersdk/rpc"
 	hstorage "github.com/AnomalyFi/hypersdk/storage"
@@ -16,17 +20,15 @@ import (
 	ametrics "github.com/ava-labs/avalanchego/api/metrics"
 	"github.com/ava-labs/avalanchego/database"
 	"github.com/ava-labs/avalanchego/snow"
-	"github.com/ava-labs/avalanchego/snow/engine/common"
 	"go.uber.org/zap"
 
 	"github.com/AnomalyFi/nodekit-seq/actions"
+	"github.com/AnomalyFi/nodekit-seq/archiver"
 	"github.com/AnomalyFi/nodekit-seq/auth"
 	"github.com/AnomalyFi/nodekit-seq/config"
 	"github.com/AnomalyFi/nodekit-seq/consts"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
-
-	// "github.com/AnomalyFi/nodekit-seq/orderbook"
-
+	rollupregistry "github.com/AnomalyFi/nodekit-seq/rollup_registry"
 	"github.com/AnomalyFi/nodekit-seq/rpc"
 	"github.com/AnomalyFi/nodekit-seq/storage"
 	"github.com/AnomalyFi/nodekit-seq/version"
@@ -42,7 +44,9 @@ type Controller struct {
 	config       *config.Config
 	stateManager *StateManager
 
-	jsonRPCServer *rpc.JSONRPCServer
+	jsonRPCServer  *rpc.JSONRPCServer
+	archiver       *archiver.ORMArchiver
+	rollupRegistry *rollupregistry.RollupRegistry
 
 	metrics *metrics
 
@@ -106,27 +110,36 @@ func (c *Controller) Initialize(
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
-	// TODO: tune Pebble config based on each sub-db focus
+
 	c.metaDB = metaDB
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
-	}
 
 	// Create handlers
 	//
 	// hypersdk handler are initiatlized automatically, you just need to
 	// initialize custom handlers here.
-	apis := map[string]*common.HTTPHandler{}
+	apis := map[string]http.Handler{}
 	jsonRPCServer := rpc.NewJSONRPCServer(c)
 	c.jsonRPCServer = jsonRPCServer
 	jsonRPCHandler, err := hrpc.NewJSONRPCHandler(
 		consts.Name,
 		jsonRPCServer,
-		common.NoLock,
 	)
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
+
+	if c.config.ArchiverConfig.ArchiverType == "sqlite" {
+		c.config.ArchiverConfig.DSN = "/tmp/sqlite." + snowCtx.NodeID.String() + ".db"
+		snowCtx.Log.Debug("setting archiver to", zap.String("dsn", c.config.ArchiverConfig.DSN))
+	}
+	// snowCtx.NodeID.String()
+	c.archiver, err = archiver.NewORMArchiverFromConfig(&c.config.ArchiverConfig)
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+	}
+
+	c.rollupRegistry = rollupregistry.NewRollupRegistr()
+
 	apis[rpc.JSONRPCEndpoint] = jsonRPCHandler
 
 	// Create builder and gossiper
@@ -157,15 +170,19 @@ func (c *Controller) Initialize(
 
 func (c *Controller) Rules(t int64) chain.Rules {
 	// TODO: extend with [UpgradeBytes]
-	return c.genesis.Rules(t, c.snowCtx.NetworkID, c.snowCtx.ChainID)
+	return c.genesis.Rules(t, c.snowCtx.NetworkID, c.snowCtx.ChainID, c.config.GetParsedWhiteListedAddress())
 }
 
 func (c *Controller) StateManager() chain.StateManager {
 	return c.stateManager
 }
 
-func (c *Controller) UnitPrices(ctx context.Context) (chain.Dimensions, error) {
+func (c *Controller) UnitPrices(ctx context.Context) (fees.Dimensions, error) {
 	return c.inner.UnitPrices(ctx)
+}
+
+func (c *Controller) NameSpacesPrice(ctx context.Context, namespaces []string) ([]uint64, error) {
+	return c.inner.NameSpacesPrice(ctx, namespaces)
 }
 
 func (c *Controller) Submit(
@@ -181,10 +198,14 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 	batch := c.metaDB.NewBatch()
 	defer batch.Reset()
 
-	if err := c.jsonRPCServer.AcceptBlock(blk); err != nil {
-		c.inner.Logger().Fatal("unable to accept block in json-rpc server", zap.Error(err))
-	}
+	go func() {
+		err := c.archiver.InsertBlock(blk)
+		if err != nil {
+			c.Logger().Debug("err inserting block", zap.Error(err))
+		}
+	}()
 
+	rollups := make([]*hactions.RollupInfo, 0)
 	results := blk.Results()
 	for i, tx := range blk.Txs {
 		result := results[i]
@@ -195,7 +216,7 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 				tx.ID(),
 				blk.GetTimestamp(),
 				result.Success,
-				result.Consumed,
+				result.Units,
 				result.Fee,
 			)
 			if err != nil {
@@ -203,24 +224,26 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 			}
 		}
 		if result.Success {
-			switch tx.Action.(type) {
-			case *actions.CreateAsset:
-				c.metrics.createAsset.Inc()
-			case *actions.MintAsset:
-				c.metrics.mintAsset.Inc()
-			case *actions.BurnAsset:
-				c.metrics.burnAsset.Inc()
-			case *actions.Transfer:
-				c.metrics.transfer.Inc()
-			case *actions.SequencerMsg:
-				c.metrics.sequencerMsg.Inc()
-			case *actions.ImportAsset:
-				c.metrics.importAsset.Inc()
-			case *actions.ExportAsset:
-				c.metrics.exportAsset.Inc()
+			for _, act := range tx.Actions {
+				switch act.(type) { //nolint:gocritic,gosimple
+				case *actions.Transfer:
+					c.metrics.transfer.Inc()
+				case *actions.SequencerMsg:
+					c.metrics.sequencerMsg.Inc()
+				case *actions.Auction:
+					c.metrics.auction.Inc()
+				case *actions.RollupRegistration:
+					reg := act.(*actions.RollupRegistration) //nolint:gosimple
+					rollups = append(rollups, &reg.Info)
+					c.metrics.rollupRegister.Inc()
+				case *actions.EpochExit:
+					c.metrics.epochExit.Inc()
+				}
 			}
 		}
 	}
+	currentEpoch := blk.Hght / uint64(c.inner.Rules(blk.Tmstmp).GetEpochLength())
+	c.rollupRegistry.Update(currentEpoch, rollups)
 	return batch.Write()
 }
 

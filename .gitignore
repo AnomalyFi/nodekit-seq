@@ -3,7 +3,7 @@
 *.log
 *~
 .DS_Store
-.token_cli/
+.seq_cli/
 awscpu
 
 # Binaries for programs and plugins
@@ -43,6 +43,7 @@ awscpu
 *.fls
 *.gz
 *.pdf
+*.db
 
 .coverage
 
@@ -57,7 +58,7 @@ genesis.json
 dist/
 *.pk
 tmp-storage-testing
-.token-cli*
+.seq-cli*
 deploys/
 .morpheus-cli*
 *.coverage.html

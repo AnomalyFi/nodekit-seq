@@ -8,4 +8,5 @@ import "errors"
 var (
 	ErrTxNotFound    = errors.New("tx not found")
 	ErrAssetNotFound = errors.New("asset not found")
+	ErrTxFailed      = errors.New("tx result failed")
 )
