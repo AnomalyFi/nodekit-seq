@@ -21,16 +21,22 @@ const (
 	txPrefix = 0x0
 
 	// stateDB
-	balancePrefix   = 0x0
-	heightPrefix    = 0x4
-	timestampPrefix = 0x5
-	feePrefix       = 0x6
-	blockPrefix     = 0x9
-	feeMarketPrefix = 0xa
+	balancePrefix        = 0x0
+	heightPrefix         = 0x4
+	timestampPrefix      = 0x5
+	feePrefix            = 0x6
+	blockPrefix          = 0x9
+	feeMarketPrefix      = 0xa
+	DACertToBNoncePrefix = 0xb0
+	DACertIndexPrefix    = 0xb1
+	DACertPrefix         = 0xb2
 )
 
 const (
-	BalanceChunks uint16 = 1
+	BalanceChunks              uint16 = 1
+	DACertficateToBNonceChunks uint16 = 1
+	DACertficateIndexChunks    uint16 = 20
+	DACertificateChunks        uint16 = 1
 )
 
 var (

@@ -5,4 +5,7 @@ package storage
 
 import "errors"
 
-var ErrInvalidBalance = errors.New("invalid balance")
+var (
+	ErrInvalidBalance = errors.New("invalid balance")
+	ErrCertExists     = errors.New("cert exists for chunk layer")
+)
