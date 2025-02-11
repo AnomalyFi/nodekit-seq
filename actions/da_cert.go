@@ -50,13 +50,17 @@ func (*DACertificate) StateKeysMaxChunks() []uint16 {
 
 func (cert *DACertificate) Execute(
 	ctx context.Context,
-	_ chain.Rules,
+	rules chain.Rules,
 	mu state.Mutable,
 	_ int64,
 	_ uint64,
 	actor codec.Address,
 	_ ids.ID,
 ) ([][]byte, error) {
+	if !isWhiteListed(rules, actor) {
+		return nil, ErrNotWhiteListed
+	}
+
 	// store highest ToBNonce if there's new one
 	tobNonce, err := storage.GetDACertToBNonce(ctx, mu)
 	if err != nil {
