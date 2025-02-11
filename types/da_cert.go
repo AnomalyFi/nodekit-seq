@@ -23,7 +23,7 @@ type DACertInfo struct {
 }
 
 func (info *DACertInfo) Size() int {
-	return codec.StringLen(info.ChainID) + consts.Uint64Len + codec.BytesLen(info.Cert)
+	return codec.StringLen(info.ChainID) + 3*consts.Uint64Len + ids.IDLen + codec.BytesLen(info.Cert)
 }
 
 func (info *DACertInfo) Marshal(p *codec.Packer) error {

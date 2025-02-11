@@ -1449,29 +1449,16 @@ var _ = ginkgo.Describe("[Test]", func() {
 		err = instances[0].wsCli.RegisterTx(tx)
 		require.NoError(err)
 		txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
-		require.Equal(tx.ID(), txID)
 		require.NoError(err)
 		require.NoError(txErr)
-		require.False(result.Success)
-
-		// Ensure all blocks processed
-		_, startHeight, _, err := instances[0].cli.Accepted(ctx)
-		require.NoError(err)
-		for _, inst := range instances {
-			color.Blue("checking %q", inst.uri)
-
-			// Ensure all blocks processed
-			for {
-				_, h, _, err := inst.cli.Accepted(context.Background())
-				require.NoError(err)
-				if h > startHeight {
-					break
-				}
-				time.Sleep(1 * time.Second)
-			}
-		}
+		require.Equal(tx.ID(), txID)
+		require.Empty(result.Error)
+		require.True(result.Success)
 
 		// check state by rpc methods
+		lowestToBNonce, err := instances[0].tcli.GetEpochLowestToBNonce(context.TODO(), cert.Epoch)
+		require.NoError(err)
+		require.Equal(cert.ToBNonce, lowestToBNonce)
 		certByChunkID, err := instances[0].tcli.GetCertByChunkID(context.TODO(), cert.ChunkID)
 		require.NoError(err)
 		require.Equal(cert, certByChunkID)
@@ -1482,9 +1469,6 @@ var _ = ginkgo.Describe("[Test]", func() {
 		certByChainInfo, err := instances[0].tcli.GetCertByChainInfo(context.TODO(), cert.ChainID, cert.BlockNumber)
 		require.NoError(err)
 		require.Equal(cert, certByChainInfo)
-		lowestToBNonce, err := instances[0].tcli.GetEpochLowestToBNonce(context.TODO(), cert.Epoch)
-		require.NoError(err)
-		require.Equal(cert.ToBNonce, lowestToBNonce)
 	})
 
 	switch mode {

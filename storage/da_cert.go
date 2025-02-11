@@ -180,10 +180,11 @@ func GetDACertChunkIDsFromState(
 
 // for individual cert
 func DACertByChunkIDKey(chunkID ids.ID) []byte {
-	k := make([]byte, 1+ids.IDLen+consts.Uint16Len)
+	chunkIDStr := chunkID.String()
+	k := make([]byte, 1+len(chunkIDStr)+consts.Uint16Len)
 	k[0] = DACertPrefix
-	copy(k[1:], chunkID[:])
-	binary.BigEndian.PutUint16(k[1+ids.IDLen:], DACertificateChunks)
+	copy(k[1:1+len(chunkIDStr)], []byte(chunkIDStr))
+	binary.BigEndian.PutUint16(k[1+len(chunkIDStr):], DACertificateChunks)
 	return k
 }
 

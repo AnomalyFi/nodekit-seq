@@ -38,8 +38,8 @@ const (
 	BalanceChunks              uint16 = 1
 	DACertficateToBNonceChunks uint16 = 1
 	EpochToBNonceChunks        uint16 = 1
-	DACertficateIndexChunks    uint16 = 20
-	DACertificateChunks        uint16 = 1
+	DACertficateIndexChunks    uint16 = 64
+	DACertificateChunks        uint16 = 16
 	DACertificateChunkIDChunks uint16 = 1
 )
 

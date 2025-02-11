@@ -5,6 +5,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/codec"
@@ -112,14 +113,14 @@ func (c *Controller) GetCertByChainInfoFromState(ctx context.Context, chainID st
 func (c *Controller) GetCertsByToBNonceFromState(ctx context.Context, tobNonce uint64) ([]*types.DACertInfo, error) {
 	chunkIDs, err := storage.GetDACertChunkIDsFromState(ctx, c.inner.ReadState, tobNonce)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot get chunkIDs from state: %w", err)
 	}
 
 	ret := make([]*types.DACertInfo, 0, len(chunkIDs))
 	for i := 0; i < len(chunkIDs); i++ {
 		cert, err := storage.GetDACertByChunkIDFromState(ctx, c.inner.ReadState, chunkIDs[i])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("cannot get cert by chunkID: %s: %w", chunkIDs[i].String(), err)
 		}
 		ret = append(ret, cert)
 	}

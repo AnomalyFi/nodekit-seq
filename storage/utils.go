@@ -49,12 +49,14 @@ func PackIDs(ids []ids.ID) ([]byte, error) {
 func UnpackIDs(raw []byte) ([]ids.ID, error) {
 	p := codec.NewReader(raw, consts.NetworkSizeLimit)
 	numIDs := p.UnpackInt(false)
-	ret := make([]ids.ID, numIDs)
-	for _, id := range ret {
+	ret := make([]ids.ID, 0, numIDs)
+	for i := 0; i < numIDs; i++ {
+		id := ids.ID{}
 		p.UnpackID(true, &id)
 		if err := p.Err(); err != nil {
 			return nil, err
 		}
+		ret = append(ret, id)
 	}
 	return ret, nil
 }

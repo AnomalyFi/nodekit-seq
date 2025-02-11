@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/AnomalyFi/hypersdk/chain"
 	"github.com/AnomalyFi/hypersdk/codec"
@@ -59,30 +60,30 @@ func (cert *DACertificate) Execute(
 	// store highest ToBNonce if there's new one
 	tobNonce, err := storage.GetDACertToBNonce(ctx, mu)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get tob nonce: %w", err)
 	}
 	if cert.Cert.ToBNonce > tobNonce {
 		if err := storage.SetDACertToBNonce(ctx, mu, tobNonce); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to store tob nonce: %w", err)
 		}
 	}
 
 	// add current chunk to chunk layer at ToBNonce
 	if err := storage.AddDACertToLayer(ctx, mu, cert.Cert.ToBNonce, cert.Cert.ChunkID); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to add cert chunk layer: %w", err)
 	}
 
 	// store the cert and the index
 	if err := storage.SetDACertChunkID(ctx, mu, cert.Cert.ChainID, cert.Cert.BlockNumber, cert.Cert.ChunkID); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to set cert chunk id: %w", err)
 	}
 
 	if err := storage.SetDACert(ctx, mu, cert.Cert.ChunkID, cert.Cert); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to save cert: %w", err)
 	}
 	// set the lowest ToBNonce for the epoch
 	if err := storage.SetToBNonceAtEpoch(ctx, mu, cert.Cert.Epoch, cert.Cert.ToBNonce); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to set tobnonce of epoch: %w", err)
 	}
 
 	return nil, nil
@@ -93,7 +94,7 @@ func (*DACertificate) ComputeUnits(codec.Address, chain.Rules) uint64 {
 }
 
 func (cert *DACertificate) Size() int {
-	return consts.ByteLen + cert.Cert.Size() + ids.IDLen
+	return consts.ByteLen + cert.Cert.Size()
 }
 
 func (cert *DACertificate) Marshal(p *codec.Packer) {
