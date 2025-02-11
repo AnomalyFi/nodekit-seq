@@ -24,8 +24,7 @@ const (
 var _ chain.Action = (*DACertificate)(nil)
 
 type DACertificate struct {
-	DAType uint8             `json:"daID"`
-	Cert   *types.DACertInfo `json:"cert"`
+	Cert *types.DACertInfo `json:"cert"`
 }
 
 func (*DACertificate) GetTypeID() uint8 {
@@ -102,13 +101,11 @@ func (cert *DACertificate) Size() int {
 }
 
 func (cert *DACertificate) Marshal(p *codec.Packer) {
-	p.PackByte(cert.DAType)
 	cert.Cert.Marshal(p)
 }
 
 func UnmarshalDACertificate(p *codec.Packer) (chain.Action, error) {
 	var cert DACertificate
-	cert.DAType = p.UnpackByte()
 	certInfo, err := types.UnmarshalCertInfo(p)
 	if err != nil {
 		return nil, err

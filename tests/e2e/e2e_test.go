@@ -1428,6 +1428,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
 		cert := &types.DACertInfo{
+			DAType:      actions.EigenDA,
 			Epoch:       1,
 			BlockNumber: 100,
 			ChainID:     "0xb096",
@@ -1437,8 +1438,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		}
 		txActions := []chain.Action{
 			&actions.DACertificate{
-				DAType: actions.EigenDA,
-				Cert:   cert,
+				Cert: cert,
 			},
 		}
 		parser, err := instances[0].tcli.Parser(ctx)

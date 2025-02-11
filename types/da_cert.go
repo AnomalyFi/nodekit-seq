@@ -14,6 +14,7 @@ const (
 )
 
 type DACertInfo struct {
+	DAType      uint8  `json:"daType"`
 	ChainID     string `json:"chainID"`
 	BlockNumber uint64 `json:"blockNumber"` // for tob, this is the tob nonce
 	Epoch       uint64 `json:"epoch"`
@@ -23,10 +24,11 @@ type DACertInfo struct {
 }
 
 func (info *DACertInfo) Size() int {
-	return codec.StringLen(info.ChainID) + 3*consts.Uint64Len + ids.IDLen + codec.BytesLen(info.Cert)
+	return consts.ByteLen + codec.StringLen(info.ChainID) + 3*consts.Uint64Len + ids.IDLen + codec.BytesLen(info.Cert)
 }
 
 func (info *DACertInfo) Marshal(p *codec.Packer) {
+	p.PackByte(info.DAType)
 	p.PackString(info.ChainID)
 	p.PackUint64(info.BlockNumber)
 	p.PackUint64(info.ToBNonce)
@@ -37,6 +39,7 @@ func (info *DACertInfo) Marshal(p *codec.Packer) {
 
 func UnmarshalCertInfo(p *codec.Packer) (*DACertInfo, error) {
 	ret := new(DACertInfo)
+	ret.DAType = p.UnpackByte()
 	ret.ChainID = p.UnpackString(true)
 	ret.BlockNumber = p.UnpackUint64(false)
 	ret.ToBNonce = p.UnpackUint64(false)
