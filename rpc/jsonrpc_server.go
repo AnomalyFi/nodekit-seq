@@ -436,6 +436,50 @@ func (j *JSONRPCServer) GetValidRollupsAtEpoch(_ *http.Request, args *types.GetR
 	return nil
 }
 
+func (j *JSONRPCServer) GetCertByChunkID(req *http.Request, args *types.GetCertByChunkIDArgs, reply *types.GetCertByChunkIDReply) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.GetCertByChunkID")
+	defer span.End()
+	cert, err := j.c.GetCertByChunkIDFromState(ctx, args.ChunkID)
+	if err != nil {
+		return err
+	}
+	reply.Cert = cert
+	return nil
+}
+
+func (j *JSONRPCServer) GetCertByChainInfo(req *http.Request, args *types.GetCertByChainInfoArgs, reply *types.GetCertByChainInfoReply) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.GetCertByChainInfo")
+	defer span.End()
+	cert, err := j.c.GetCertByChainInfoFromState(ctx, args.ChainID, args.BlockNumber)
+	if err != nil {
+		return err
+	}
+	reply.Cert = cert
+	return nil
+}
+
+func (j *JSONRPCServer) GetCertsByToBNonce(req *http.Request, args *types.GetCertsByToBNonceArgs, reply *types.GetCertsByToBNonceReply) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.GetCertsByToBNonce")
+	defer span.End()
+	certs, err := j.c.GetCertsByToBNonceFromState(ctx, args.ToBNonce)
+	if err != nil {
+		return err
+	}
+	reply.Certs = certs
+	return nil
+}
+
+func (j *JSONRPCServer) GetEpochLowestToBNonce(req *http.Request, args *types.GetLowestToBNonceAtEpochArgs, reply *types.GetLowestToBNonceAtEpochReply) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.GetEpochLowestToBNonce")
+	defer span.End()
+	tobNonce, err := j.c.GetLowestToBNonceAtEpochFromState(ctx, args.Epoch)
+	if err != nil {
+		return err
+	}
+	reply.ToBNonce = tobNonce
+	return nil
+}
+
 var _ chain.Parser = (*ServerParser)(nil)
 
 type ServerParser struct {

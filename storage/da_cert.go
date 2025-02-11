@@ -18,7 +18,7 @@ import (
 func DACertToBNonceKey() []byte {
 	k := make([]byte, 1+consts.Uint16Len)
 	k[0] = DACertToBNoncePrefix
-	binary.BigEndian.PutUint16(k[1+consts.Uint64Len:], DACertficateToBNonceChunks)
+	binary.BigEndian.PutUint16(k[1:], DACertficateToBNonceChunks)
 	return k
 }
 
@@ -48,6 +48,59 @@ func GetDAToBNonceFromState(
 	k := DACertToBNonceKey()
 	values, errs := f(ctx, [][]byte{k})
 	nonce, _, err := innerGetBalance(values[0], errs[0])
+	return nonce, err
+}
+
+// for mapping epoch to the lowest tobnonce in that epoch, this can give a rough range of chunks
+// for rollups/sidecar to traverse through at derivation pipeline
+// for highest stored DACert ToBNonce
+func ToBNonceEpochKey(epoch uint64) []byte {
+	k := make([]byte, 1+consts.Uint64Len+consts.Uint16Len)
+	k[0] = EpochToBNoncePrefix
+	binary.BigEndian.PutUint64(k[1:], epoch)
+	binary.BigEndian.PutUint16(k[1+consts.Uint64Len:], EpochToBNonceChunks)
+	return k
+}
+
+func SetToBNonceAtEpoch(
+	ctx context.Context,
+	mu state.Mutable,
+	epoch uint64,
+	tobNonce uint64,
+) error {
+	k := ToBNonceEpochKey(epoch)
+	_, exists, err := innerGetBalance(mu.GetValue(ctx, k))
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+	return setBalance(ctx, mu, k, tobNonce)
+}
+
+func GetToBNonceAtEpoch(
+	ctx context.Context,
+	im state.Immutable,
+	epoch uint64,
+) (uint64, error) {
+	k := ToBNonceEpochKey(epoch)
+	nonce, _, err := innerGetBalance(im.GetValue(ctx, k))
+	return nonce, err
+}
+
+// Used to serve RPC queries
+func GetToBNonceAtEpochFromState(
+	ctx context.Context,
+	f ReadState,
+	epoch uint64,
+) (uint64, error) {
+	k := ToBNonceEpochKey(epoch)
+	values, errs := f(ctx, [][]byte{k})
+	nonce, exists, err := innerGetBalance(values[0], errs[0])
+	if !exists {
+		return 0, ErrToBNonceNotExistsForEpoch
+	}
 	return nonce, err
 }
 
@@ -126,7 +179,7 @@ func GetDACertChunkIDsFromState(
 }
 
 // for individual cert
-func DACertKey(chunkID ids.ID) []byte {
+func DACertByChunkIDKey(chunkID ids.ID) []byte {
 	k := make([]byte, 1+ids.IDLen+consts.Uint16Len)
 	k[0] = DACertPrefix
 	copy(k[1:], chunkID[:])
@@ -134,12 +187,12 @@ func DACertKey(chunkID ids.ID) []byte {
 	return k
 }
 
-func GetDACert(
+func GetDACertByChunkID(
 	ctx context.Context,
 	im state.Immutable,
 	chunkID ids.ID,
 ) (*types.DACertInfo, error) {
-	k := DACertKey(chunkID)
+	k := DACertByChunkIDKey(chunkID)
 	value, err := im.GetValue(ctx, k)
 	if err != nil {
 		return nil, err
@@ -150,12 +203,12 @@ func GetDACert(
 }
 
 // Used to serve RPC queries
-func GetDACertFromState(
+func GetDACertByChunkIDFromState(
 	ctx context.Context,
 	f ReadState,
 	chunkID ids.ID,
 ) (*types.DACertInfo, error) {
-	k := DACertKey(chunkID)
+	k := DACertByChunkIDKey(chunkID)
 	values, errs := f(ctx, [][]byte{k})
 	if errs[0] != nil {
 		return nil, errs[0]
@@ -170,9 +223,72 @@ func SetDACert(
 	chunkID ids.ID,
 	cert *types.DACertInfo,
 ) error {
-	k := DACertKey(chunkID)
+	k := DACertByChunkIDKey(chunkID)
 	p := codec.NewWriter(128, types.CertInfoSizeLimit)
 	if err := cert.Marshal(p); err != nil {
+		return err
+	}
+	raw := p.Bytes()
+	return mu.Insert(ctx, k, raw)
+}
+
+// for mapping <chainID, blockNumber> to chunkID
+func DACertChunkIDKey(chainID string, blockNumber uint64) []byte {
+	k := make([]byte, 1+len(chainID)+consts.Uint64Len+consts.Uint16Len)
+	k[0] = DACertChunkIDPrefix
+	copy(k[1:], []byte(chainID))
+	binary.BigEndian.PutUint64(k[1+len(chainID):], blockNumber)
+	binary.BigEndian.PutUint16(k[1+len(chainID)+consts.Uint64Len:], DACertificateChunkIDChunks)
+	return k
+}
+
+func GetDACertChunkID(
+	ctx context.Context,
+	im state.Immutable,
+	chainID string,
+	blockNumber uint64,
+) (ids.ID, error) {
+	ret := ids.ID{}
+	k := DACertChunkIDKey(chainID, blockNumber)
+	value, err := im.GetValue(ctx, k)
+	if err != nil {
+		return ids.Empty, err
+	}
+
+	p := codec.NewReader(value, ids.IDLen)
+	p.UnpackID(true, &ret)
+	return ret, p.Err()
+}
+
+// Used to serve RPC queries
+func GetDACertChunkIDFromState(
+	ctx context.Context,
+	f ReadState,
+	chainID string,
+	blockNumber uint64,
+) (ids.ID, error) {
+	ret := ids.ID{}
+	k := DACertChunkIDKey(chainID, blockNumber)
+	values, errs := f(ctx, [][]byte{k})
+	if errs[0] != nil {
+		return ids.Empty, errs[0]
+	}
+	p := codec.NewReader(values[0], ids.IDLen)
+	p.UnpackID(true, &ret)
+	return ret, p.Err()
+}
+
+func SetDACertChunkID(
+	ctx context.Context,
+	mu state.Mutable,
+	chainID string,
+	blockNumber uint64,
+	chunkID ids.ID,
+) error {
+	k := DACertChunkIDKey(chainID, blockNumber)
+	p := codec.NewWriter(ids.IDLen, ids.IDLen)
+	p.PackID(chunkID)
+	if err := p.Err(); err != nil {
 		return err
 	}
 	raw := p.Bytes()

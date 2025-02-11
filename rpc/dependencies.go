@@ -13,6 +13,7 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/archiver"
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	rollupregistry "github.com/AnomalyFi/nodekit-seq/rollup_registry"
+	"github.com/AnomalyFi/nodekit-seq/types"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/trace"
 	"github.com/ava-labs/avalanchego/utils/logging"
@@ -41,4 +42,8 @@ type Controller interface {
 	// TODO: update this to only have read permission
 	Archiver() *archiver.ORMArchiver
 	RollupRegistry() *rollupregistry.RollupRegistry
+	GetCertByChunkIDFromState(ctx context.Context, chunkID ids.ID) (*types.DACertInfo, error)
+	GetCertByChainInfoFromState(ctx context.Context, chainID string, blockNumber uint64) (*types.DACertInfo, error)
+	GetCertsByToBNonceFromState(ctx context.Context, tobNonce uint64) ([]*types.DACertInfo, error)
+	GetLowestToBNonceAtEpochFromState(ctx context.Context, epoch uint64) (uint64, error)
 }

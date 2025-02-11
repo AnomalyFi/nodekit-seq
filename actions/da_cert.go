@@ -16,24 +16,28 @@ const (
 	CertLimit = 2048 // 2KB
 )
 
+const (
+	EigenDA = iota
+)
+
 var _ chain.Action = (*DACertificate)(nil)
 
 type DACertificate struct {
-	DAType   uint8             `json:"daID"`
-	ChunkID  ids.ID            `json:"chunkID"`
-	ToBNonce uint64            `json:"tobNonce"`
-	Cert     *types.DACertInfo `json:"cert"`
+	DAType uint8             `json:"daID"`
+	Cert   *types.DACertInfo `json:"cert"`
 }
 
 func (*DACertificate) GetTypeID() uint8 {
-	return MsgID
+	return DACertID
 }
 
 func (cert *DACertificate) StateKeys(_ codec.Address, _ ids.ID) state.Keys {
 	return state.Keys{
-		string(storage.DACertToBNonceKey()):           state.All,
-		string(storage.DACertIndexKey(cert.ToBNonce)): state.All,
-		string(storage.DACertKey(cert.ChunkID)):       state.All,
+		string(storage.DACertToBNonceKey()):                                        state.All,
+		string(storage.ToBNonceEpochKey(cert.Cert.Epoch)):                          state.All,
+		string(storage.DACertChunkIDKey(cert.Cert.ChainID, cert.Cert.BlockNumber)): state.All,
+		string(storage.DACertIndexKey(cert.Cert.ToBNonce)):                         state.All,
+		string(storage.DACertByChunkIDKey(cert.Cert.ChunkID)):                      state.All,
 	}
 }
 
@@ -52,21 +56,32 @@ func (cert *DACertificate) Execute(
 	actor codec.Address,
 	_ ids.ID,
 ) ([][]byte, error) {
+	// store highest ToBNonce if there's new one
 	tobNonce, err := storage.GetDACertToBNonce(ctx, mu)
 	if err != nil {
 		return nil, err
 	}
-	if cert.ToBNonce > tobNonce {
+	if cert.Cert.ToBNonce > tobNonce {
 		if err := storage.SetDACertToBNonce(ctx, mu, tobNonce); err != nil {
 			return nil, err
 		}
 	}
 
-	if err := storage.AddDACertToLayer(ctx, mu, cert.ToBNonce, cert.ChunkID); err != nil {
+	// add current chunk to chunk layer at ToBNonce
+	if err := storage.AddDACertToLayer(ctx, mu, cert.Cert.ToBNonce, cert.Cert.ChunkID); err != nil {
 		return nil, err
 	}
 
-	if err := storage.SetDACert(ctx, mu, cert.ChunkID, cert.Cert); err != nil {
+	// store the cert and the index
+	if err := storage.SetDACertChunkID(ctx, mu, cert.Cert.ChainID, cert.Cert.BlockNumber, cert.Cert.ChunkID); err != nil {
+		return nil, err
+	}
+
+	if err := storage.SetDACert(ctx, mu, cert.Cert.ChunkID, cert.Cert); err != nil {
+		return nil, err
+	}
+	// set the lowest ToBNonce for the epoch
+	if err := storage.SetToBNonceAtEpoch(ctx, mu, cert.Cert.Epoch, cert.Cert.ToBNonce); err != nil {
 		return nil, err
 	}
 
@@ -83,14 +98,12 @@ func (cert *DACertificate) Size() int {
 
 func (cert *DACertificate) Marshal(p *codec.Packer) {
 	p.PackByte(cert.DAType)
-	p.PackID(cert.ChunkID)
 	cert.Cert.Marshal(p)
 }
 
 func UnmarshalDACertificate(p *codec.Packer) (chain.Action, error) {
 	var cert DACertificate
 	cert.DAType = p.UnpackByte()
-	p.UnpackID(true, &cert.ChunkID)
 	certInfo, err := types.UnmarshalCertInfo(p)
 	if err != nil {
 		return nil, err

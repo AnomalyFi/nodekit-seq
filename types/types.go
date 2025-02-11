@@ -255,3 +255,36 @@ type GetRollupsInfoAtEpochArgs struct {
 type GetRollupsInfoAtEpochReply struct {
 	Rollups []*hactions.RollupInfo `json:"rollups"`
 }
+
+type GetCertByChunkIDArgs struct {
+	ChunkID ids.ID `json:"chunkID"`
+}
+
+type GetCertByChunkIDReply struct {
+	Cert *DACertInfo `json:"cert"`
+}
+
+type GetCertByChainInfoArgs struct {
+	ChainID     string `json:"chainID"`
+	BlockNumber uint64 `json:"blockNumber"`
+}
+
+type GetCertByChainInfoReply struct {
+	Cert *DACertInfo `json:"cert"`
+}
+
+type GetCertsByToBNonceArgs struct {
+	ToBNonce uint64 `json:"tobNonce"`
+}
+
+type GetCertsByToBNonceReply struct {
+	Certs []*DACertInfo `json:"certs"`
+}
+
+type GetLowestToBNonceAtEpochArgs struct {
+	Epoch uint64 `json:"epoch"`
+}
+
+type GetLowestToBNonceAtEpochReply struct {
+	ToBNonce uint64 `json:"tobNonce"`
+}

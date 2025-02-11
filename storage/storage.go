@@ -28,15 +28,19 @@ const (
 	blockPrefix          = 0x9
 	feeMarketPrefix      = 0xa
 	DACertToBNoncePrefix = 0xb0
-	DACertIndexPrefix    = 0xb1
-	DACertPrefix         = 0xb2
+	EpochToBNoncePrefix  = 0xb1
+	DACertIndexPrefix    = 0xb2
+	DACertPrefix         = 0xb3
+	DACertChunkIDPrefix  = 0xb4
 )
 
 const (
 	BalanceChunks              uint16 = 1
 	DACertficateToBNonceChunks uint16 = 1
+	EpochToBNonceChunks        uint16 = 1
 	DACertficateIndexChunks    uint16 = 20
 	DACertificateChunks        uint16 = 1
+	DACertificateChunkIDChunks uint16 = 1
 )
 
 var (
