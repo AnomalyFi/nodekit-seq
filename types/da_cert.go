@@ -26,15 +26,13 @@ func (info *DACertInfo) Size() int {
 	return codec.StringLen(info.ChainID) + 3*consts.Uint64Len + ids.IDLen + codec.BytesLen(info.Cert)
 }
 
-func (info *DACertInfo) Marshal(p *codec.Packer) error {
+func (info *DACertInfo) Marshal(p *codec.Packer) {
 	p.PackString(info.ChainID)
 	p.PackUint64(info.BlockNumber)
 	p.PackUint64(info.ToBNonce)
 	p.PackUint64(info.Epoch)
 	p.PackID(info.ChunkID)
 	p.PackBytes(info.Cert)
-
-	return p.Err()
 }
 
 func UnmarshalCertInfo(p *codec.Packer) (*DACertInfo, error) {

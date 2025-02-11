@@ -122,7 +122,7 @@ func (*DACertificate) ValidRange(chain.Rules) (int64, int64) {
 	return -1, -1
 }
 
-func (cert *DACertificate) NMTNamespace() []byte {
+func (*DACertificate) NMTNamespace() []byte {
 	return DefaultNMTNamespace
 }
 

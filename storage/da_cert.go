@@ -122,16 +122,18 @@ func AddDACertToLayer(
 	k := DACertIndexKey(tobNonce)
 	var chunkIDs []ids.ID
 	value, err := mu.GetValue(ctx, k)
-	if errors.Is(err, database.ErrNotFound) {
+	switch err {
+	case database.ErrNotFound:
 		chunkIDs = make([]ids.ID, 0)
-	} else if err != nil {
-		return err
-	} else {
+	case nil:
 		chunkIDs, err = UnpackIDs(value)
 		if err != nil {
 			return err
 		}
+	default:
+		return err
 	}
+
 	if slices.ContainsFunc(chunkIDs, func(c ids.ID) bool {
 		return chunkID.Compare(c) == 0
 	}) {
@@ -226,8 +228,9 @@ func SetDACert(
 ) error {
 	k := DACertByChunkIDKey(chunkID)
 	p := codec.NewWriter(128, types.CertInfoSizeLimit)
-	if err := cert.Marshal(p); err != nil {
-		return err
+	cert.Marshal(p)
+	if p.Err() != nil {
+		return p.Err()
 	}
 	raw := p.Bytes()
 	return mu.Insert(ctx, k, raw)
