@@ -14,13 +14,14 @@ const (
 )
 
 type DACertInfo struct {
-	DAType      uint8  `json:"daType"`
-	ChainID     string `json:"chainID"`
-	BlockNumber uint64 `json:"blockNumber"` // for tob, this is the tob nonce
-	Epoch       uint64 `json:"epoch"`
-	ToBNonce    uint64 `json:"tobNonce"`
-	ChunkID     ids.ID `json:"chunkID"`
-	Cert        []byte `json:"cert"`
+	DAType        uint8  `json:"daType"`
+	ChainID       string `json:"chainID"`
+	BlockNumber   uint64 `json:"blockNumber"` // for tob, this is the tob nonce
+	Epoch         uint64 `json:"epoch"`
+	ToBNonce      uint64 `json:"tobNonce"`
+	ChunkID       ids.ID `json:"chunkID"`
+	IsPlaceHolder bool   `json:"isPlaceHolder"`
+	Cert          []byte `json:"cert"`
 }
 
 func (info *DACertInfo) Size() int {
@@ -34,6 +35,7 @@ func (info *DACertInfo) Marshal(p *codec.Packer) {
 	p.PackUint64(info.ToBNonce)
 	p.PackUint64(info.Epoch)
 	p.PackID(info.ChunkID)
+	p.PackBool(info.IsPlaceHolder)
 	p.PackBytes(info.Cert)
 }
 
@@ -44,7 +46,8 @@ func UnmarshalCertInfo(p *codec.Packer) (*DACertInfo, error) {
 	ret.BlockNumber = p.UnpackUint64(false)
 	ret.ToBNonce = p.UnpackUint64(false)
 	ret.Epoch = p.UnpackUint64(false)
-	p.UnpackID(true, &ret.ChunkID)
+	p.UnpackID(false, &ret.ChunkID)
+	ret.IsPlaceHolder = p.UnpackBool()
 	p.UnpackBytes(CertInfoSizeLimit, true, &ret.Cert)
 	if err := p.Err(); err != nil {
 		return nil, err
