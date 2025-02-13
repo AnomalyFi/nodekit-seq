@@ -334,6 +334,16 @@ func (cli *JSONRPCClient) GetBuilder(ctx context.Context, epoch uint64) (*[]byte
 	)
 	return &resp.BuilderPubKey, err
 }
+func (cli *JSONRPCClient) GetHighestSettledToBNonce(ctx context.Context) (uint64, error) {
+	resp := new(types.GetHighestSettledToBNonceReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"GetHighestSettledToBNonce",
+		nil,
+		resp,
+	)
+	return resp.ToBNonce, err
+}
 
 func (cli *JSONRPCClient) GetCertByChunkID(ctx context.Context, chunkID ids.ID) (*types.DACertInfo, error) {
 	resp := new(types.GetCertByChunkIDReply)
