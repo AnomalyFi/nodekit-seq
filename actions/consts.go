@@ -5,10 +5,11 @@ package actions
 
 // Note: Registry will error during initialization if a duplicate ID is assigned. We explicitly assign IDs to avoid accidental remapping.
 const (
-	TransferID uint8 = 0
-	MsgID      uint8 = 1
-	AuctionID  uint8 = 2
-	DACertID   uint8 = 3
+	TransferID           uint8 = 0
+	MsgID                uint8 = 1
+	AuctionID            uint8 = 2
+	DACertID             uint8 = 3
+	SetSettledToBNonceID uint8 = 4
 )
 
 const (

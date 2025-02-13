@@ -60,17 +60,8 @@ func (cert *DACertificate) Execute(
 		return nil, ErrNotWhiteListed
 	}
 
-	// store highest ToBNonce if there's new one
-	tobNonce, err := storage.GetDACertToBNonce(ctx, mu)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get tob nonce: %w", err)
-	}
-	if cert.Cert.ToBNonce > tobNonce {
-		if err := storage.SetDACertToBNonce(ctx, mu, tobNonce); err != nil {
-			return nil, fmt.Errorf("failed to store tob nonce: %w", err)
-		}
-	}
-
+	// TODO: clear cert layer may be needed but should be no influence as in rare case Arcadia may go down
+	// and we need to clear everything after the highestSettledToBNonce
 	// add current chunk to chunk layer at ToBNonce
 	if err := storage.AddDACertToLayer(ctx, mu, cert.Cert.ToBNonce, cert.Cert.ChunkID); err != nil {
 		return nil, fmt.Errorf("failed to add cert chunk layer: %w", err)
@@ -124,5 +115,5 @@ func (*DACertificate) NMTNamespace() []byte {
 }
 
 func (*DACertificate) UseFeeMarket() bool {
-	return true
+	return false
 }

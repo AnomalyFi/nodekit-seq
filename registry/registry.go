@@ -27,6 +27,7 @@ func init() {
 		consts.ActionRegistry.Register((&actions.EpochExit{}).GetTypeID(), actions.UnmarshalEpochExit, false),
 		consts.ActionRegistry.Register((&actions.Auction{}).GetTypeID(), actions.UnmarshalAuction, false),
 		consts.ActionRegistry.Register((&actions.DACertificate{}).GetTypeID(), actions.UnmarshalDACertificate, false),
+		consts.ActionRegistry.Register((&actions.SetSettledToBNonce{}).GetTypeID(), actions.UnmarshalSetSettledToBNonce, false),
 		// When registering new auth, ALWAYS make sure to append at the end.
 		consts.AuthRegistry.Register((&auth.ED25519{}).GetTypeID(), auth.UnmarshalED25519, false),
 		consts.AuthRegistry.Register((&auth.BLS{}).GetTypeID(), auth.UnmarshalBLS, false),
