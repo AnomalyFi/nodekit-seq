@@ -98,6 +98,10 @@ func (c *Controller) ChainID() ids.ID {
 	return c.snowCtx.ChainID
 }
 
+func (c *Controller) GetHighestSettledToBNonceFromState(ctx context.Context) (uint64, error) {
+	return storage.GetDAToBNonceFromState(ctx, c.inner.ReadState)
+}
+
 func (c *Controller) GetCertByChunkIDFromState(ctx context.Context, chunkID ids.ID) (*types.DACertInfo, error) {
 	return storage.GetDACertByChunkIDFromState(ctx, c.inner.ReadState, chunkID)
 }

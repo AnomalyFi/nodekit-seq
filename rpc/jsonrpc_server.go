@@ -436,6 +436,17 @@ func (j *JSONRPCServer) GetValidRollupsAtEpoch(_ *http.Request, args *types.GetR
 	return nil
 }
 
+func (j *JSONRPCServer) GetHighestSettledToBNonce(req *http.Request, _ *struct{}, reply *types.GetHighestSettledToBNonceReply) error {
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.GetHighestSettledToBNonce")
+	defer span.End()
+	tobNonce, err := j.c.GetHighestSettledToBNonceFromState(ctx)
+	if err != nil {
+		return err
+	}
+	reply.ToBNonce = tobNonce
+	return nil
+}
+
 func (j *JSONRPCServer) GetCertByChunkID(req *http.Request, args *types.GetCertByChunkIDArgs, reply *types.GetCertByChunkIDReply) error {
 	ctx, span := j.c.Tracer().Start(req.Context(), "Server.GetCertByChunkID")
 	defer span.End()

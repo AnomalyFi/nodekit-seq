@@ -256,6 +256,10 @@ type GetRollupsInfoAtEpochReply struct {
 	Rollups []*hactions.RollupInfo `json:"rollups"`
 }
 
+type GetHighestSettledToBNonceReply struct {
+	ToBNonce uint64 `json:"tobNonce"`
+}
+
 type GetCertByChunkIDArgs struct {
 	ChunkID ids.ID `json:"chunkID"`
 }

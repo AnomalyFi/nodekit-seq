@@ -42,6 +42,7 @@ type Controller interface {
 	// TODO: update this to only have read permission
 	Archiver() *archiver.ORMArchiver
 	RollupRegistry() *rollupregistry.RollupRegistry
+	GetHighestSettledToBNonceFromState(ctx context.Context) (uint64, error)
 	GetCertByChunkIDFromState(ctx context.Context, chunkID ids.ID) (*types.DACertInfo, error)
 	GetCertByChainInfoFromState(ctx context.Context, chainID string, blockNumber uint64) (*types.DACertInfo, error)
 	GetCertsByToBNonceFromState(ctx context.Context, tobNonce uint64) ([]*types.DACertInfo, error)
