@@ -19,7 +19,7 @@ type SetSettledToBNonce struct {
 }
 
 func (*SetSettledToBNonce) GetTypeID() uint8 {
-	return DACertID
+	return SetSettledToBNonceID
 }
 
 func (sst *SetSettledToBNonce) StateKeys(_ codec.Address, _ ids.ID) state.Keys {

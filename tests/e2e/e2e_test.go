@@ -1440,6 +1440,9 @@ var _ = ginkgo.Describe("[Test]", func() {
 			&actions.DACertificate{
 				Cert: cert,
 			},
+			&actions.SetSettledToBNonce{
+				ToBNonce: cert.ToBNonce,
+			},
 		}
 		parser, err := instances[0].tcli.Parser(ctx)
 		require.NoError(err)
