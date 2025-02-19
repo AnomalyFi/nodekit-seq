@@ -18,7 +18,7 @@ const (
 )
 
 const (
-	EigenDA = iota
+	CelestiaDA = iota
 )
 
 var _ chain.Action = (*DACertificate)(nil)

@@ -1428,7 +1428,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
 		cert := &types.DACertInfo{
-			DAType:      actions.EigenDA,
+			DAType:      actions.CelestiaDA,
 			Epoch:       1,
 			BlockNumber: 100,
 			ChainID:     "0xb096",

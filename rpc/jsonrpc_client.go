@@ -338,7 +338,7 @@ func (cli *JSONRPCClient) GetHighestSettledToBNonce(ctx context.Context) (uint64
 	resp := new(types.GetHighestSettledToBNonceReply)
 	err := cli.requester.SendRequest(
 		ctx,
-		"GetHighestSettledToBNonce",
+		"getHighestSettledToBNonce",
 		nil,
 		resp,
 	)
