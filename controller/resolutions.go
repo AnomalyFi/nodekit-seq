@@ -5,6 +5,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/codec"
@@ -14,6 +15,7 @@ import (
 	"github.com/AnomalyFi/nodekit-seq/genesis"
 	rollupregistry "github.com/AnomalyFi/nodekit-seq/rollup_registry"
 	"github.com/AnomalyFi/nodekit-seq/storage"
+	"github.com/AnomalyFi/nodekit-seq/types"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/trace"
 	"github.com/ava-labs/avalanchego/utils/logging"
@@ -94,4 +96,44 @@ func (c *Controller) NetworkID() uint32 {
 
 func (c *Controller) ChainID() ids.ID {
 	return c.snowCtx.ChainID
+}
+
+func (c *Controller) GetHighestSettledToBNonceFromState(ctx context.Context) (uint64, error) {
+	return storage.GetDAToBNonceFromState(ctx, c.inner.ReadState)
+}
+
+func (c *Controller) GetCertByChunkIDFromState(ctx context.Context, chunkID ids.ID) (*types.DACertInfo, error) {
+	return storage.GetDACertByChunkIDFromState(ctx, c.inner.ReadState, chunkID)
+}
+
+func (c *Controller) GetCertByChainInfoFromState(ctx context.Context, chainID string, blockNumber uint64) (*types.DACertInfo, error) {
+	chunkID, err := storage.GetDACertChunkIDFromState(ctx, c.inner.ReadState, chainID, blockNumber)
+	if err != nil {
+		return nil, err
+	}
+	if chunkID == ids.Empty {
+		return nil, nil
+	}
+	return storage.GetDACertByChunkIDFromState(ctx, c.inner.ReadState, chunkID)
+}
+
+func (c *Controller) GetCertsByToBNonceFromState(ctx context.Context, tobNonce uint64) ([]*types.DACertInfo, error) {
+	chunkIDs, err := storage.GetDACertChunkIDsFromState(ctx, c.inner.ReadState, tobNonce)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get chunkIDs from state: %w", err)
+	}
+
+	ret := make([]*types.DACertInfo, 0, len(chunkIDs))
+	for i := 0; i < len(chunkIDs); i++ {
+		cert, err := storage.GetDACertByChunkIDFromState(ctx, c.inner.ReadState, chunkIDs[i])
+		if err != nil {
+			return nil, fmt.Errorf("cannot get cert by chunkID: %s: %w", chunkIDs[i].String(), err)
+		}
+		ret = append(ret, cert)
+	}
+	return ret, nil
+}
+
+func (c *Controller) GetLowestToBNonceAtEpochFromState(ctx context.Context, epoch uint64) (uint64, error) {
+	return storage.GetToBNonceAtEpochFromState(ctx, c.inner.ReadState, epoch)
 }

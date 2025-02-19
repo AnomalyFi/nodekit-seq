@@ -4,6 +4,7 @@ import (
 	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/codec"
 	"github.com/AnomalyFi/hypersdk/consts"
+	"github.com/ava-labs/avalanchego/ids"
 )
 
 func PackNamespaces(namespaces [][]byte) ([]byte, error) {
@@ -33,4 +34,29 @@ func UnpackEpochs(raw []byte) ([]uint64, error) {
 	}
 
 	return epochs, p.Err()
+}
+
+func PackIDs(ids []ids.ID) ([]byte, error) {
+	p := codec.NewWriter(1024, consts.NetworkSizeLimit)
+	p.PackInt(len(ids))
+	for _, id := range ids {
+		p.PackID(id)
+	}
+
+	return p.Bytes(), p.Err()
+}
+
+func UnpackIDs(raw []byte) ([]ids.ID, error) {
+	p := codec.NewReader(raw, consts.NetworkSizeLimit)
+	numIDs := p.UnpackInt(false)
+	ret := make([]ids.ID, 0, numIDs)
+	for i := 0; i < numIDs; i++ {
+		id := ids.ID{}
+		p.UnpackID(true, &id)
+		if err := p.Err(); err != nil {
+			return nil, err
+		}
+		ret = append(ret, id)
+	}
+	return ret, nil
 }

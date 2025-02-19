@@ -219,3 +219,23 @@ var updateArcadiaURL = &cobra.Command{
 		return valCLI.UpdateArcadiaURL(str)
 	},
 }
+
+var resetToBNonce = &cobra.Command{
+	Use: "reset-tobnonce",
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
+		_, _, factory, cli, scli, tcli, err := handler.DefaultActor()
+		if err != nil {
+			return err
+		}
+
+		_, err = sendAndWait(ctx, []chain.Action{
+			&actions.SetSettledToBNonce{
+				ToBNonce: 0,
+				Reset:    true,
+			},
+		}, cli, scli, tcli, factory, priorityFee, true)
+
+		return err
+	},
+}

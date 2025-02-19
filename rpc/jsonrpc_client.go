@@ -334,6 +334,73 @@ func (cli *JSONRPCClient) GetBuilder(ctx context.Context, epoch uint64) (*[]byte
 	)
 	return &resp.BuilderPubKey, err
 }
+func (cli *JSONRPCClient) GetHighestSettledToBNonce(ctx context.Context) (uint64, error) {
+	resp := new(types.GetHighestSettledToBNonceReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"getHighestSettledToBNonce",
+		nil,
+		resp,
+	)
+	return resp.ToBNonce, err
+}
+
+func (cli *JSONRPCClient) GetCertByChunkID(ctx context.Context, chunkID ids.ID) (*types.DACertInfo, error) {
+	resp := new(types.GetCertByChunkIDReply)
+	args := &types.GetCertByChunkIDArgs{
+		ChunkID: chunkID,
+	}
+	err := cli.requester.SendRequest(
+		ctx,
+		"getCertByChunkID",
+		args,
+		resp,
+	)
+	return resp.Cert, err
+}
+
+func (cli *JSONRPCClient) GetCertByChainInfo(ctx context.Context, chainID string, blockNumber uint64) (*types.DACertInfo, error) {
+	resp := new(types.GetCertByChainInfoReply)
+	args := &types.GetCertByChainInfoArgs{
+		ChainID:     chainID,
+		BlockNumber: blockNumber,
+	}
+	err := cli.requester.SendRequest(
+		ctx,
+		"getCertByChainInfo",
+		args,
+		resp,
+	)
+	return resp.Cert, err
+}
+
+func (cli *JSONRPCClient) GetCertsByToBNonce(ctx context.Context, tobNonce uint64) ([]*types.DACertInfo, error) {
+	resp := new(types.GetCertsByToBNonceReply)
+	args := &types.GetCertsByToBNonceArgs{
+		ToBNonce: tobNonce,
+	}
+	err := cli.requester.SendRequest(
+		ctx,
+		"getCertsByToBNonce",
+		args,
+		resp,
+	)
+	return resp.Certs, err
+}
+
+func (cli *JSONRPCClient) GetEpochLowestToBNonce(ctx context.Context, epoch uint64) (uint64, error) {
+	resp := new(types.GetLowestToBNonceAtEpochReply)
+	args := &types.GetLowestToBNonceAtEpochArgs{
+		Epoch: epoch,
+	}
+	err := cli.requester.SendRequest(
+		ctx,
+		"getEpochLowestToBNonce",
+		args,
+		resp,
+	)
+	return resp.ToBNonce, err
+}
 
 var _ chain.Parser = (*Parser)(nil)
 

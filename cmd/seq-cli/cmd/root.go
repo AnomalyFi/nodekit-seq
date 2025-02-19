@@ -164,6 +164,7 @@ func init() {
 		rollupCmd,
 		auctionCmd,
 		updateArcadiaURL,
+		resetToBNonce,
 	)
 
 	// spam
