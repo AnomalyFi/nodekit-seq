@@ -278,7 +278,7 @@ func GetDACertChunkIDFromState(
 	k := DACertChunkIDKey(chainID, blockNumber)
 	values, errs := f(ctx, [][]byte{k})
 	if errors.Is(errs[0], database.ErrNotFound) {
-		return ids.Empty, types.ErrCertChunkIDNotExists
+		return ids.Empty, nil
 	}
 	if errs[0] != nil {
 		return ids.Empty, errs[0]

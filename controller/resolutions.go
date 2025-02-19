@@ -111,6 +111,9 @@ func (c *Controller) GetCertByChainInfoFromState(ctx context.Context, chainID st
 	if err != nil {
 		return nil, err
 	}
+	if chunkID == ids.Empty {
+		return nil, nil
+	}
 	return storage.GetDACertByChunkIDFromState(ctx, c.inner.ReadState, chunkID)
 }
 

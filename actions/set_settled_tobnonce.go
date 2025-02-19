@@ -16,6 +16,7 @@ var _ chain.Action = (*SetSettledToBNonce)(nil)
 
 type SetSettledToBNonce struct {
 	ToBNonce uint64 `json:"tobNonce"`
+	Reset    bool   `json:"reset"`
 }
 
 func (*SetSettledToBNonce) GetTypeID() uint8 {
@@ -52,7 +53,7 @@ func (sst *SetSettledToBNonce) Execute(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tob nonce: %w", err)
 	}
-	if sst.ToBNonce <= tobNonce {
+	if !sst.Reset && sst.ToBNonce <= tobNonce {
 		return nil, fmt.Errorf("tob nonce to set is lower than in state")
 	}
 
@@ -74,15 +75,13 @@ func (sst *SetSettledToBNonce) Size() int {
 
 func (sst *SetSettledToBNonce) Marshal(p *codec.Packer) {
 	p.PackUint64(sst.ToBNonce)
+	p.PackBool(sst.Reset)
 }
 
 func UnmarshalSetSettledToBNonce(p *codec.Packer) (chain.Action, error) {
 	var sst SetSettledToBNonce
-	tobNonce := p.UnpackUint64(false)
-	if p.Err() != nil {
-		return nil, p.Err()
-	}
-	sst.ToBNonce = tobNonce
+	sst.ToBNonce = p.UnpackUint64(false)
+	sst.Reset = p.UnpackBool()
 	return &sst, p.Err()
 }
 
