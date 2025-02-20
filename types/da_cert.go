@@ -48,7 +48,7 @@ func UnmarshalCertInfo(p *codec.Packer) (*DACertInfo, error) {
 	ret.Epoch = p.UnpackUint64(false)
 	p.UnpackID(false, &ret.ChunkID)
 	ret.IsPlaceHolder = p.UnpackBool()
-	p.UnpackBytes(CertInfoSizeLimit, true, &ret.Cert)
+	p.UnpackBytes(CertInfoSizeLimit, !ret.IsPlaceHolder, &ret.Cert)
 	if err := p.Err(); err != nil {
 		return nil, err
 	}
