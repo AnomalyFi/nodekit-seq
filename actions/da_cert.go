@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/AnomalyFi/hypersdk/chain"
@@ -63,7 +64,8 @@ func (cert *DACertificate) Execute(
 	// TODO: clear cert layer may be needed but should be no influence as in rare case Arcadia may go down
 	// and we need to clear everything after the highestSettledToBNonce
 	// add current chunk to chunk layer at ToBNonce
-	if err := storage.AddDACertToLayer(ctx, mu, cert.Cert.ToBNonce, cert.Cert.ChunkID); err != nil {
+	err := storage.AddDACertToLayer(ctx, mu, cert.Cert.ToBNonce, cert.Cert.ChunkID)
+	if err != nil && !errors.Is(err, storage.ErrCertExists) { // allow override
 		return nil, fmt.Errorf("failed to add cert chunk layer: %w", err)
 	}
 

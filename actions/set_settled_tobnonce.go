@@ -54,7 +54,8 @@ func (sst *SetSettledToBNonce) Execute(
 		return nil, fmt.Errorf("failed to get tob nonce: %w", err)
 	}
 	if !sst.Reset && sst.ToBNonce <= tobNonce {
-		return nil, fmt.Errorf("tob nonce to set is lower than in state")
+		// no-op
+		return nil, nil
 	}
 
 	// set the new tob nonce
