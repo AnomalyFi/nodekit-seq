@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	hactions "github.com/AnomalyFi/hypersdk/actions"
 	"github.com/AnomalyFi/hypersdk/codec"
@@ -69,7 +68,6 @@ func SetRollupInfo(
 		return err
 	}
 	infoBytes := p.Bytes()
-	fmt.Printf("key: %s, value: %s\n", string(k), string(infoBytes))
 	return mu.Insert(ctx, k, infoBytes)
 }
 

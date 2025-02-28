@@ -5,4 +5,9 @@ package storage
 
 import "errors"
 
-var ErrInvalidBalance = errors.New("invalid balance")
+var (
+	ErrInvalidBalance               = errors.New("invalid balance")
+	ErrCertExists                   = errors.New("cert exists for chunk layer")
+	ErrLowestToBNonceExistsForEpoch = errors.New("lowest tob nonce exists for epoch")
+	ErrToBNonceNotExistsForEpoch    = errors.New("lowest tob nonce not exists for epoch")
+)

@@ -22,10 +22,7 @@ func StoreArcadiaBidInfo(
 	bidderSignature []byte, // 96 bytes
 ) error {
 	k := ArcadiaBidKey(epoch)
-	v := make([]byte, 8+48+96)
-	binary.BigEndian.PutUint64(v[:8], bidPrice)
-	copy(v[8:], bidderPublicKey)
-	copy(v[8+48:], bidderSignature)
+	v := hactions.PackArcadiaAuctionWinner(bidPrice, bidderPublicKey, bidderSignature)
 	return mu.Insert(ctx, k, v)
 }
 

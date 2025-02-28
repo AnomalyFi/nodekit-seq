@@ -202,7 +202,7 @@ cat <<EOF > "${TMPDIR}"/seqvm.config
   },
   "valRPCConfig": {
     "derivePort": true,
-    "port": 0
+    "port": 9652
   }
 }
 EOF
