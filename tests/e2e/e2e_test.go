@@ -1317,46 +1317,6 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.Contains(string(result.Error), "not authorized")
 	})
 
-	// with previous changes focused on devops ease, this test is irrelevant now.
-	// ginkgo.It("test already existing namespace in rollup registration", func() {
-	// 	ctx := context.Background()
-	// 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
-	// 	defer cancel()
-	// 	tpriv, err := bls.GeneratePrivateKey()
-	// 	require.NoError(err)
-
-	// 	pubKey := bls.PublicFromPrivateKey(tpriv)
-	// 	seqAddress := auth.NewBLSAddress(pubKey)
-
-	// 	currEpoch, err := instances[0].cli.GetCurrentEpoch()
-	// 	require.NoError(err)
-	// 	txActions := []chain.Action{&actions.RollupRegistration{
-	// 		Info: hactions.RollupInfo{
-	// 			Namespace:           []byte("nkit"),
-	// 			FeeRecipient:        seqAddress,
-	// 			AuthoritySEQAddress: seqAddress,
-	// 			SequencerPublicKey:  pubKeyDummy,
-	// 			StartEpoch:          currEpoch + 5,
-	// 		},
-	// 		Namespace: []byte("nkit"),
-	// 		OpCode:    actions.CreateRollup,
-	// 	}}
-	// 	parser, err := instances[0].tcli.Parser(ctx)
-	// 	require.NoError(err)
-	// 	_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
-	// 	require.NoError(err)
-	// 	hutils.Outf("{{green}}txID of submitted data:{{/}}%s\n", tx.ID().String())
-
-	// 	err = instances[0].wsCli.RegisterTx(tx)
-	// 	require.NoError(err)
-	// 	txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
-	// 	require.Equal(tx.ID(), txID)
-	// 	require.NoError(err)
-	// 	require.NoError(txErr)
-	// 	require.False(result.Success)
-	// 	require.Contains(string(result.Error), "namespace already registered")
-	// })
-
 	var currEpoch uint64
 
 	ginkgo.It("test create epoch exit for rollups", func() {
@@ -1462,6 +1422,58 @@ var _ = ginkgo.Describe("[Test]", func() {
 		require.False(result.Success)
 		require.Contains(string(result.Error), "namespace is not registered")
 	})
+
+	ginkgo.It("test da cert can be submitted & storage methods are correct", func() {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+		cert := &types.DACertInfo{
+			DAType:      actions.CelestiaDA,
+			Epoch:       1,
+			BlockNumber: 100,
+			ChainID:     "0xb096",
+			ToBNonce:    10,
+			ChunkID:     ids.GenerateTestID(),
+			Cert:        []byte("someblobid"),
+		}
+		txActions := []chain.Action{
+			&actions.DACertificate{
+				Cert: cert,
+			},
+			&actions.SetSettledToBNonce{
+				ToBNonce: cert.ToBNonce,
+			},
+		}
+		parser, err := instances[0].tcli.Parser(ctx)
+		require.NoError(err)
+		_, tx, _, err := instances[0].cli.GenerateTransaction(ctx, parser, txActions, factory, 0)
+		require.NoError(err)
+		hutils.Outf("{{green}}txID of submitted DA cert:{{/}}%s\n", tx.ID().String())
+		err = instances[0].wsCli.RegisterTx(tx)
+		require.NoError(err)
+		txID, txErr, result, err := instances[0].wsCli.ListenTx(ctx)
+		require.NoError(err)
+		require.NoError(txErr)
+		require.Equal(tx.ID(), txID)
+		require.Empty(result.Error)
+		require.True(result.Success)
+
+		// check state by rpc methods
+		lowestToBNonce, err := instances[0].tcli.GetEpochLowestToBNonce(context.TODO(), cert.Epoch)
+		require.NoError(err)
+		require.Equal(cert.ToBNonce, lowestToBNonce)
+		certByChunkID, err := instances[0].tcli.GetCertByChunkID(context.TODO(), cert.ChunkID)
+		require.NoError(err)
+		require.Equal(cert, certByChunkID)
+		certs, err := instances[0].tcli.GetCertsByToBNonce(context.TODO(), cert.ToBNonce)
+		require.NoError(err)
+		require.Equal(1, len(certs))
+		require.Equal(cert, certs[0])
+		certByChainInfo, err := instances[0].tcli.GetCertByChainInfo(context.TODO(), cert.ChainID, cert.BlockNumber)
+		require.NoError(err)
+		require.Equal(cert, certByChainInfo)
+	})
+
 	switch mode {
 	case modeTest:
 		hutils.Outf("{{yellow}}skipping bootstrap and state sync tests{{/}}\n")
