@@ -104,7 +104,7 @@ var sequencerMsgCmd = &cobra.Command{
 	},
 }
 
-var rollupCmd = &cobra.Command{
+var rollupRegisterCmd = &cobra.Command{
 	Use: "rollup-register",
 	RunE: func(*cobra.Command, []string) error {
 		ctx := context.Background()

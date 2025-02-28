@@ -56,6 +56,7 @@ func init() {
 		actionCmd,
 		spamCmd,
 		prometheusCmd,
+		rollupCmd,
 	)
 	rootCmd.PersistentFlags().StringVar(
 		&dbPath,
@@ -161,7 +162,7 @@ func init() {
 	actionCmd.AddCommand(
 		transferCmd,
 		sequencerMsgCmd,
-		rollupCmd,
+		rollupRegisterCmd,
 		auctionCmd,
 		updateArcadiaURL,
 		resetToBNonce,
@@ -223,6 +224,12 @@ func init() {
 	)
 	prometheusCmd.AddCommand(
 		generatePrometheusCmd,
+	)
+
+	// rollup
+	rollupCmd.AddCommand(
+		getCertCmd,
+		getToBNonceCmd,
 	)
 }
 

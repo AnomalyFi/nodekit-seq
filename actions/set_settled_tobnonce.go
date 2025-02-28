@@ -23,7 +23,7 @@ func (*SetSettledToBNonce) GetTypeID() uint8 {
 	return SetSettledToBNonceID
 }
 
-func (sst *SetSettledToBNonce) StateKeys(_ codec.Address, _ ids.ID) state.Keys {
+func (*SetSettledToBNonce) StateKeys(_ codec.Address, _ ids.ID) state.Keys {
 	return state.Keys{
 		string(storage.DACertToBNonceKey()): state.All,
 	}
@@ -70,8 +70,8 @@ func (*SetSettledToBNonce) ComputeUnits(codec.Address, chain.Rules) uint64 {
 	return DACertComputeUnits
 }
 
-func (sst *SetSettledToBNonce) Size() int {
-	return consts.Uint64Len
+func (*SetSettledToBNonce) Size() int {
+	return consts.Uint64Len + consts.BoolLen
 }
 
 func (sst *SetSettledToBNonce) Marshal(p *codec.Packer) {

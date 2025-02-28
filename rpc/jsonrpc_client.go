@@ -334,6 +334,7 @@ func (cli *JSONRPCClient) GetBuilder(ctx context.Context, epoch uint64) (*[]byte
 	)
 	return &resp.BuilderPubKey, err
 }
+
 func (cli *JSONRPCClient) GetHighestSettledToBNonce(ctx context.Context) (uint64, error) {
 	resp := new(types.GetHighestSettledToBNonceReply)
 	err := cli.requester.SendRequest(
