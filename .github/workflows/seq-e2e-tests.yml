@@ -3,7 +3,7 @@ name: SEQ e2e tests
 on:
   push:
     branches:
-      - '*'
+      - main
   pull_request:
     types: [labeled,synchronize,reopened]
 
