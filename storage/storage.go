@@ -37,11 +37,11 @@ const (
 // 64 bytes per chunk, this constrict the value size for the corresponding keys
 const (
 	BalanceChunks              uint16 = 1
-	DACertficateToBNonceChunks uint16 = 1
-	EpochToBNonceChunks        uint16 = 1
+	DACertficateToBNonceChunks uint16 = 16
+	EpochToBNonceChunks        uint16 = 16
 	DACertficateIndexChunks    uint16 = 64 // 4KiB
 	DACertificateChunks        uint16 = 64 // 4KiB
-	DACertificateChunkIDChunks uint16 = 1
+	DACertificateChunkIDChunks uint16 = 16
 )
 
 var (
