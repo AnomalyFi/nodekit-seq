@@ -1029,7 +1029,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 		_, startHeight, _, err := instances[0].cli.Accepted(ctx)
 		require.NoError(err)
 
-		// submit regsitration at startHeight
+		// submit registration at startHeight
 		currEpoch, err := instances[0].cli.GetCurrentEpoch()
 		require.NoError(err)
 		txActions := []chain.Action{&actions.RollupRegistration{

@@ -45,7 +45,7 @@ func (*RollupRegistration) StateKeysMaxChunks() []uint16 {
 }
 
 // TODO: this action needs to be managed by DAO to manage deletions since we are not deleting any namespace from storage
-// but only by marking them as regsitered or exited
+// but only by marking them as registered or exited
 func (r *RollupRegistration) Execute(
 	ctx context.Context,
 	rules chain.Rules,
